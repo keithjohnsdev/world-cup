@@ -55,14 +55,12 @@ export function NavHeader({ left, center, right, variant = "brand", className = 
       {mobileOpen && (
         <div className="md:hidden flex flex-col border-t border-white/10" onClick={() => setMobileOpen(false)}>
           {center && (
-            <div className="overflow-x-auto border-b border-white/10">
-              <div className="flex h-12">
-                {center}
-              </div>
+            <div className="[&>div]:flex-col [&>div]:h-auto [&>div>*]:w-full [&>div>*]:min-h-[48px] [&>div>*]:border-b [&>div>*]:border-white/10 [&>div>*]:justify-start [&>div>*]:px-5">
+              {center}
             </div>
           )}
           {right && (
-            <div className="flex items-center gap-2 px-4 py-3">
+            <div className="flex items-center gap-2 px-4 py-3 border-t border-white/10">
               {right}
             </div>
           )}
