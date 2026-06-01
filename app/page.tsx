@@ -56,10 +56,10 @@ const PHRASES: { teamId: string; text: string }[] = [
   { teamId: "PAN", text: "¡Vamos!" },
 ];
 
-const INTERVAL_MS = 3500;
-const RING_S = 80; // seconds per full rotation
-const RADIUS = 265;
-const SIZE = RADIUS * 2 + 130;
+const INTERVAL_MS = 4500;
+const RING_S = 120; // seconds per full rotation
+const RADIUS = 310;
+const SIZE = RADIUS * 2 + 140;
 
 export default function Home() {
   const [name, setName] = useState("");
@@ -69,7 +69,11 @@ export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    const id = setInterval(() => setPhraseIdx((i) => (i + 1) % PHRASES.length), INTERVAL_MS);
+    const id = setInterval(() => setPhraseIdx((i) => {
+      let next: number;
+      do { next = Math.floor(Math.random() * PHRASES.length); } while (next === i);
+      return next;
+    }), INTERVAL_MS);
     return () => clearInterval(id);
   }, []);
 
@@ -208,8 +212,8 @@ export default function Home() {
                   src={`https://flagcdn.com/w80/${team.cc}.png`}
                   alt={team.name}
                   style={{
-                    width: 40,
-                    height: 28,
+                    width: 52,
+                    height: 36,
                     borderRadius: 4,
                     objectFit: "cover",
                     display: "block",
