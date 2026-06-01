@@ -630,6 +630,8 @@ export default function BracketPage() {
   return (
     <div className="min-h-screen bg-green-950">
       <NavHeader
+        className="border-b border-white/10"
+        style={{ background: "linear-gradient(160deg, #060d1a 0%, #0d2137 50%, #0a1a0f 100%)" }}
         center={
           <div className="text-center select-none">
             <div className="leading-none">

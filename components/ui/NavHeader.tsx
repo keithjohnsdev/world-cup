@@ -5,6 +5,8 @@ interface NavHeaderProps {
   center?: React.ReactNode;
   right?: React.ReactNode;
   variant?: Variant;
+  className?: string;
+  style?: React.CSSProperties;
 }
 
 const variantClasses: Record<Variant, string> = {
@@ -12,9 +14,9 @@ const variantClasses: Record<Variant, string> = {
   dark:  "bg-surface-deep border-b border-white/10",
 };
 
-export function NavHeader({ left, center, right, variant = "brand" }: NavHeaderProps) {
+export function NavHeader({ left, center, right, variant = "brand", className = "", style }: NavHeaderProps) {
   return (
-    <header className={`sticky top-0 z-10 relative flex items-center px-4 py-3 ${variantClasses[variant]}`}>
+    <header className={`sticky top-0 z-10 relative flex items-center px-4 py-3 ${variantClasses[variant]} ${className}`} style={style}>
       <div className="flex items-center gap-3 flex-1">{left}</div>
       {center && (
         <div className="absolute left-1/2 -translate-x-1/2 flex items-center pointer-events-none">
