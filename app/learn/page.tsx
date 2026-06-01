@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { getTeam } from "@/lib/data";
+import { GROUPS, getTeam } from "@/lib/data";
 import { COUNTRY_INFO } from "@/lib/countries";
 import { FlagIcon } from "@/components/FlagIcon";
 import { NavHeader } from "@/components/ui/NavHeader";
@@ -14,22 +14,43 @@ const GlobeView = dynamic(() => import("@/components/GlobeView"), { ssr: false }
 const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
 
 type View = "globe" | "map";
+type Picks = Record<string, string>;
 
 export default function LearnPage() {
   const [view, setView] = useState<View>("globe");
   const [hoveredTeam, setHoveredTeam] = useState<string | null>(null);
   const [userName, setUserName] = useState("");
+  const [picks, setPicks] = useState<Picks>({});
   const router = useRouter();
 
   useEffect(() => {
+    const token = localStorage.getItem("wc_token");
     setUserName(localStorage.getItem("wc_name") || "");
+    if (!token) return;
+    fetch("/api/picks", { headers: { "x-session-token": token } })
+      .then((r) => r.json())
+      .then((data: { stage: string; slot: string; team_id: string }[]) => {
+        if (Array.isArray(data)) {
+          const loaded: Picks = {};
+          data.forEach(({ stage, slot, team_id }) => { loaded[`${stage}:${slot}`] = team_id; });
+          setPicks(loaded);
+        }
+      })
+      .catch(() => {});
   }, []);
+
+  function signOut() {
+    localStorage.removeItem("wc_token");
+    localStorage.removeItem("wc_name");
+    router.replace("/");
+  }
 
   const handleHover = useCallback((teamId: string | null) => setHoveredTeam(teamId), []);
   const handleClick = useCallback((teamId: string) => router.push(`/learn/${teamId}`), [router]);
 
   const hovered = hoveredTeam ? getTeam(hoveredTeam) : null;
   const hoveredInfo = hoveredTeam ? COUNTRY_INFO[hoveredTeam] : null;
+  const groupPickCount = GROUPS.filter((g) => picks[`group:${g.id}`]).length;
 
   return (
     <div className="h-screen bg-surface-deep flex flex-col overflow-hidden">
@@ -47,40 +68,48 @@ export default function LearnPage() {
         }
         center={
           <div className="flex items-end">
-            <a
-              href="/bracket"
-              className="py-3 px-4 -mb-px text-xs font-black uppercase tracking-[0.15em] whitespace-nowrap border-b-2 border-transparent text-slate-200 transition-all"
-              onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.color = "#ffffff"; el.style.textShadow = "0 0 10px rgba(255,255,255,0.5)"; }}
-              onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = ""; el.style.textShadow = ""; }}
-            >
-              ← Picks
-            </a>
-            {(["globe", "map"] as const).map((v) => (
-              <button
-                key={v}
-                onClick={() => setView(v)}
-                className={`py-3 px-4 -mb-px text-xs font-black uppercase tracking-[0.15em] whitespace-nowrap border-b-2 transition-all cursor-pointer ${
-                  view === v ? "border-yellow-300 text-yellow-300" : "border-transparent text-slate-200"
-                }`}
-                onMouseEnter={e => { if (view !== v) { const el = e.currentTarget as HTMLElement; el.style.color = "#ffffff"; el.style.textShadow = "0 0 10px rgba(255,255,255,0.5)"; }}}
+            {(["rules", "groups", "bracket"] as const).map((t) => (
+              <a
+                key={t}
+                href={`/bracket?tab=${t}`}
+                className="flex items-center px-4 -mb-px text-xs font-black uppercase tracking-[0.15em] whitespace-nowrap border-b-2 border-transparent text-slate-200 transition-all"
+                onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.color = "#ffffff"; el.style.textShadow = "0 0 10px rgba(255,255,255,0.5)"; }}
                 onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = ""; el.style.textShadow = ""; }}
               >
-                {v === "globe" ? "🌐 Globe" : "🗺 Map"}
-              </button>
+                {t === "groups" ? `Groups (${groupPickCount}/12)` : t === "bracket" ? "Knockout" : "The Rules"}
+              </a>
             ))}
+            <span className="flex items-center px-4 -mb-px text-xs font-black uppercase tracking-[0.15em] whitespace-nowrap border-b-2 border-yellow-300 text-yellow-300 cursor-default">
+              🌍 The World
+            </span>
           </div>
         }
         right={
           <>
             {userName && <span className="text-green-400 text-sm font-medium hidden sm:inline">{userName}</span>}
-            <Button variant="ghost" size="sm" onClick={() => router.push("/bracket")}>Sign out</Button>
+            <Button variant="ghost" size="sm" onClick={signOut}>Sign out</Button>
           </>
         }
       />
 
       <div className="flex-1 relative min-h-0">
-        {/* Hint overlay — floats above the globe, takes no layout space */}
-        <p className="absolute top-2 left-1/2 -translate-x-1/2 z-10 text-white/40 text-xs pointer-events-none whitespace-nowrap">
+        {/* Globe / Map toggle */}
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 rounded-full bg-black/30 p-1 backdrop-blur-sm">
+          {(["globe", "map"] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-[0.12em] transition-all ${
+                view === v ? "bg-yellow-300 text-green-950" : "text-white/60 hover:text-white"
+              }`}
+            >
+              {v === "globe" ? "🌐 Globe" : "🗺 Map"}
+            </button>
+          ))}
+        </div>
+
+        {/* Hint */}
+        <p className="absolute top-12 left-1/2 -translate-x-1/2 z-10 text-white/40 text-xs pointer-events-none whitespace-nowrap">
           {view === "globe"
             ? "Rotate the globe · hover a green country · click to explore"
             : "Hover a green country · click to explore"}

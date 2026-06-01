@@ -562,6 +562,9 @@ export default function BracketPage() {
     if (!token) { router.replace("/"); return; }
     setUserName(name || "");
 
+    const urlTab = new URLSearchParams(window.location.search).get("tab") as "rules" | "groups" | "bracket" | null;
+    if (urlTab && ["rules", "groups", "bracket"].includes(urlTab)) setTab(urlTab);
+
     fetch("/api/picks", { headers: { "x-session-token": token } })
       .then((r) => r.json())
       .then((data: { stage: string; slot: string; team_id: string }[]) => {
