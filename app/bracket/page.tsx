@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { GROUPS, getTeam, type Team } from "@/lib/data";
+import { FlagIcon } from "@/components/FlagIcon";
 
 type Picks = Record<string, string>; // key: "stage:slot" → teamId
 
@@ -28,7 +29,7 @@ function TeamButton({
             : "border-gray-200 bg-white hover:border-green-300 hover:bg-green-50 text-gray-700"
         }`}
     >
-      <span className={size === "sm" ? "text-lg" : "text-2xl"}>{team.flag}</span>
+      <FlagIcon cc={team.cc} name={team.name} className={size === "sm" ? "w-5 h-4" : "w-7 h-5"} />
       <span className="truncate">{team.name}</span>
       {selected && <span className="ml-auto text-green-500">✓</span>}
     </button>
@@ -52,16 +53,16 @@ function GroupCard({
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-bold text-gray-800 text-lg">{group.name}</h3>
         <div className="flex gap-1 text-xs text-gray-400">
-          {winner && (
-            <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
-              1st: {getTeam(winner)?.flag}
+          {winner && (() => { const t = getTeam(winner); return t ? (
+            <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+              1st: <FlagIcon cc={t.cc} name={t.name} className="w-5 h-3" />
             </span>
-          )}
-          {runnerUp && (
-            <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
-              2nd: {getTeam(runnerUp)?.flag}
+          ) : null; })()}
+          {runnerUp && (() => { const t = getTeam(runnerUp); return t ? (
+            <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+              2nd: <FlagIcon cc={t.cc} name={t.name} className="w-5 h-3" />
             </span>
-          )}
+          ) : null; })()}
         </div>
       </div>
       <p className="text-xs text-gray-400 mb-2">Pick 1st place (required) and 2nd place (optional)</p>
@@ -83,7 +84,7 @@ function GroupCard({
                 className={`flex-1 flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 transition-all text-left
                   ${isWinner ? "border-green-500 bg-green-50 font-semibold text-green-800" : "border-gray-200 bg-white hover:border-green-300 hover:bg-green-50 text-gray-700"}`}
               >
-                <span className="text-2xl">{team.flag}</span>
+                <FlagIcon cc={team.cc} name={team.name} className="w-7 h-5" />
                 <span className="truncate text-sm">{team.name}</span>
                 {isWinner && <span className="ml-auto text-green-500 font-bold">1st</span>}
               </button>
@@ -133,7 +134,7 @@ function SlotBox({
     >
       {team ? (
         <>
-          <span className="text-2xl">{team.flag}</span>
+          <FlagIcon cc={team.cc} name={team.name} className="w-8 h-6" />
           <span className="text-xs font-medium text-gray-700 truncate w-full px-1">{team.name}</span>
         </>
       ) : (
@@ -238,9 +239,175 @@ function buildSFMatches(qfmatches: { slot: string }[], picks: Picks) {
   ];
 }
 
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="mb-10">
+      <h2 className="text-xl font-bold text-green-900 border-b-2 border-green-200 pb-2 mb-4">{title}</h2>
+      {children}
+    </section>
+  );
+}
+
+function Sub({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="mb-6">
+      <h3 className="text-base font-bold text-green-800 mb-3">{title}</h3>
+      {children}
+    </div>
+  );
+}
+
+function ScoreRow({ label, pts }: { label: string; pts: string }) {
+  return (
+    <div className="flex justify-between items-center py-2.5 border-b border-gray-100 last:border-0">
+      <span className="text-gray-700">{label}</span>
+      <span className="font-bold text-green-700 tabular-nums ml-4 shrink-0">{pts}</span>
+    </div>
+  );
+}
+
+function AwardRow({ name, description }: { name: string; description: string }) {
+  return (
+    <div className="py-3 border-b border-gray-100 last:border-0">
+      <div className="font-semibold text-gray-900">{name}</div>
+      <div className="text-sm text-gray-500 mt-0.5">{description}</div>
+    </div>
+  );
+}
+
+function PowerRow({ name, description }: { name: string; description: string }) {
+  return (
+    <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex gap-3">
+      <span className="text-yellow-500 text-xl mt-0.5">⚡</span>
+      <div>
+        <div className="font-bold text-yellow-900">{name}</div>
+        <div className="text-sm text-yellow-800 mt-0.5">{description}</div>
+      </div>
+    </div>
+  );
+}
+
+function RulesTab() {
+  return (
+    <div className="bg-gray-50 min-h-screen">
+      <div className="max-w-2xl mx-auto px-4 py-8">
+
+        <Section title="How It Works">
+          <div className="space-y-4 text-gray-700 leading-relaxed">
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <div className="font-bold text-green-800 mb-1">Phase 1 — Group Stage Picks</div>
+              <div className="text-sm text-gray-500 mb-2">Deadline: before the first match</div>
+              <p className="text-sm">For each of the 12 groups, pick which team finishes 1st and which finishes 2nd. Also name your champion. Picks lock when the tournament begins.</p>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <div className="font-bold text-green-800 mb-1">Phase 2 — Knockout Bracket Picks</div>
+              <div className="text-sm text-gray-500 mb-2">Deadline: before the Round of 32</div>
+              <p className="text-sm">Once the group stage is over, the real bracket is set. Everyone picks the knockout rounds fresh — Round of 32 through the Final — using the teams that actually qualified.</p>
+            </div>
+          </div>
+        </Section>
+
+        <Section title="Scoring">
+          <Sub title="Group Stage">
+            <div className="bg-white rounded-xl border border-gray-200 px-4 divide-y divide-gray-100">
+              <ScoreRow label="Team correctly advances (either position)" pts="2 pts" />
+              <ScoreRow label="Team finishes in the exact position you picked" pts="+1 pt" />
+              <ScoreRow label="Max per group (2 teams × 3 pts)" pts="6 pts" />
+              <ScoreRow label="Max group stage total (12 groups)" pts="72 pts" />
+            </div>
+          </Sub>
+          <Sub title="Knockout Rounds">
+            <div className="bg-white rounded-xl border border-gray-200 px-4 divide-y divide-gray-100">
+              <ScoreRow label="Round of 32" pts="3 pts" />
+              <ScoreRow label="Round of 16" pts="6 pts" />
+              <ScoreRow label="Quarterfinals" pts="12 pts" />
+              <ScoreRow label="Semifinals" pts="24 pts" />
+              <ScoreRow label="Final" pts="48 pts" />
+            </div>
+            <p className="text-xs text-gray-400 mt-2 px-1">Each round has the same total points available (48 pts). No round matters more than any other — they just feel like they do.</p>
+          </Sub>
+          <Sub title="Champion Bonus">
+            <div className="bg-white rounded-xl border border-gray-200 px-4 divide-y divide-gray-100">
+              <ScoreRow label="Your champion pick wins the tournament" pts="+10 pts" />
+            </div>
+            <p className="text-xs text-gray-400 mt-2 px-1">Named during Phase 1. The real reward is built into the bracket — this is just a little extra for calling it before a ball was kicked.</p>
+          </Sub>
+          <Sub title="Shootout Mercy Rule">
+            <div className="bg-white rounded-xl border border-gray-200 px-4">
+              <ScoreRow label="Your pick loses in a penalty shootout" pts="½ pts" />
+            </div>
+            <p className="text-xs text-gray-400 mt-2 px-1">Getting eliminated in the cruelest way possible shouldn&apos;t also cost you full points.</p>
+          </Sub>
+        </Section>
+
+        <Section title="Awards">
+          <p className="text-sm text-gray-500 mb-4">Everyone wins something. Awards are announced after the Final.</p>
+          <Sub title="Glory">
+            <div className="bg-white rounded-xl border border-gray-200 px-4 divide-y divide-gray-100">
+              <AwardRow name="The Champion" description="Most total points overall" />
+              <AwardRow name="True Believer" description="Named the actual World Cup winner as their champion pick before the tournament" />
+              <AwardRow name="Group Stage Guru" description="Most points in the group stage — rewards knowing the obscure teams" />
+              <AwardRow name="The Closer" description="Most points scored in the quarterfinals and beyond — peaked at the right time" />
+              <AwardRow name="Dark Horse Whisperer" description="Named the lowest-ranked team to make the deepest run" />
+              <AwardRow name="Bracket Brainiac" description="Highest accuracy percentage in the knockout rounds" />
+              <AwardRow name="Dead Cert" description="Correctly predicted the winner of every group (1st place, all 12) — near impossible" />
+            </div>
+          </Sub>
+          <Sub title="Funny &amp; Consolation">
+            <div className="bg-white rounded-xl border border-gray-200 px-4 divide-y divide-gray-100">
+              <AwardRow name="Wooden Spoon" description="Dead last — awarded with full ceremony and a literal wooden spoon" />
+              <AwardRow name="Heartbreak Hotel" description="Most picks that lost specifically in penalty shootouts — the universe has a grudge" />
+              <AwardRow name="The Human Coin Flip" description="Accuracy closest to exactly 50% — perfectly, uselessly neutral" />
+              <AwardRow name="Help, I've Gone Cross-Eyed" description="Most picks where the team advanced but in the wrong position — so close, so often" />
+              <AwardRow name="The Trendsetter" description="Made the most unique picks that nobody else made — a true contrarian" />
+              <AwardRow name="Reverse Oracle" description="Most incorrect picks overall — so reliably wrong you're almost useful" />
+            </div>
+          </Sub>
+          <Sub title="Skill">
+            <div className="bg-white rounded-xl border border-gray-200 px-4 divide-y divide-gray-100">
+              <AwardRow name="Perfect Round" description="Got every single pick correct in one round (any round counts)" />
+              <AwardRow name="Upset Artist" description="Most correctly predicted upsets — lower-ranked team beats higher-ranked" />
+              <AwardRow name="Crystal Ball" description="Most total correct picks by raw count across the whole tournament" />
+            </div>
+          </Sub>
+          <Sub title="Special">
+            <div className="bg-white rounded-xl border border-gray-200 px-4 divide-y divide-gray-100">
+              <AwardRow name="Rookie Star" description="Best score among players age 10 and under — kids compete against each other" />
+              <AwardRow name="Comeback Kid" description="Biggest point swing — most improved from the bottom half of the standings to the top" />
+              <AwardRow name="The Commentator" description="Most enthusiastic trash-talker on the leaderboard (voted, not scored)" />
+              <AwardRow name="The Hipster" description="Whose champion pick was the most obscure team that went the farthest — scored as seed × rounds advanced" />
+            </div>
+          </Sub>
+        </Section>
+
+        <Section title="Kid Powers ⚡">
+          <p className="text-sm text-gray-500 mb-4">Players age 10 and under get special powers. Each can only be used once. Tell a grown-up before you use one.</p>
+          <div className="space-y-3">
+            <PowerRow name="Champion Boost" description="Your champion bonus is worth +20 pts instead of +10 if they win it all." />
+            <PowerRow name="Comeback Chip" description="Starting a round in last place? You get 3 free bonus points. Automatic. Can happen more than once." />
+            <PowerRow name="Heart Pick" description="Name your favorite team before the tournament. Every time they win any game — even ones you didn't pick — you earn 1 bonus point." />
+            <PowerRow name="Star Power" description="Pick one game and declare it your Star Pick before it starts. Get it right and earn double points. One star. Use it well." />
+          </div>
+        </Section>
+
+        <Section title="General Rules">
+          <div className="bg-white rounded-xl border border-gray-200 px-4 divide-y divide-gray-100 text-sm text-gray-700">
+            <div className="py-3">All picks must be submitted before the relevant deadline or they will not count.</div>
+            <div className="py-3">Picks are final once locked, except where a Kid Power specifically allows otherwise.</div>
+            <div className="py-3">In case of a tie, the co-champions may agree to share the title — or settle it the fun way: all the kids secretly hold up some fingers behind their backs. Each tied player guesses even or odd. Kids reveal. Whoever guesses right wins.</div>
+            <div className="py-3">Awards are announced together after the Final.</div>
+            <div className="py-3 font-medium">The Wooden Spoon is non-negotiable and must be accepted with grace.</div>
+          </div>
+        </Section>
+
+      </div>
+    </div>
+  );
+}
+
 export default function BracketPage() {
   const [picks, setPicks] = useState<Picks>({});
-  const [tab, setTab] = useState<"groups" | "bracket">("groups");
+  const [tab, setTab] = useState<"groups" | "bracket" | "rules">("groups");
   const [userName, setUserName] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
@@ -355,7 +522,7 @@ export default function BracketPage() {
       {championTeam && (
         <div className="bg-yellow-400 text-yellow-900 text-center py-2 font-bold flex items-center justify-center gap-2">
           <span>🥇 Your champion pick:</span>
-          <span>{championTeam.flag}</span>
+          <FlagIcon cc={championTeam.cc} name={championTeam.name} className="w-7 h-5" />
           <span>{championTeam.name}</span>
         </div>
       )}
@@ -378,6 +545,14 @@ export default function BracketPage() {
         >
           Knockout Bracket
         </button>
+        <button
+          onClick={() => setTab("rules")}
+          className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
+            tab === "rules" ? "border-white text-white" : "border-transparent text-green-300 hover:text-white"
+          }`}
+        >
+          The Rules
+        </button>
       </div>
 
       {/* Groups tab */}
@@ -393,6 +568,9 @@ export default function BracketPage() {
           </div>
         </div>
       )}
+
+      {/* Rules tab */}
+      {tab === "rules" && <RulesTab />}
 
       {/* Bracket tab */}
       {tab === "bracket" && (
@@ -426,12 +604,12 @@ export default function BracketPage() {
                       highlight={champion === match.team2}
                       onClick={canPick ? () => handlePick("final", "m1", match.team2!) : undefined}
                     />
-                    {champion && (
-                      <div className="mt-2 text-center">
-                        <div className="text-4xl">{getTeam(champion)?.flag}</div>
+                    {champion && (() => { const ct = getTeam(champion); return ct ? (
+                      <div className="mt-2 text-center flex flex-col items-center gap-1">
+                        <FlagIcon cc={ct.cc} name={ct.name} className="w-14 h-10" />
                         <div className="text-yellow-400 font-bold text-xs">CHAMPION</div>
                       </div>
-                    )}
+                    ) : null; })()}
                   </div>
                 );
               })}
