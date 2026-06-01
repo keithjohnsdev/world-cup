@@ -589,7 +589,7 @@ function KidPowerSection({ picks, onPick }: { picks: Picks; onPick: (stage: stri
             <div className="text-3xl mt-1">❤️</div>
             <p className="text-white/75 text-sm mt-3">Your favourite team — every game they win earns you +1 bonus point, even ones you didn&apos;t pick.</p>
           </div>
-          <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-1.5">
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
             {GROUPS.flatMap((g) => g.teams).map((team) => {
               const isSelected = picks["heart:pick"] === team.id;
               return (
@@ -599,8 +599,8 @@ function KidPowerSection({ picks, onPick }: { picks: Picks; onPick: (stage: stri
                   className={`flex flex-col items-center justify-center gap-1 rounded-xl p-2 border-2 transition-all cursor-pointer
                     ${isSelected ? "border-red-400 bg-red-400/10" : "border-white/10 bg-white/5 hover:border-white/30"}`}
                 >
-                  <FlagIcon cc={team.cc} name={team.name} className="w-8 h-6 rounded-sm" />
-                  <span className={`text-[9px] font-bold text-center leading-tight truncate w-full ${isSelected ? "text-red-400" : "text-white/50"}`}>
+                  <FlagIcon cc={team.cc} name={team.name} className="w-10 h-7 rounded-sm" />
+                  <span className={`text-[11px] font-bold text-center leading-tight truncate w-full ${isSelected ? "text-red-400" : "text-white/50"}`}>
                     {team.name}
                   </span>
                 </button>
@@ -641,7 +641,7 @@ function ChampionPicker({ picks, onPick }: { picks: Picks; onPick: (stage: strin
         </div>
         <p className="text-white/75 text-sm mt-3">A correctly chosen champion is worth <span className="text-yellow-300 font-bold">+10</span> bonus points, <span className="text-green-400 font-bold">+20</span> for kids.</p>
       </div>
-      <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-1.5">
+      <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
         {allTeams.map((team) => {
           const isSelected = selected === team.id;
           return (
@@ -651,8 +651,8 @@ function ChampionPicker({ picks, onPick }: { picks: Picks; onPick: (stage: strin
               className={`flex flex-col items-center justify-center gap-1 rounded-xl p-2 border-2 transition-all cursor-pointer
                 ${isSelected ? "border-yellow-400 bg-yellow-400/10" : "border-white/10 bg-white/5 hover:border-white/30"}`}
             >
-              <FlagIcon cc={team.cc} name={team.name} className="w-8 h-6 rounded-sm" />
-              <span className={`text-[9px] font-bold text-center leading-tight truncate w-full ${isSelected ? "text-yellow-300" : "text-white/50"}`}>
+              <FlagIcon cc={team.cc} name={team.name} className="w-10 h-7 rounded-sm" />
+              <span className={`text-[11px] font-bold text-center leading-tight truncate w-full ${isSelected ? "text-yellow-300" : "text-white/50"}`}>
                 {team.name}
               </span>
             </button>
