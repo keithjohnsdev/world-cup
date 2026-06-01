@@ -58,6 +58,7 @@ export default function MapView({ onHover, onCountryClick }: Props) {
               key={teamId}
               id={`flag-${teamId}`}
               patternUnits="objectBoundingBox"
+              patternContentUnits="objectBoundingBox"
               width="1"
               height="1"
             >
