@@ -1,14 +1,14 @@
 // Cron handler — triggered by cron-job.org every 15 minutes.
 // cron-job.org is configured to POST:
-//   https://<your-domain>/api/cron/results?secret=<CRON_SECRET>
+//   https://johnsies.vercel.app/api/cron/results?secret=<CRON_SECRET>
 //
 // Env vars required:
-//   API_FOOTBALL_KEY  — from api-football.com dashboard
-//   CRON_SECRET       — any random string; set in both Vercel and cron-job.org
+//   FOOTBALL_DATA_KEY  — from football-data.org dashboard (free tier)
+//   CRON_SECRET        — random secret set in both Vercel and cron-job.org URL
 
 import { NextRequest, NextResponse } from "next/server";
 import { initDb, getSql } from "@/lib/db";
-import { fetchFixturesByDate, fetchGroupStandings, ApiFix } from "@/lib/api-football";
+import { fetchCompletedMatchesForDate, fetchGroupStandings, CompletedMatch } from "@/lib/api-football";
 import { apiNameToTeamId } from "@/lib/team-mapping";
 import { findKnockoutSlot } from "@/lib/bracket";
 import { GROUPS, TEAMS } from "@/lib/data";
@@ -52,77 +52,67 @@ async function handler(req: NextRequest) {
   const sql = getSql();
   const dateStr = now.toISOString().slice(0, 10);
 
-  let fixtures: ApiFix[];
+  let matches: CompletedMatch[];
   try {
-    fixtures = await fetchFixturesByDate(dateStr);
+    matches = await fetchCompletedMatchesForDate(dateStr);
   } catch (err) {
-    console.error("[cron/results] fetch fixtures failed:", err);
+    console.error("[cron/results] fetch failed:", err);
     return NextResponse.json({ error: String(err) }, { status: 502 });
   }
-
-  const completed = fixtures.filter((f) =>
-    ["FT", "AET", "PEN"].includes(f.fixture.status.short),
-  );
 
   const done: number[] = [];
   const skipped: number[] = [];
   const errors: { id: number; err: string }[] = [];
 
-  for (const fix of completed) {
-    const fid = fix.fixture.id;
+  for (const match of matches) {
+    const mid = match.id;
 
     const already = await sql`
-      SELECT 1 FROM processed_fixtures WHERE fixture_id = ${fid} LIMIT 1
+      SELECT 1 FROM processed_fixtures WHERE fixture_id = ${mid} LIMIT 1
     `;
-    if (already.length > 0) { skipped.push(fid); continue; }
+    if (already.length > 0) { skipped.push(mid); continue; }
 
     try {
-      const round = fix.league.round ?? "";
-      const wasShootout = fix.fixture.status.short === "PEN";
-
-      if (/group stage/i.test(round)) {
-        await handleGroupFixture(sql, fix, fixtures);
-      } else if (/3rd place|third place/i.test(round)) {
+      if (match.round === "group stage") {
+        await handleGroupMatch(sql, match, matches);
+      } else if (match.round.includes("3rd") || match.round.includes("third")) {
         // Skip 3rd-place play-off — not part of our bracket
       } else {
-        await handleKnockoutFixture(sql, fix, wasShootout);
+        await handleKnockoutMatch(sql, match);
       }
 
       await sql`
         INSERT INTO processed_fixtures (fixture_id)
-        VALUES (${fid})
+        VALUES (${mid})
         ON CONFLICT DO NOTHING
       `;
-      done.push(fid);
+      done.push(mid);
     } catch (err) {
-      console.error(`[cron/results] fixture ${fid}:`, err);
-      errors.push({ id: fid, err: String(err) });
+      console.error(`[cron/results] match ${mid}:`, err);
+      errors.push({ id: mid, err: String(err) });
     }
   }
 
   return NextResponse.json({ date: dateStr, done, skipped, errors });
 }
 
-// cron-job.org sends POST; export both so the endpoint works either way
 export const POST = handler;
 export const GET  = handler;
 
-// ─── Group stage handler ───────────────────────────────────────────────────────
-// Only finalises standings after the last group matchday (round "3"),
-// once BOTH simultaneous group matches are complete.
+// ─── Group stage ───────────────────────────────────────────────────────────────
 
-async function handleGroupFixture(
+async function handleGroupMatch(
   sql: ReturnType<typeof getSql>,
-  fix: ApiFix,
-  todayFixtures: ApiFix[],
+  match: CompletedMatch,
+  todayMatches: CompletedMatch[],
 ) {
-  // Only act on the final group matchday
-  if (!/group stage.*3$/i.test(fix.league.round)) return;
+  // Only finalise standings on the last group matchday (3)
+  if (match.matchday !== 3) return;
 
-  const homeId = apiNameToTeamId(fix.teams.home.name);
-  const awayId = apiNameToTeamId(fix.teams.away.name);
+  const homeId = apiNameToTeamId(match.homeTeamName);
+  const awayId = apiNameToTeamId(match.awayTeamName);
   if (!homeId || !awayId) {
-    throw new Error(`Unknown teams: "${fix.teams.home.name}" / "${fix.teams.away.name}"`);
+    throw new Error(`Unknown teams: "${match.homeTeamName}" / "${match.awayTeamName}"`);
   }
 
   const group = TEAMS.find((t) => t.id === homeId)?.group;
@@ -134,81 +124,73 @@ async function handleGroupFixture(
   `;
   if (existing.length > 0) return;
 
-  // Wait until both round-3 matches for this group are FT
+  // Wait until both matchday-3 matches for this group are in today's completed list
   const groupTeamIds = new Set(
     GROUPS.find((g) => g.id === group)?.teams.map((t) => t.id) ?? [],
   );
-  const round3ForGroup = todayFixtures.filter((f) => {
-    if (!/group stage.*3$/i.test(f.league.round ?? "")) return false;
-    const h = apiNameToTeamId(f.teams.home.name);
-    const a = apiNameToTeamId(f.teams.away.name);
+  const groupMatchday3 = todayMatches.filter((m) => {
+    if (m.round !== "group stage" || m.matchday !== 3) return false;
+    const h = apiNameToTeamId(m.homeTeamName);
+    const a = apiNameToTeamId(m.awayTeamName);
     return (h && groupTeamIds.has(h)) || (a && groupTeamIds.has(a));
   });
 
-  const allDone = round3ForGroup.every((f) =>
-    ["FT", "AET", "PEN"].includes(f.fixture.status.short),
-  );
-  if (!allDone) return;
+  if (groupMatchday3.length < 2) return; // other match not done yet
 
-  // Fetch standings and write all four positions
+  // Fetch final standings and write all four positions
   const allStandings = await fetchGroupStandings();
   const entries = allStandings.get(group);
-  if (!entries || entries.some((e) => e.all.played < 3)) {
+  if (!entries || entries.some((e) => e.playedGames < 3)) {
     throw new Error(`Standings not final for group ${group}`);
   }
 
-  const stageByRank = ["group", "runner", "third", "fourth"];
+  const stageByPosition = ["group", "runner", "third", "fourth"];
   for (const entry of entries) {
-    const ourId = apiNameToTeamId(entry.team.name);
-    if (!ourId) throw new Error(`Unknown standing team: "${entry.team.name}"`);
-    const stage = stageByRank[entry.rank - 1];
+    const ourId = apiNameToTeamId(entry.teamName);
+    if (!ourId) throw new Error(`Unknown standing team: "${entry.teamName}"`);
+    const stage = stageByPosition[entry.position - 1];
     if (!stage) continue;
     await sql`
       INSERT INTO results (stage, slot, team_id, was_shootout)
       VALUES (${stage}, ${group}, ${ourId}, false)
-      ON CONFLICT (stage, slot) DO UPDATE
-        SET team_id = EXCLUDED.team_id
+      ON CONFLICT (stage, slot) DO UPDATE SET team_id = EXCLUDED.team_id
     `;
   }
 }
 
-// ─── Knockout handler ──────────────────────────────────────────────────────────
-// Slot is derived from which teams are playing vs. known results —
-// no separate fixture-mapping table needed.
+// ─── Knockout ──────────────────────────────────────────────────────────────────
 
-async function handleKnockoutFixture(
+async function handleKnockoutMatch(
   sql: ReturnType<typeof getSql>,
-  fix: ApiFix,
-  wasShootout: boolean,
+  match: CompletedMatch,
 ) {
-  const winner = fix.teams.home.winner === true ? fix.teams.home : fix.teams.away;
-  const ourWinnerId = apiNameToTeamId(winner.name);
-  if (!ourWinnerId) throw new Error(`Unknown winner: "${winner.name}"`);
+  const ourWinnerId = apiNameToTeamId(match.winnerName);
+  if (!ourWinnerId) throw new Error(`Unknown winner: "${match.winnerName}"`);
 
-  const team1Id = apiNameToTeamId(fix.teams.home.name);
-  const team2Id = apiNameToTeamId(fix.teams.away.name);
+  const team1Id = apiNameToTeamId(match.homeTeamName);
+  const team2Id = apiNameToTeamId(match.awayTeamName);
   if (!team1Id || !team2Id) {
-    throw new Error(`Unknown teams: "${fix.teams.home.name}" / "${fix.teams.away.name}"`);
+    throw new Error(`Unknown teams: "${match.homeTeamName}" / "${match.awayTeamName}"`);
   }
 
-  // Build a results map so findKnockoutSlot can trace the bracket path
+  // Load all current results to derive the bracket slot
   const rows = await sql`SELECT stage, slot, team_id FROM results` as {
     stage: string; slot: string; team_id: string;
   }[];
   const resultsMap = new Map(rows.map((r) => [`${r.stage}:${r.slot}`, r.team_id]));
 
-  const mapping = findKnockoutSlot(team1Id, team2Id, fix.league.round, resultsMap);
+  const mapping = findKnockoutSlot(team1Id, team2Id, match.round, resultsMap);
   if (!mapping) {
     throw new Error(
-      `Cannot map fixture ${fix.fixture.id} (${fix.teams.home.name} vs ${fix.teams.away.name}) ` +
-      `round="${fix.league.round}" to a bracket slot — group results may not be in DB yet`,
+      `Cannot map match ${match.id} (${match.homeTeamName} vs ${match.awayTeamName}) ` +
+      `round="${match.round}" to a slot — group results may not be in DB yet`,
     );
   }
 
   const { stage, slot } = mapping;
   await sql`
     INSERT INTO results (stage, slot, team_id, was_shootout)
-    VALUES (${stage}, ${slot}, ${ourWinnerId}, ${wasShootout})
+    VALUES (${stage}, ${slot}, ${ourWinnerId}, ${match.wasShootout})
     ON CONFLICT (stage, slot) DO UPDATE
       SET team_id = EXCLUDED.team_id,
           was_shootout = EXCLUDED.was_shootout
