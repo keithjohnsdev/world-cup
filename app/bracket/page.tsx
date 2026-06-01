@@ -544,6 +544,51 @@ function RulesTab() {
 
 
 
+function KidPowerSection({ picks, onPick }: { picks: Picks; onPick: (stage: string, slot: string, teamId: string) => void }) {
+  const isKid = picks["meta:isKid"] === "true";
+  return (
+    <div className="max-w-5xl mx-auto px-4 pb-16">
+      <div className="h-px bg-gradient-to-r from-transparent via-white/15 to-transparent mb-10" />
+      <div className="text-center mb-8">
+        <div className="inline-flex items-center gap-2 bg-yellow-300/10 border border-yellow-300/20 rounded-full px-4 py-1.5 mb-4">
+          <span className="text-base">🚫</span>
+          <span className="text-yellow-300 text-[10px] font-black uppercase tracking-[0.25em]">No grownups allowed</span>
+        </div>
+        <h2 className="font-black uppercase text-white leading-none" style={{ fontSize: "clamp(2rem, 6vw, 2.8rem)", letterSpacing: "-0.02em" }}>
+          Kid Powers
+        </h2>
+      </div>
+
+      {isKid ? (
+        <div className="text-center">
+          <div className="inline-flex flex-col items-center gap-3 rounded-2xl border border-yellow-300/30 bg-yellow-300/8 px-10 py-8">
+            <span className="text-5xl">⚡</span>
+            <div className="text-yellow-300 font-black text-xl uppercase tracking-tight">Kid Powers: Unlocked!</div>
+            <p className="text-white/60 text-sm max-w-xs">Your special powers are active. Check the rules to see what you can do.</p>
+            <button
+              onClick={() => onPick("meta", "isKid", "false")}
+              className="mt-2 text-white/25 text-xs underline hover:text-white/50 transition-colors cursor-pointer"
+            >
+              Actually I&apos;m a grownup
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="text-center">
+          <p className="text-white font-black text-2xl mb-8">Are you a kid?</p>
+          <button
+            onClick={() => onPick("meta", "isKid", "true")}
+            className="inline-flex items-center gap-3 bg-yellow-300 hover:bg-yellow-200 text-green-950 font-black text-xl uppercase tracking-tight rounded-2xl px-10 py-5 transition-all cursor-pointer shadow-lg hover:shadow-yellow-300/20 hover:scale-105 active:scale-95"
+          >
+            <span className="text-3xl">⚡</span>
+            Yes — Kid Power!
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ChampionPicker({ picks, onPick }: { picks: Picks; onPick: (stage: string, slot: string, teamId: string) => void }) {
   const selected = picks["champion:pick"];
   const allTeams = GROUPS.flatMap((g) => g.teams);
@@ -754,6 +799,7 @@ export default function BracketPage() {
             </div>
           </div>
           <ChampionPicker picks={picks} onPick={handlePick} />
+          <KidPowerSection picks={picks} onPick={handlePick} />
         </div>
       )}
 
