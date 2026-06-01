@@ -69,7 +69,7 @@ async function handler(req: NextRequest) {
 
     const already = await sql`
       SELECT 1 FROM processed_fixtures WHERE fixture_id = ${mid} LIMIT 1
-    `;
+    ` as unknown[];
     if (already.length > 0) { skipped.push(mid); continue; }
 
     try {
@@ -121,7 +121,7 @@ async function handleGroupMatch(
   // Skip if standings already written for this group
   const existing = await sql`
     SELECT 1 FROM results WHERE stage = 'group' AND slot = ${group} LIMIT 1
-  `;
+  ` as unknown[];
   if (existing.length > 0) return;
 
   // Wait until both matchday-3 matches for this group are in today's completed list
