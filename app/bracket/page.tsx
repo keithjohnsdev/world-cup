@@ -351,11 +351,11 @@ function ScoreRow({ label, pts }: { label: string; pts: string }) {
   );
 }
 
-function AwardRow({ name, description }: { name: string; description: string }) {
+function AwardRow({ name, description, isNew }: { name: string; description: string; isNew?: boolean }) {
   return (
     <div className="py-3 border-b border-green-800 last:border-0">
-      <div className="font-bold text-white text-base">{name}</div>
-      <div className="text-base text-green-400 mt-0.5">{description}</div>
+      <div className={`font-bold text-base ${isNew ? "text-yellow-300" : "text-white"}`}>{name}</div>
+      <div className={`text-base mt-0.5 ${isNew ? "text-yellow-500/80" : "text-green-400"}`}>{description}</div>
     </div>
   );
 }
@@ -502,6 +502,9 @@ function RulesTab() {
               <AwardRow name="The Hipster" description="Named the lowest-ranked team to make the deepest run" />
               <AwardRow name="Bracket Brainiac" description="Highest accuracy percentage in the knockout rounds" />
               <AwardRow name="The Oracle" description="Correctly predicted the winner of every group (1st place, all 12) — near impossible" />
+              <AwardRow isNew name="The Pacemaker" description="Led the overall standings for more rounds than anyone else — front-runner all tournament" />
+              <AwardRow isNew name="Group Stage Guru" description="Highest points scored in the group stage alone — knew their stuff before a ball was kicked" />
+              <AwardRow isNew name="Perfect Storm" description="Correctly picked both finalists before the tournament began" />
             </div>
           </Sub>
           <Sub title="Funny &amp; Consolation">
@@ -512,12 +515,18 @@ function RulesTab() {
               <AwardRow name="Help, I've Gone Cross-Eyed" description="Most picks where the team advanced but in the wrong position" />
               <AwardRow name="The Trendsetter" description="Made the most unique picks that nobody else made — a true contrarian" />
               <AwardRow name="Reverse Oracle" description="Most incorrect picks overall — so reliably wrong you're almost useful" />
+              <AwardRow isNew name="Early Retirement" description="Your pre-tournament champion pick was eliminated in the group stage — sent home before the party started" />
+              <AwardRow isNew name="The Wall" description="Went an entire knockout round without a single correct pick — an achievement in its own right" />
+              <AwardRow isNew name="Always the Bridesmaid" description="Most times your team made the next round but you had picked their opponent — this close, every time" />
             </div>
           </Sub>
           <Sub title="Special">
             <div className="rounded-xl border border-green-800 bg-green-900/40 px-4">
               <AwardRow name="Upset Artist" description="Most correctly predicted upsets — lower-ranked team beats higher-ranked" />
               <AwardRow name="Comeback Kid" description="Biggest point swing — most improved from the bottom half of the standings to the top" />
+              <AwardRow isNew name="The Streak" description="Longest consecutive run of correct picks across the entire tournament" />
+              <AwardRow isNew name="Group of Death Survivor" description="Correctly predicted both qualifiers from the most competitive group — nobody else saw that coming" />
+              <AwardRow isNew name="First Blood" description="Highest score in any single round — one round to rule them all" />
             </div>
           </Sub>
         </Section>
