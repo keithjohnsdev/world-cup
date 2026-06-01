@@ -118,8 +118,8 @@ function DraggableGroupCard({
 
   return (
     <div className="rounded-2xl overflow-hidden shadow-md" style={{ border: "1px solid rgba(22,101,52,0.2)" }}>
-      {/* Dark header */}
-      <div className="bg-brand-900 px-4 py-3 flex items-center justify-between">
+      {/* Card header */}
+      <div className="bg-brand-950 px-4 py-3 flex items-center justify-between">
         <div className="flex items-baseline gap-1.5">
           <span className="text-brand-400 text-[10px] font-bold uppercase tracking-[0.25em]">Group</span>
           <span className="text-white font-black text-3xl leading-none">{group.id}</span>
@@ -689,16 +689,19 @@ export default function BracketPage() {
 
       {/* Groups tab */}
       {tab === "groups" && (
-        <div className="bg-surface-dark min-h-screen">
-          <div className="p-4 max-w-5xl mx-auto">
-            <p className="text-brand-400 text-sm mb-4 text-center">
+        <div className="p-4 max-w-5xl mx-auto">
+          <div className="mb-6 mt-2">
+            <div className="text-[0.6rem] font-black uppercase tracking-[0.3em] text-green-600 mb-1.5">— Section</div>
+            <h2 className="text-2xl font-black uppercase text-white leading-none" style={{ letterSpacing: "-0.01em" }}>The Group Stage</h2>
+            <div className="mt-3 h-px bg-gradient-to-r from-yellow-300 via-green-600 to-transparent" />
+            <p className="text-white/40 text-sm mt-3">
               Drag teams to rank all four finishing positions — top 2 advance to the knockout round.
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {GROUPS.map((group) => (
-                <DraggableGroupCard key={group.id} group={group} picks={picks} onPick={handlePick} />
-              ))}
-            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {GROUPS.map((group) => (
+              <DraggableGroupCard key={group.id} group={group} picks={picks} onPick={handlePick} />
+            ))}
           </div>
         </div>
       )}
