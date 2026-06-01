@@ -111,6 +111,15 @@ function GroupCard({
   );
 }
 
+// Returns the visual rank an item will occupy given the current drag state,
+// so rank labels and colors update live as you drag.
+function getVisualIndex(arrayIndex: number, dragIdx: number, insertIdx: number): number {
+  if (arrayIndex === dragIdx) return insertIdx;
+  if (dragIdx > insertIdx && arrayIndex >= insertIdx && arrayIndex < dragIdx) return arrayIndex + 1;
+  if (dragIdx < insertIdx && arrayIndex > dragIdx && arrayIndex <= insertIdx) return arrayIndex - 1;
+  return arrayIndex;
+}
+
 function DraggableGroupCard({
   group,
   picks,
@@ -121,11 +130,15 @@ function DraggableGroupCard({
   onPick: (stage: string, slot: string, teamId: string) => void;
 }) {
   const [order, setOrder] = useState<Team[]>([...group.teams]);
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [overIndex, setOverIndex] = useState<number | null>(null);
   const hasInitialized = useRef(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  // Once picks load from server, arrange winner/runner-up at the top
+  const [dragging, setDragging] = useState<number | null>(null);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [insertAt, setInsertAt] = useState<number | null>(null);
+  const dragStartY = useRef(0);
+  const itemHeightRef = useRef(52);
+
   useEffect(() => {
     if (hasInitialized.current) return;
     const winner = picks[`group:${group.id}`];
@@ -142,29 +155,50 @@ function DraggableGroupCard({
     setOrder(ordered);
   }, [picks, group]);
 
-  function handleDragStart(index: number) {
-    setDragIndex(index);
-  }
-
-  function handleDragEnter(index: number) {
-    if (index !== dragIndex) setOverIndex(index);
-  }
-
-  function handleDragEnd() {
-    if (dragIndex !== null && overIndex !== null && dragIndex !== overIndex) {
-      const newOrder = [...order];
-      const [moved] = newOrder.splice(dragIndex, 1);
-      newOrder.splice(overIndex, 0, moved);
-      setOrder(newOrder);
-
-      // Sync top-2 positions to picks
-      const newWinner = newOrder[0];
-      const newRunner = newOrder[1];
-      if (newWinner.id !== picks[`group:${group.id}`]) onPick("group", group.id, newWinner.id);
-      if (newRunner.id !== picks[`runner:${group.id}`]) onPick("runner", group.id, newRunner.id);
+  function handlePointerDown(e: React.PointerEvent, index: number) {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragStartY.current = e.clientY;
+    if (containerRef.current) {
+      const kids = containerRef.current.children;
+      if (kids.length >= 2) {
+        itemHeightRef.current =
+          kids[1].getBoundingClientRect().top - kids[0].getBoundingClientRect().top;
+      }
     }
-    setDragIndex(null);
-    setOverIndex(null);
+    setDragging(index);
+    setDragOffset(0);
+    setInsertAt(index);
+  }
+
+  function handlePointerMove(e: React.PointerEvent, index: number) {
+    if (dragging === null || dragging !== index) return;
+    const offset = e.clientY - dragStartY.current;
+    setDragOffset(offset);
+    const raw = Math.round(dragging + offset / itemHeightRef.current);
+    setInsertAt(Math.max(0, Math.min(order.length - 1, raw)));
+  }
+
+  function handlePointerUp() {
+    if (dragging !== null && insertAt !== null && dragging !== insertAt) {
+      const newOrder = [...order];
+      const [moved] = newOrder.splice(dragging, 1);
+      newOrder.splice(insertAt, 0, moved);
+      setOrder(newOrder);
+      onPick("group", group.id, newOrder[0].id);
+      onPick("runner", group.id, newOrder[1].id);
+    }
+    setDragging(null);
+    setDragOffset(0);
+    setInsertAt(null);
+  }
+
+  function getTranslateY(index: number): number {
+    if (dragging === null || insertAt === null) return 0;
+    if (index === dragging) return dragOffset;
+    const h = itemHeightRef.current;
+    if (dragging > insertAt && index >= insertAt && index < dragging) return h;
+    if (dragging < insertAt && index > dragging && index <= insertAt) return -h;
+    return 0;
   }
 
   const rankLabel = ["1st", "2nd", "3rd", "4th"];
@@ -179,29 +213,42 @@ function DraggableGroupCard({
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
       <h3 className="font-bold text-gray-800 text-lg mb-1">{group.name}</h3>
       <p className="text-xs text-gray-400 mb-3">Drag to rank — top 2 advance</p>
-      <div className="space-y-1.5">
-        {order.map((team, index) => (
-          <div
-            key={team.id}
-            draggable
-            onDragStart={() => handleDragStart(index)}
-            onDragEnter={() => handleDragEnter(index)}
-            onDragOver={(e) => e.preventDefault()}
-            onDragEnd={handleDragEnd}
-            className={`flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 cursor-grab active:cursor-grabbing select-none transition-all
-              ${rankColors[index]}
-              ${overIndex === index ? "scale-105 shadow-md" : ""}
-              ${dragIndex === index ? "opacity-40" : "opacity-100"}
-            `}
-          >
-            <span className="text-gray-300 text-lg leading-none select-none">⠿</span>
-            <FlagIcon cc={team.cc} name={team.name} className="w-7 h-5" />
-            <span className="text-sm font-medium truncate">{team.name}</span>
-            <span className={`ml-auto text-xs font-bold ${index < 2 ? "" : "text-gray-300"}`}>
-              {rankLabel[index]}
-            </span>
-          </div>
-        ))}
+      <div ref={containerRef} className="space-y-1.5" style={{ touchAction: "none" }}>
+        {order.map((team, index) => {
+          const isDragging = dragging === index;
+          const translateY = getTranslateY(index);
+          const visualIndex =
+            dragging !== null && insertAt !== null
+              ? getVisualIndex(index, dragging, insertAt)
+              : index;
+          return (
+            <div
+              key={team.id}
+              onPointerDown={(e) => handlePointerDown(e, index)}
+              onPointerMove={(e) => handlePointerMove(e, index)}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerUp}
+              style={{
+                transform: `translateY(${translateY}px)`,
+                transition: isDragging ? "box-shadow 150ms ease" : "transform 200ms ease",
+                zIndex: isDragging ? 10 : 1,
+                position: "relative",
+                boxShadow: isDragging ? "0 8px 24px rgba(0,0,0,0.13)" : undefined,
+              }}
+              className={`flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 select-none
+                ${isDragging ? "cursor-grabbing" : "cursor-grab"}
+                ${rankColors[visualIndex]}
+              `}
+            >
+              <span className="text-gray-300 text-lg leading-none">⠿</span>
+              <FlagIcon cc={team.cc} name={team.name} className="w-7 h-5" />
+              <span className="text-sm font-medium truncate">{team.name}</span>
+              <span className={`ml-auto text-xs font-bold ${visualIndex < 2 ? "" : "opacity-30"}`}>
+                {rankLabel[visualIndex]}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -384,9 +431,25 @@ function PowerRow({ name, description }: { name: string; description: string }) 
 }
 
 function RulesTab() {
+  const [zoom, setZoom] = useState<1 | 1.25 | 1.5>(1);
   return (
     <div className="bg-gray-50 min-h-screen">
       <div className="max-w-2xl mx-auto px-4 py-8">
+        <div className="flex justify-end gap-1 mb-4">
+          {([1, 1.25, 1.5] as const).map((z, i) => (
+            <button
+              key={z}
+              onClick={() => setZoom(z)}
+              className={`rounded-lg px-2.5 py-1 font-bold leading-none transition-colors border
+                ${zoom === z ? "bg-green-700 text-white border-green-700" : "bg-white text-gray-500 border-gray-200 hover:border-green-400"}`}
+              style={{ fontSize: `${0.75 + i * 0.15}rem` }}
+              title={["Normal", "Large", "Extra large"][i]}
+            >
+              A
+            </button>
+          ))}
+        </div>
+      <div style={{ zoom }}>
 
         <Section title="How It Works">
           <div className="space-y-4 text-gray-700 leading-relaxed">
@@ -496,6 +559,7 @@ function RulesTab() {
           </div>
         </Section>
 
+      </div>
       </div>
     </div>
   );
