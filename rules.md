@@ -71,10 +71,6 @@ Everyone wins something. Awards are announced after the Final.
 | **The Closer** | Most points scored in the quarterfinals and beyond — peaked at the right time |
 | **Dark Horse Whisperer** | Named the lowest-ranked team to make the deepest run |
 | **Bracket Brainiac** | Highest accuracy percentage in the knockout rounds |
-
----
-
-| **The Opener** | Most points in the Round of 32 — rewards doing the homework nobody else did |
 | **Dead Cert** | Correctly predicted the winner of every group (1st place, all 12) — near impossible |
 
 ### Funny & Consolation Awards
@@ -88,11 +84,6 @@ Everyone wins something. Awards are announced after the Final.
 | **The Trendsetter** | Made the most unique picks that nobody else made — a true contrarian |
 | **Reverse Oracle** | Most incorrect predictions overall — so reliably wrong you're almost useful |
 
----
-
-| **The Broken Clock** | Highest score in a single round but still finished last overall — right twice a day |
-| **Enthusiastic Supporter** | Most group stage correct picks whose teams all crashed out in the Round of 32 — the group stage was their whole personality |
-
 ### Skill Awards
 
 | Award | Description |
@@ -101,11 +92,6 @@ Everyone wins something. Awards are announced after the Final.
 | **Upset Artist** | Most correctly predicted upsets (lower-ranked team beats higher-ranked) |
 | **Crystal Ball** | Most total correct picks by raw count across the whole tournament |
 
----
-
-| **The Surgeon** | Best accuracy in the Round of 16 specifically — the most chaotic, unpredictable round |
-| **Efficient** | Highest points-per-pick ratio — fewest picks needed to score the most |
-
 ### Special Awards
 
 | Award | Description |
@@ -113,11 +99,7 @@ Everyone wins something. Awards are announced after the Final.
 | **Rookie Star** | Best score among players age 10 and under — kids compete against each other |
 | **Comeback Kid** | Biggest point swing — most improved from the bottom half of the standings to the top |
 | **The Commentator** | Most enthusiastic trash-talker on the family leaderboard (voted, not scored) |
-
----
-
-| **The Diplomat** | Voted by everyone — nicest, most gracious loser of the tournament |
-| **Last Standing** | Final player whose champion pick was still alive — even if they eventually lost |
+| **The Hipster** | Whose champion pick was the most obscure team that went the farthest — scored as seed × rounds advanced, so a rank-40 team reaching the semifinals (4 rounds) beats a rank-8 team winning it all (6 rounds) |
 
 ---
 
