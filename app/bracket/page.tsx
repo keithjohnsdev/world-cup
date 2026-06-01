@@ -634,15 +634,39 @@ export default function BracketPage() {
       <NavHeader
         className="border-b border-white/10"
         style={{ background: "linear-gradient(160deg, #060d1a 0%, #0d2137 50%, #0a1a0f 100%)" }}
-        center={
-          <div className="text-center select-none">
+        left={
+          <div className="select-none">
             <div className="leading-none">
-              <span className="font-black text-white uppercase tracking-tight text-base">Johnsies </span>
-              <span className="font-black text-amber-400 uppercase tracking-tight text-base">World Cup</span>
+              <span className="font-black text-white uppercase tracking-tight text-sm">Johnsies </span>
+              <span className="font-black text-amber-400 uppercase tracking-tight text-sm">World Cup</span>
             </div>
-            <div className="text-green-400 text-[9px] font-black uppercase tracking-[0.25em] mt-0.5">
-              2026 · Family Bracket Challenge
+            <div className="text-green-600 text-[8px] font-black uppercase tracking-[0.2em] mt-0.5">
+              2026
             </div>
+          </div>
+        }
+        center={
+          <div className="flex items-end">
+            {(["rules", "groups", "bracket"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`py-3 px-4 text-xs font-black uppercase tracking-[0.15em] whitespace-nowrap border-b-2 transition-all cursor-pointer ${
+                  tab === t
+                    ? "border-yellow-300 text-yellow-300"
+                    : "border-transparent text-green-500 hover:text-white hover:border-green-500"
+                }`}
+                style={tab !== t ? undefined : { textShadow: "0 0 16px rgba(253,224,71,0.7)" }}
+              >
+                {t === "groups" ? `Groups (${groupPickCount}/12)` : t === "bracket" ? "Knockout" : "The Rules"}
+              </button>
+            ))}
+            <a
+              href="/learn"
+              className="py-3 px-4 text-xs font-black uppercase tracking-[0.15em] whitespace-nowrap border-b-2 border-transparent text-green-500 hover:text-white hover:border-green-500 transition-all"
+            >
+              🌍 The World
+            </a>
           </div>
         }
         right={
@@ -668,29 +692,6 @@ export default function BracketPage() {
         </div>
       )}
 
-      {/* Tab bar */}
-      <div className="bg-brand-800 border-b border-brand-700 flex justify-center">
-        {(["rules", "groups", "bracket"] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`py-3 px-6 text-xs font-black uppercase tracking-[0.2em] whitespace-nowrap border-b-2 transition-all cursor-pointer ${
-              tab === t
-                ? "border-yellow-300 text-yellow-300"
-                : "border-transparent text-green-500 hover:text-white hover:border-green-500"
-            }`}
-            style={tab !== t ? undefined : { textShadow: "0 0 16px rgba(253,224,71,0.7)" }}
-          >
-            {t === "groups" ? `Groups (${groupPickCount}/12)` : t === "bracket" ? "Knockout Bracket" : "The Rules"}
-          </button>
-        ))}
-        <a
-          href="/learn"
-          className="py-3 px-6 text-xs font-black uppercase tracking-[0.2em] whitespace-nowrap border-b-2 border-transparent text-green-500 hover:text-white hover:border-green-500 transition-all"
-        >
-          🌍 The World
-        </a>
-      </div>
 
       {/* Groups tab */}
       {tab === "groups" && (
