@@ -4,6 +4,9 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { GROUPS, getTeam, type Team } from "@/lib/data";
 import { FlagIcon } from "@/components/FlagIcon";
+import { NavHeader } from "@/components/ui/NavHeader";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 
 type Picks = Record<string, string>; // key: "stage:slot" → teamId
 
@@ -672,27 +675,26 @@ export default function BracketPage() {
   }
 
   return (
-    <div className="min-h-screen bg-green-900">
-      {/* Header */}
-      <header className="bg-green-800 border-b border-green-700 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
-        <div>
-          <span className="text-white font-bold text-lg">🏆 WC 2026</span>
-          {userName && <span className="text-green-300 text-sm ml-2">— {userName}</span>}
-        </div>
-        <div className="flex items-center gap-2">
-          {saveMsg && <span className="text-green-300 text-sm">{saveMsg}</span>}
-          <button
-            onClick={saveAll}
-            disabled={saving}
-            className="bg-green-600 hover:bg-green-500 text-white text-sm px-3 py-1.5 rounded-lg font-medium transition-colors"
-          >
-            {saving ? "Saving…" : "Save All"}
-          </button>
-          <button onClick={signOut} className="text-green-400 hover:text-white text-sm transition-colors">
-            Sign out
-          </button>
-        </div>
-      </header>
+    <div className="min-h-screen bg-brand-900">
+      <NavHeader
+        left={
+          <div>
+            <span className="text-white font-bold text-lg">🏆 WC 2026</span>
+            {userName && <span className="text-brand-300 text-sm ml-2">— {userName}</span>}
+          </div>
+        }
+        right={
+          <>
+            {saveMsg && <span className="text-brand-300 text-sm">{saveMsg}</span>}
+            <Button variant="primary" size="sm" onClick={saveAll} loading={saving}>
+              Save All
+            </Button>
+            <Button variant="ghost" size="sm" onClick={signOut}>
+              Sign out
+            </Button>
+          </>
+        }
+      />
 
       {/* Champion banner */}
       {championTeam && (
@@ -704,11 +706,11 @@ export default function BracketPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex border-b border-green-700 bg-green-800 px-4">
+      <div className="flex border-b border-brand-700 bg-brand-800 px-4">
         <button
           onClick={() => setTab("groups")}
           className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
-            tab === "groups" ? "border-white text-white" : "border-transparent text-green-300 hover:text-white"
+            tab === "groups" ? "border-white text-white" : "border-transparent text-brand-300 hover:text-white"
           }`}
         >
           Groups ({groupPickCount}/12)
@@ -716,7 +718,7 @@ export default function BracketPage() {
         <button
           onClick={() => setTab("groups-drag")}
           className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
-            tab === "groups-drag" ? "border-white text-white" : "border-transparent text-green-300 hover:text-white"
+            tab === "groups-drag" ? "border-white text-white" : "border-transparent text-brand-300 hover:text-white"
           }`}
         >
           Groups (drag)
@@ -724,7 +726,7 @@ export default function BracketPage() {
         <button
           onClick={() => setTab("bracket")}
           className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
-            tab === "bracket" ? "border-white text-white" : "border-transparent text-green-300 hover:text-white"
+            tab === "bracket" ? "border-white text-white" : "border-transparent text-brand-300 hover:text-white"
           }`}
         >
           Knockout Bracket
@@ -732,7 +734,7 @@ export default function BracketPage() {
         <button
           onClick={() => setTab("rules")}
           className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
-            tab === "rules" ? "border-white text-white" : "border-transparent text-green-300 hover:text-white"
+            tab === "rules" ? "border-white text-white" : "border-transparent text-brand-300 hover:text-white"
           }`}
         >
           The Rules

@@ -1,22 +1,46 @@
 @import "tailwindcss";
 
+/* ── Brand tokens ────────────────────────────────────────────────────────────
+   To rebrand the whole app, change these values. Every component that uses
+   bg-brand-*, text-brand-*, border-brand-* will update automatically.
+   Surface tokens control the dark backgrounds on the learn / country pages.
+──────────────────────────────────────────────────────────────────────────── */
 :root {
+  --brand-950: #052e16;
+  --brand-900: #14532d;
+  --brand-800: #166534;
+  --brand-700: #15803d;
+  --brand-600: #16a34a;
+  --brand-500: #22c55e;
+  --brand-400: #4ade80;
+  --brand-300: #86efac;
+
+  --surface-deep:  #060d1a;
+  --surface-dark:  #0d1f35;
+  --surface-card:  #ffffff;
+
   --background: #ffffff;
   --foreground: #171717;
 }
 
 @theme inline {
+  --color-brand-950: var(--brand-950);
+  --color-brand-900: var(--brand-900);
+  --color-brand-800: var(--brand-800);
+  --color-brand-700: var(--brand-700);
+  --color-brand-600: var(--brand-600);
+  --color-brand-500: var(--brand-500);
+  --color-brand-400: var(--brand-400);
+  --color-brand-300: var(--brand-300);
+
+  --color-surface-deep: var(--surface-deep);
+  --color-surface-dark: var(--surface-dark);
+  --color-surface-card: var(--surface-card);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {

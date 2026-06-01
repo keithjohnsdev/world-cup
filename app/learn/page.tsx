@@ -6,6 +6,9 @@ import dynamic from "next/dynamic";
 import { getTeam } from "@/lib/data";
 import { COUNTRY_INFO } from "@/lib/countries";
 import { FlagIcon } from "@/components/FlagIcon";
+import { NavHeader } from "@/components/ui/NavHeader";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import Link from "next/link";
 
 const GlobeView = dynamic(() => import("@/components/GlobeView"), { ssr: false });
@@ -18,58 +21,51 @@ export default function LearnPage() {
   const [hoveredTeam, setHoveredTeam] = useState<string | null>(null);
   const router = useRouter();
 
-  const handleHover = useCallback((teamId: string | null) => {
-    setHoveredTeam(teamId);
-  }, []);
-
-  const handleClick = useCallback((teamId: string) => {
-    router.push(`/learn/${teamId}`);
-  }, [router]);
+  const handleHover = useCallback((teamId: string | null) => setHoveredTeam(teamId), []);
+  const handleClick = useCallback((teamId: string) => router.push(`/learn/${teamId}`), [router]);
 
   const hovered = hoveredTeam ? getTeam(hoveredTeam) : null;
   const hoveredInfo = hoveredTeam ? COUNTRY_INFO[hoveredTeam] : null;
 
   return (
-    <div className="min-h-screen bg-[#060d1a] flex flex-col">
-      {/* Header */}
-      <header className="flex items-center justify-between px-4 py-3 border-b border-white/10 z-10">
-        <div className="flex items-center gap-3">
-          <Link href="/bracket" className="text-green-400 hover:text-white text-sm transition-colors">
-            ← Back to picks
-          </Link>
-          <span className="text-white/30">|</span>
-          <h1 className="text-white font-bold">🌍 Explore the Teams</h1>
-        </div>
+    <div className="min-h-screen bg-surface-deep flex flex-col">
+      <NavHeader
+        variant="dark"
+        left={
+          <>
+            <Link href="/bracket">
+              <Button variant="ghost" size="sm">← Back to picks</Button>
+            </Link>
+            <span className="text-white/30">|</span>
+            <h1 className="text-white font-bold">🌍 Explore the Teams</h1>
+          </>
+        }
+        right={
+          <div className="flex bg-white/10 rounded-xl p-1 gap-1">
+            <Button
+              variant={view === "globe" ? "primary" : "ghost"}
+              size="sm"
+              onClick={() => setView("globe")}
+            >
+              🌐 Globe
+            </Button>
+            <Button
+              variant={view === "map" ? "primary" : "ghost"}
+              size="sm"
+              onClick={() => setView("map")}
+            >
+              🗺 Map
+            </Button>
+          </div>
+        }
+      />
 
-        {/* Globe / Map toggle */}
-        <div className="flex bg-white/10 rounded-xl p-1 gap-1">
-          <button
-            onClick={() => setView("globe")}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              view === "globe" ? "bg-green-500 text-white" : "text-white/60 hover:text-white"
-            }`}
-          >
-            🌐 Globe
-          </button>
-          <button
-            onClick={() => setView("map")}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              view === "map" ? "bg-green-500 text-white" : "text-white/60 hover:text-white"
-            }`}
-          >
-            🗺 Map
-          </button>
-        </div>
-      </header>
-
-      {/* Instruction hint */}
       <p className="text-center text-white/40 text-xs py-2">
         {view === "globe"
           ? "Rotate the globe · hover a green country · click to explore"
           : "Hover a green country · click to explore"}
       </p>
 
-      {/* Main view */}
       <div className="flex-1 relative">
         {view === "globe" ? (
           <GlobeView onHover={handleHover} onCountryClick={handleClick} />
@@ -79,22 +75,21 @@ export default function LearnPage() {
           </div>
         )}
 
-        {/* Hover info panel */}
         {hovered && hoveredInfo && (
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
-            <div className="bg-[#0d1f35]/95 backdrop-blur border border-green-500/40 rounded-2xl px-5 py-4 shadow-2xl min-w-[260px] max-w-xs">
+            <Card variant="dark" className="px-5 py-4 min-w-[260px] max-w-xs">
               <div className="flex items-center gap-3 mb-3">
                 <FlagIcon cc={hovered.cc} name={hovered.name} className="w-10 h-7 rounded" />
                 <div>
                   <div className="text-white font-bold text-lg leading-tight">{hovered.name}</div>
-                  <div className="text-green-400 text-xs font-medium">Group {hovered.group} · {hoveredInfo.capital}</div>
+                  <div className="text-brand-400 text-xs font-medium">Group {hovered.group} · {hoveredInfo.capital}</div>
                 </div>
               </div>
               <p className="text-white/70 text-xs leading-relaxed line-clamp-3">
                 {hoveredInfo.soccerHistory.split(".")[0]}.
               </p>
-              <p className="text-green-400/70 text-xs mt-2">Click to learn more →</p>
-            </div>
+              <p className="text-brand-400/70 text-xs mt-2">Click to learn more →</p>
+            </Card>
           </div>
         )}
       </div>
