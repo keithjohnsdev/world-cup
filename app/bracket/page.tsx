@@ -645,25 +645,26 @@ export default function BracketPage() {
           </div>
         }
         center={
-          <div className="flex items-end">
+          <div className="flex h-full">
             {(["rules", "groups", "bracket"] as const).map((t) => (
               <button
                 key={t}
                 onClick={e => { (e.currentTarget as HTMLElement).style.color = ""; (e.currentTarget as HTMLElement).style.textShadow = ""; setTab(t); }}
-                className={`flex items-center px-4 -mb-px text-xs font-black uppercase tracking-[0.15em] whitespace-nowrap border-b-2 transition-all cursor-pointer ${
+                className={`relative flex items-center h-full px-4 text-xs font-black uppercase tracking-[0.15em] whitespace-nowrap transition-all cursor-pointer ${
                   tab === t
-                    ? "border-yellow-300 text-yellow-300"
-                    : "border-transparent text-slate-200"
+                    ? "text-yellow-300"
+                    : "text-slate-200"
                 }`}
                 onMouseEnter={e => { if (tab !== t) { const el = e.currentTarget as HTMLElement; el.style.color = "#ffffff"; el.style.textShadow = "0 0 10px rgba(255,255,255,0.5)"; }}}
                 onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = ""; el.style.textShadow = ""; }}
               >
                 {t === "groups" ? `Groups (${groupPickCount}/12)` : t === "bracket" ? "Knockout" : "The Rules"}
+                <span className={`absolute bottom-[-1px] inset-x-0 h-[2px] ${tab === t ? "bg-yellow-300" : ""}`} />
               </button>
             ))}
             <a
               href="/learn"
-              className="flex items-center px-4 -mb-px text-xs font-black uppercase tracking-[0.15em] whitespace-nowrap border-b-2 border-transparent text-slate-200 transition-all"
+              className="relative flex items-center h-full px-4 text-xs font-black uppercase tracking-[0.15em] whitespace-nowrap text-slate-200 transition-all"
               onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.color = "#ffffff"; el.style.textShadow = "0 0 10px rgba(255,255,255,0.5)"; }}
               onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = ""; el.style.textShadow = ""; }}
             >
