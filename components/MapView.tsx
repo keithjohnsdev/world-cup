@@ -49,7 +49,7 @@ export default function MapView({ onHover, onCountryClick }: Props) {
       <ComposableMap
         projection="geoNaturalEarth1"
         projectionConfig={{ scale: 153 }}
-        viewBox="0 0 800 450"
+        viewBox="0 30 800 400"
         style={{ width: "100%", height: "100%" }}
       >
         <defs>
