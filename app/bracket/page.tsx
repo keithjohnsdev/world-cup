@@ -139,7 +139,7 @@ function DraggableGroupCard({
       </div>
 
       {/* Teams */}
-      <div className="bg-white p-3">
+      <div className="bg-gray-50 p-3">
         <div ref={containerRef} className="space-y-1.5" style={{ touchAction: "none" }}>
           {order.flatMap((team, index) => {
             const isDragging = dragging === index;
