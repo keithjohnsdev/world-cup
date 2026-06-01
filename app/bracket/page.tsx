@@ -185,16 +185,6 @@ function DraggableGroupCard({
               </div>
             );
 
-            if (index === 1) {
-              return [
-                item,
-                <div key="sep" className="flex items-center gap-2 py-0.5 select-none pointer-events-none" style={{ position: "relative", zIndex: 0 }}>
-                  <div className="h-px flex-1 bg-green-200" />
-                  <span className="text-[9px] font-black text-green-500 uppercase tracking-[0.2em] whitespace-nowrap">advances</span>
-                  <div className="h-px flex-1 bg-green-200" />
-                </div>,
-              ];
-            }
             return [item];
           })}
         </div>
