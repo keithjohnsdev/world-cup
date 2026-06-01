@@ -647,7 +647,7 @@ export default function BracketPage() {
               <button
                 key={t}
                 onClick={e => { (e.currentTarget as HTMLElement).style.color = ""; (e.currentTarget as HTMLElement).style.textShadow = ""; setTab(t); }}
-                className={`py-3 px-4 text-xs font-black uppercase tracking-[0.15em] whitespace-nowrap border-b-2 transition-all cursor-pointer ${
+                className={`py-3 px-4 -mb-px text-xs font-black uppercase tracking-[0.15em] whitespace-nowrap border-b-2 transition-all cursor-pointer ${
                   tab === t
                     ? "border-yellow-300 text-yellow-300"
                     : "border-transparent text-slate-200"
@@ -660,7 +660,7 @@ export default function BracketPage() {
             ))}
             <a
               href="/learn"
-              className="py-3 px-4 text-xs font-black uppercase tracking-[0.15em] whitespace-nowrap border-b-2 border-transparent text-slate-200 transition-all"
+              className="py-3 px-4 -mb-px text-xs font-black uppercase tracking-[0.15em] whitespace-nowrap border-b-2 border-transparent text-slate-200 transition-all"
               onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.color = "#ffffff"; el.style.textShadow = "0 0 10px rgba(255,255,255,0.5)"; }}
               onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = ""; el.style.textShadow = ""; }}
             >
