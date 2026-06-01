@@ -152,26 +152,13 @@ export default function GlobeView({ onHover, onCountryClick }: Props) {
     });
   }, [loading]);
 
-  // Update material tint + render order whenever hover changes
+  // Update material tint whenever hover changes
   useEffect(() => {
-    const hoveredMat = hoveredIso ? materialCache.current[hoveredIso] : null;
-    const wcMats = new Set(Object.values(materialCache.current));
-
     Object.entries(materialCache.current).forEach(([iso, mat]) => {
       if (!mat?.color) return;
       mat.color.setHex(iso === hoveredIso ? TINT_HOVER : TINT_NORMAL);
-      mat.depthTest = iso !== hoveredIso;
       mat.needsUpdate = true;
     });
-
-    // Push hovered polygon above the night overlay (renderOrder 10) so it cuts through
-    if (globeRef.current) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      globeRef.current.scene().traverse((obj: any) => {
-        if (!obj.isMesh || !wcMats.has(obj.material)) return;
-        obj.renderOrder = obj.material === hoveredMat ? 15 : 0;
-      });
-    }
   }, [hoveredIso]);
 
   const handlePolygonHover = (feature: unknown) => {
