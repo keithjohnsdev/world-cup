@@ -582,10 +582,11 @@ function KidPowerSection({ picks, onPick }: { picks: Picks; onPick: (stage: stri
             <div className="flex items-center justify-center gap-3">
               <div className="h-px w-10 bg-gradient-to-r from-transparent to-red-400/60" />
               <h2 className="font-black uppercase leading-none text-red-400" style={{ fontSize: "clamp(2.2rem, 7vw, 3rem)", letterSpacing: "-0.02em" }}>
-                ❤️ Heart Team
+                Heart Team
               </h2>
               <div className="h-px w-10 bg-gradient-to-l from-transparent to-red-400/60" />
             </div>
+            <div className="text-3xl mt-1">❤️</div>
             <p className="text-white/75 text-sm mt-3">Your favourite team — every game they win earns you +1 bonus point, even ones you didn&apos;t pick.</p>
           </div>
           <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-1.5">
