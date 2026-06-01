@@ -412,10 +412,10 @@ function RulesTab() {
             </h2>
 
             {/* body */}
-            <div className="space-y-4 text-base text-green-100 leading-relaxed mb-9">
-              <p>Forty-eight nations. Six continents. One trophy.</p>
-              <p>Underdogs do the impossible. Giants crumble. Heroes etch their names in eternity.</p>
-              <p>And somewhere in all that chaos and beauty, somebody in this family is going to get it <em className="text-white not-italic font-semibold">exactly right.</em></p>
+            <div className="space-y-3 mb-9">
+              <p className="text-lg font-black italic tracking-tight text-green-100 leading-snug">Forty-eight nations. Six continents. One trophy.</p>
+              <p className="text-lg font-black italic tracking-tight text-green-100 leading-snug">Underdogs do the impossible. Giants crumble. Heroes etch their names in eternity.</p>
+              <p className="text-lg font-black italic tracking-tight text-green-100 leading-snug">And somewhere in all that chaos and beauty, somebody in this family is going to get it <span className="text-white">exactly right.</span></p>
             </div>
 
             {/* call to action */}
