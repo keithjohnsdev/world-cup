@@ -83,9 +83,10 @@ export default function MapView({ onHover, onCountryClick }: Props) {
 
               const fill = !isWC ? "#1e3a5f" : `url(#flag-${teamId})`;
               const stroke = isWC
-                ? isHovered ? "#ffffff" : "rgba(255,255,255,0.3)"
+                ? isHovered ? "#ffffff" : "rgba(255,255,255,0.2)"
                 : "#0f2340";
               const strokeWidth = isHovered ? 1.5 : 0.5;
+              const opacity = !isWC ? 1 : isHovered ? 1 : 0.45;
 
               return (
                 <Geography
@@ -95,9 +96,9 @@ export default function MapView({ onHover, onCountryClick }: Props) {
                   stroke={stroke}
                   strokeWidth={strokeWidth}
                   style={{
-                    default: { outline: "none" },
-                    hover: { outline: "none" },
-                    pressed: { outline: "none" },
+                    default: { outline: "none", opacity },
+                    hover: { outline: "none", opacity },
+                    pressed: { outline: "none", opacity },
                   }}
                   onMouseEnter={isWC ? () => handleMouseEnter(teamId!) : undefined}
                   onMouseLeave={isWC ? handleMouseLeave : undefined}
