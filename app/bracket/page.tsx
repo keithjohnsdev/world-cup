@@ -411,11 +411,14 @@ function RulesTab() {
             {/* body */}
             <div className="space-y-4 text-base text-green-100 leading-relaxed mb-9">
               <p>
-                Forty-eight nations. Six continents. One trophy. Underdogs do the impossible.
+                Forty-eight nations. Six continents. One trophy.
+              </p>
+              <p>
+                Underdogs do the impossible.
                 Giants crumble. Heroes etch their names in eternity.
               </p>
               <p>
-                Somewhere in all that chaos and beauty, somebody in this family is going to
+                And somewhere in all that chaos and beauty, somebody in this family is going to
                 get it <em className="text-white not-italic font-semibold">exactly right.</em>
               </p>
             </div>
@@ -423,8 +426,10 @@ function RulesTab() {
             {/* call to action */}
             <div className="flex items-center gap-4">
               <div className="h-px flex-1 bg-green-700" />
-              <p className="text-sm font-black uppercase tracking-[0.2em] text-yellow-300">
-                Study the flags. Trust your gut. Make your picks.
+              <p className="text-sm font-black uppercase tracking-[0.2em] text-yellow-300 text-center">
+                Study the flags.<br />
+                Trust your gut.<br />
+                Make your picks.
               </p>
               <div className="h-px flex-1 bg-green-700" />
             </div>
@@ -551,7 +556,7 @@ function RulesTab() {
 
 export default function BracketPage() {
   const [picks, setPicks] = useState<Picks>({});
-  const [tab, setTab] = useState<"groups" | "bracket" | "rules">("groups");
+  const [tab, setTab] = useState<"groups" | "bracket" | "rules">("rules");
   const [userName, setUserName] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
