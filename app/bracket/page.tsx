@@ -643,6 +643,12 @@ export default function BracketPage() {
         >
           The Rules
         </button>
+        <a
+          href="/learn"
+          className="py-3 px-4 text-sm font-medium border-b-2 border-transparent text-brand-300 hover:text-white transition-colors"
+        >
+          🌍 The World
+        </a>
       </div>
 
       {/* Groups tab */}
