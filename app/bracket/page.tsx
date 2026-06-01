@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { GROUPS, getTeam, type Team } from "@/lib/data";
 import { FlagIcon } from "@/components/FlagIcon";
@@ -106,6 +106,102 @@ function GroupCard({
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+function DraggableGroupCard({
+  group,
+  picks,
+  onPick,
+}: {
+  group: (typeof GROUPS)[0];
+  picks: Picks;
+  onPick: (stage: string, slot: string, teamId: string) => void;
+}) {
+  const [order, setOrder] = useState<Team[]>([...group.teams]);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [overIndex, setOverIndex] = useState<number | null>(null);
+  const hasInitialized = useRef(false);
+
+  // Once picks load from server, arrange winner/runner-up at the top
+  useEffect(() => {
+    if (hasInitialized.current) return;
+    const winner = picks[`group:${group.id}`];
+    const runnerUp = picks[`runner:${group.id}`];
+    if (!winner && !runnerUp) return;
+    hasInitialized.current = true;
+    const winnerTeam = group.teams.find((t) => t.id === winner);
+    const runnerTeam = group.teams.find((t) => t.id === runnerUp);
+    const rest = group.teams.filter((t) => t.id !== winner && t.id !== runnerUp);
+    const ordered: Team[] = [];
+    if (winnerTeam) ordered.push(winnerTeam);
+    if (runnerTeam) ordered.push(runnerTeam);
+    ordered.push(...rest);
+    setOrder(ordered);
+  }, [picks, group]);
+
+  function handleDragStart(index: number) {
+    setDragIndex(index);
+  }
+
+  function handleDragEnter(index: number) {
+    if (index !== dragIndex) setOverIndex(index);
+  }
+
+  function handleDragEnd() {
+    if (dragIndex !== null && overIndex !== null && dragIndex !== overIndex) {
+      const newOrder = [...order];
+      const [moved] = newOrder.splice(dragIndex, 1);
+      newOrder.splice(overIndex, 0, moved);
+      setOrder(newOrder);
+
+      // Sync top-2 positions to picks
+      const newWinner = newOrder[0];
+      const newRunner = newOrder[1];
+      if (newWinner.id !== picks[`group:${group.id}`]) onPick("group", group.id, newWinner.id);
+      if (newRunner.id !== picks[`runner:${group.id}`]) onPick("runner", group.id, newRunner.id);
+    }
+    setDragIndex(null);
+    setOverIndex(null);
+  }
+
+  const rankLabel = ["1st", "2nd", "3rd", "4th"];
+  const rankColors = [
+    "border-green-500 bg-green-50 text-green-700",
+    "border-blue-400 bg-blue-50 text-blue-600",
+    "border-gray-200 bg-white text-gray-300",
+    "border-gray-200 bg-white text-gray-300",
+  ];
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+      <h3 className="font-bold text-gray-800 text-lg mb-1">{group.name}</h3>
+      <p className="text-xs text-gray-400 mb-3">Drag to rank — top 2 advance</p>
+      <div className="space-y-1.5">
+        {order.map((team, index) => (
+          <div
+            key={team.id}
+            draggable
+            onDragStart={() => handleDragStart(index)}
+            onDragEnter={() => handleDragEnter(index)}
+            onDragOver={(e) => e.preventDefault()}
+            onDragEnd={handleDragEnd}
+            className={`flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 cursor-grab active:cursor-grabbing select-none transition-all
+              ${rankColors[index]}
+              ${overIndex === index ? "scale-105 shadow-md" : ""}
+              ${dragIndex === index ? "opacity-40" : "opacity-100"}
+            `}
+          >
+            <span className="text-gray-300 text-lg leading-none select-none">⠿</span>
+            <FlagIcon cc={team.cc} name={team.name} className="w-7 h-5" />
+            <span className="text-sm font-medium truncate">{team.name}</span>
+            <span className={`ml-auto text-xs font-bold ${index < 2 ? "" : "text-gray-300"}`}>
+              {rankLabel[index]}
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -407,7 +503,7 @@ function RulesTab() {
 
 export default function BracketPage() {
   const [picks, setPicks] = useState<Picks>({});
-  const [tab, setTab] = useState<"groups" | "bracket" | "rules">("groups");
+  const [tab, setTab] = useState<"groups" | "groups-drag" | "bracket" | "rules">("groups");
   const [userName, setUserName] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
@@ -538,6 +634,14 @@ export default function BracketPage() {
           Groups ({groupPickCount}/12)
         </button>
         <button
+          onClick={() => setTab("groups-drag")}
+          className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
+            tab === "groups-drag" ? "border-white text-white" : "border-transparent text-green-300 hover:text-white"
+          }`}
+        >
+          Groups (drag)
+        </button>
+        <button
           onClick={() => setTab("bracket")}
           className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
             tab === "bracket" ? "border-white text-white" : "border-transparent text-green-300 hover:text-white"
@@ -564,6 +668,20 @@ export default function BracketPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {GROUPS.map((group) => (
               <GroupCard key={group.id} group={group} picks={picks} onPick={handlePick} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Groups (drag) tab */}
+      {tab === "groups-drag" && (
+        <div className="p-4 max-w-5xl mx-auto">
+          <p className="text-green-300 text-sm mb-4 text-center">
+            Drag teams to rank them — 1st and 2nd place advance to the knockout round.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {GROUPS.map((group) => (
+              <DraggableGroupCard key={group.id} group={group} picks={picks} onPick={handlePick} />
             ))}
           </div>
         </div>
