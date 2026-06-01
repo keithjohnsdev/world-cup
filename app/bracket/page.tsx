@@ -927,9 +927,7 @@ export default function BracketPage() {
           {worldView === "globe" ? (
             <GlobeView onHover={handleGlobeHover} onCountryClick={handleGlobeClick} />
           ) : (
-            <div className="h-full flex items-center">
-              <MapView onHover={handleGlobeHover} onCountryClick={handleGlobeClick} />
-            </div>
+            <MapView onHover={handleGlobeHover} onCountryClick={handleGlobeClick} />
           )}
           {hoveredTeam && COUNTRY_INFO[hoveredTeam] && (() => {
             const team = getTeam(hoveredTeam);
