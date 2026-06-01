@@ -395,11 +395,11 @@ function RulesTab() {
 
         <div className="relative rounded-2xl overflow-hidden mb-10 bg-green-950 text-white">
           <div className="px-8 pt-10 pb-11 text-center">
-            {/* official emblem */}
+            {/* Johnsies logo */}
             <img
-              src="https://upload.wikimedia.org/wikipedia/commons/1/17/2026_FIFA_World_Cup_emblem.svg"
-              alt="2026 FIFA World Cup"
-              className="w-28 h-auto mx-auto mb-8"
+              src="/johnsies-logo.svg"
+              alt="Johnsies World Cup 2026"
+              className="w-36 h-auto mx-auto mb-8"
             />
 
             {/* headline */}

@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 390" fill="none">
+  <defs>
+    <linearGradient id="shield-stroke" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fbbf24" stop-opacity="1"/>
+      <stop offset="65%" stop-color="#fbbf24" stop-opacity="0.65"/>
+      <stop offset="100%" stop-color="#fbbf24" stop-opacity="0.2"/>
+    </linearGradient>
+    <linearGradient id="shield-stroke-inner" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fbbf24" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#fbbf24" stop-opacity="0.05"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Outer shield -->
+  <path
+    d="M 22 16 H 278 Q 294 16 294 32 V 222 L 150 382 L 6 222 V 32 Q 6 16 22 16 Z"
+    stroke="url(#shield-stroke)"
+    stroke-width="2.5"
+  />
+
+  <!-- Inner shield (subtle inset) -->
+  <path
+    d="M 34 28 H 266 Q 280 28 280 42 V 218 L 150 364 L 20 218 V 42 Q 20 28 34 28 Z"
+    stroke="url(#shield-stroke-inner)"
+    stroke-width="1"
+  />
+
+  <!-- Stars row -->
+  <text x="104" y="70" text-anchor="middle" font-size="13" fill="#fbbf24" opacity="0.8">★</text>
+  <text x="150" y="75" text-anchor="middle" font-size="20" fill="#fbbf24">★</text>
+  <text x="196" y="70" text-anchor="middle" font-size="13" fill="#fbbf24" opacity="0.8">★</text>
+
+  <!-- JOHNSIES -->
+  <text
+    x="150" y="143"
+    text-anchor="middle"
+    font-family="'Arial Black', Impact, 'Helvetica Neue', Arial, sans-serif"
+    font-weight="900"
+    font-size="41"
+    fill="white"
+    letter-spacing="-1"
+  >JOHNSIES</text>
+
+  <!-- Divider: line · diamond · line -->
+  <line x1="40" y1="160" x2="126" y2="160" stroke="#fbbf24" stroke-width="1.5" opacity="0.7"/>
+  <polygon points="150,154 156,160 150,166 144,160" fill="#fbbf24"/>
+  <line x1="174" y1="160" x2="260" y2="160" stroke="#fbbf24" stroke-width="1.5" opacity="0.7"/>
+
+  <!-- WORLD CUP -->
+  <text
+    x="150" y="202"
+    text-anchor="middle"
+    font-family="'Arial Black', Impact, 'Helvetica Neue', Arial, sans-serif"
+    font-weight="900"
+    font-size="24"
+    fill="#fbbf24"
+    letter-spacing="5"
+  >WORLD CUP</text>
+
+  <!-- 2026 -->
+  <text
+    x="150" y="274"
+    text-anchor="middle"
+    font-family="'Arial Black', Impact, 'Helvetica Neue', Arial, sans-serif"
+    font-weight="900"
+    font-size="62"
+    fill="white"
+    letter-spacing="-2"
+  >2026</text>
+
+  <!-- Accent dots: green · amber · green -->
+  <circle cx="126" cy="312" r="3.5" fill="#4ade80" opacity="0.75"/>
+  <circle cx="150" cy="312" r="3.5" fill="#fbbf24"/>
+  <circle cx="174" cy="312" r="3.5" fill="#4ade80" opacity="0.75"/>
+</svg>
