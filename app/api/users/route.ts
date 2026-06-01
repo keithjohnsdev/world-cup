@@ -10,9 +10,17 @@ export async function POST(req: NextRequest) {
 
   await initDb();
   const sql = getSql();
+  const trimmed = name.trim();
+
+  const existing = (await sql`
+    SELECT id, name, session_token FROM users WHERE LOWER(name) = LOWER(${trimmed})
+  `) as { id: number; name: string; session_token: string }[];
+
+  if (existing.length) return NextResponse.json(existing[0]);
+
   const token = randomBytes(32).toString("hex");
   const rows = (await sql`
-    INSERT INTO users (name, session_token) VALUES (${name.trim()}, ${token})
+    INSERT INTO users (name, session_token) VALUES (${trimmed}, ${token})
     RETURNING id, name, session_token
   `) as { id: number; name: string; session_token: string }[];
   return NextResponse.json(rows[0]);
