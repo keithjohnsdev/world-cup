@@ -119,20 +119,20 @@ function DraggableGroupCard({
   return (
     <div className="rounded-2xl overflow-hidden shadow-lg" style={{ border: "1px solid rgba(255,255,255,0.07)" }}>
       {/* Card header */}
-      <div className="bg-surface-dark px-4 py-3 flex items-center justify-between">
+      <div className="bg-yellow-400 px-4 py-3 flex items-center justify-between">
         <div className="flex items-baseline gap-1.5">
-          <span className="text-brand-400 text-[10px] font-bold uppercase tracking-[0.25em]">Group</span>
-          <span className="text-white font-black text-3xl leading-none">{group.id}</span>
+          <span className="text-yellow-800 text-[10px] font-bold uppercase tracking-[0.25em]">Group</span>
+          <span className="text-green-950 font-black text-3xl leading-none">{group.id}</span>
         </div>
         <div className="flex items-center gap-1.5">
           {[top1, top2].map((t, i) =>
             t ? (
-              <div key={i} className="flex items-center gap-1 rounded-lg px-1.5 py-0.5" style={{ background: "rgba(255,255,255,0.12)" }}>
+              <div key={i} className="flex items-center gap-1 rounded-lg px-1.5 py-0.5 bg-green-900/20">
                 <FlagIcon cc={t.cc} name={t.name} className="w-5 h-3.5" />
-                <span className="text-white/60 text-[10px] font-bold">{i === 0 ? "1st" : "2nd"}</span>
+                <span className="text-green-900 text-[10px] font-bold">{i === 0 ? "1st" : "2nd"}</span>
               </div>
             ) : (
-              <div key={i} className="w-14 h-6 rounded-lg" style={{ background: "rgba(255,255,255,0.07)" }} />
+              <div key={i} className="w-14 h-6 rounded-lg bg-green-900/10" />
             )
           )}
         </div>
@@ -698,14 +698,14 @@ export default function BracketPage() {
 
       {/* Groups tab */}
       {tab === "groups" && (
-        <div className="bg-stone-300 min-h-screen">
+        <div className="bg-green-950 min-h-screen">
           <div className="p-4 max-w-5xl mx-auto">
-            <div className="mb-6 mt-2">
-              <div className="text-[0.6rem] font-black uppercase tracking-[0.3em] text-green-700 mb-1.5">— Section</div>
-              <h2 className="text-2xl font-black uppercase text-gray-900 leading-none" style={{ letterSpacing: "-0.01em" }}>The Group Stage</h2>
-              <div className="mt-3 h-px bg-gradient-to-r from-green-600 via-yellow-400 to-transparent" />
-              <p className="text-gray-500 text-sm mt-3">
-                Drag teams to rank all four finishing positions — top 2 advance to the knockout round.
+            <div className="mb-6 mt-4 text-center">
+              <h2 className="font-black uppercase leading-none text-white" style={{ fontSize: "clamp(2.5rem, 8vw, 3.5rem)", letterSpacing: "-0.02em" }}>
+                The <span className="text-yellow-300">Group Stage</span>
+              </h2>
+              <p className="text-white/50 text-sm mt-3">
+                Drag teams to rank all four finishing positions — top 2 advance.
               </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
