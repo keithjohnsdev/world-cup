@@ -1,5 +1,7 @@
 # World Cup 2026 Family Bracket Challenge — Rules & Scoring
 
+Every four years, the world stops. Forty-eight nations travel from six continents to prove something — to themselves, to their history, to a billion people watching from living rooms and rooftops and corner bars. Underdogs do the impossible. Giants crumble. Heroes rise to etch their names in eternity. And somewhere in all of that chaos and beauty, somebody in this family is going to get it exactly right. This is your chance to be that person. Study the flags. Trust your gut. Make your picks. And when the final whistle blows in July, may your bracket be the last one standing.
+
 ## How It Works
 
 Picking happens in **two phases** so that knockout picks are always based on real teams, not guesses on top of guesses.
