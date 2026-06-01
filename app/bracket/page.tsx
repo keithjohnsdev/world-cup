@@ -863,8 +863,8 @@ export default function BracketPage() {
           <div className="text-center">
             <div className="text-amber-900 text-[10px] font-black uppercase tracking-[0.25em] opacity-70">Your Champion</div>
             <div className="flex items-center gap-2 justify-center mt-0.5">
-              <FlagIcon cc={championTeam.cc} name={championTeam.name} className="w-8 h-6 rounded shadow" />
-              <span className="font-black text-amber-900 text-lg leading-tight">{championTeam.name}</span>
+              <FlagIcon cc={championTeam!.cc} name={championTeam!.name} className="w-8 h-6 rounded shadow" />
+              <span className="font-black text-amber-900 text-lg leading-tight">{championTeam!.name}</span>
             </div>
           </div>
           <span className="text-2xl">🏆</span>
