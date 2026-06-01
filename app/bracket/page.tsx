@@ -667,14 +667,14 @@ export default function BracketPage() {
         </div>
       )}
 
-      {/* Tab navigation */}
-      <div className="bg-green-950">
-        <div className="flex overflow-x-auto px-2">
+      {/* Tab navigation — inside the content column */}
+      <div className="max-w-2xl mx-auto px-4 pt-6">
+        <div className="flex overflow-x-auto -mx-4 px-4">
           {(["rules", "groups", "bracket"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`py-4 px-5 text-xs font-black uppercase tracking-[0.2em] whitespace-nowrap border-b-2 transition-colors ${
+              className={`py-3 px-4 text-xs font-black uppercase tracking-[0.2em] whitespace-nowrap border-b-2 transition-colors ${
                 tab === t
                   ? "border-yellow-300 text-yellow-300"
                   : "border-transparent text-green-500 hover:text-green-300"
