@@ -374,8 +374,8 @@ function RulesTab() {
   const [zoom, setZoom] = useState<1 | 1.25 | 1.5>(1);
   return (
     <div className="bg-green-950 min-h-screen">
-      {/* Font size picker — fixed top-right, always visible */}
-      <div className="fixed top-16 right-3 z-50 flex items-center gap-1">
+      {/* Font size picker — hidden for now */}
+      <div className="hidden fixed top-16 right-3 z-50 flex items-center gap-1">
         {([1, 1.25, 1.5] as const).map((z, i) => (
           <button
             key={z}
