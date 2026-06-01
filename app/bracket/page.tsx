@@ -544,7 +544,8 @@ function ChampionPicker({ picks, onPick }: { picks: Picks; onPick: (stage: strin
   return (
     <div className="max-w-5xl mx-auto px-4 pb-10">
       <div className="mt-10 mb-5 text-center">
-        <p className="font-black uppercase leading-none text-white mb-1" style={{ fontSize: "clamp(2.2rem, 7vw, 3rem)", letterSpacing: "-0.02em" }}>Choose your</p>
+        <div className="h-px bg-gradient-to-r from-transparent via-white/15 to-transparent mb-10" />
+        <p className="font-black uppercase leading-none text-white mb-1" style={{ fontSize: "clamp(1rem, 3vw, 1.25rem)", letterSpacing: "-0.01em" }}>Choose your</p>
         <div className="flex items-center justify-center gap-3">
           <div className="h-px w-10 bg-gradient-to-r from-transparent to-yellow-300/60" />
           <h2 className="font-black uppercase leading-none text-yellow-300" style={{ fontSize: "clamp(2.2rem, 7vw, 3rem)", letterSpacing: "-0.02em" }}>
