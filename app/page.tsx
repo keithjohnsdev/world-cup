@@ -134,7 +134,7 @@ export default function Home() {
       const data = await res.json();
       localStorage.setItem("wc_token", data.session_token);
       localStorage.setItem("wc_name", data.name);
-      router.push("/bracket");
+      router.push(data.is_new ? "/bracket" : "/bracket?tab=groups");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
