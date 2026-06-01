@@ -654,7 +654,7 @@ export default function BracketPage() {
                 className={`py-3 px-4 text-xs font-black uppercase tracking-[0.15em] whitespace-nowrap border-b-2 transition-all cursor-pointer ${
                   tab === t
                     ? "border-yellow-300 text-yellow-300"
-                    : "border-transparent text-green-500 hover:text-white hover:border-green-500"
+                    : "border-transparent text-amber-100/50 hover:text-white hover:border-white/40"
                 }`}
                 style={tab !== t ? undefined : { textShadow: "0 0 16px rgba(253,224,71,0.7)" }}
               >
@@ -663,7 +663,7 @@ export default function BracketPage() {
             ))}
             <a
               href="/learn"
-              className="py-3 px-4 text-xs font-black uppercase tracking-[0.15em] whitespace-nowrap border-b-2 border-transparent text-green-500 hover:text-white hover:border-green-500 transition-all"
+              className="py-3 px-4 text-xs font-black uppercase tracking-[0.15em] whitespace-nowrap border-b-2 border-transparent text-amber-100/50 hover:text-white hover:border-white/40 transition-all"
             >
               🌍 The World
             </a>
