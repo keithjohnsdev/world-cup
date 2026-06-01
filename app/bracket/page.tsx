@@ -685,6 +685,12 @@ export default function BracketPage() {
               {t === "groups" ? `Groups (${groupPickCount}/12)` : t === "bracket" ? "Knockout Bracket" : "The Rules"}
             </button>
           ))}
+          <a
+            href="/learn"
+            className="py-3 px-6 text-xs font-black uppercase tracking-[0.2em] whitespace-nowrap border-b-2 border-transparent text-green-500 hover:text-white hover:border-green-500 transition-all"
+          >
+            🌍 The World
+          </a>
         </div>
       </div>
 
