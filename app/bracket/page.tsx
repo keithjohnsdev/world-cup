@@ -324,8 +324,12 @@ function buildSFMatches(qfmatches: { slot: string }[], picks: Picks) {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="mb-10">
-      <h2 className="text-xl font-bold text-green-900 border-b-2 border-green-200 pb-2 mb-4">{title}</h2>
+    <section className="mb-12">
+      <div className="mb-6">
+        <div className="text-[0.6rem] font-black uppercase tracking-[0.3em] text-green-500 mb-1.5">— Section</div>
+        <h2 className="text-2xl font-black uppercase text-white leading-none" style={{ letterSpacing: "-0.01em" }}>{title}</h2>
+        <div className="mt-3 h-px bg-gradient-to-r from-yellow-300 via-green-600 to-transparent" />
+      </div>
       {children}
     </section>
   );
@@ -333,8 +337,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function Sub({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="mb-6">
-      <h3 className="text-base font-bold text-green-800 mb-3">{title}</h3>
+    <div className="mb-7">
+      <div className="text-xs font-black uppercase tracking-[0.2em] text-green-400 mb-3">{title}</div>
       {children}
     </div>
   );
@@ -342,30 +346,27 @@ function Sub({ title, children }: { title: string; children: React.ReactNode }) 
 
 function ScoreRow({ label, pts }: { label: string; pts: string }) {
   return (
-    <div className="flex justify-between items-center py-2.5 border-b border-gray-100 last:border-0">
-      <span className="text-gray-700">{label}</span>
-      <span className="font-bold text-green-700 tabular-nums ml-4 shrink-0">{pts}</span>
+    <div className="flex justify-between items-center py-3 border-b border-green-800 last:border-0">
+      <span className="text-green-100 text-sm">{label}</span>
+      <span className="font-black text-yellow-300 tabular-nums ml-4 shrink-0 text-sm">{pts}</span>
     </div>
   );
 }
 
 function AwardRow({ name, description }: { name: string; description: string }) {
   return (
-    <div className="py-3 border-b border-gray-100 last:border-0">
-      <div className="font-semibold text-gray-900">{name}</div>
-      <div className="text-sm text-gray-500 mt-0.5">{description}</div>
+    <div className="py-3 border-b border-green-800 last:border-0">
+      <div className="font-bold text-white text-sm">{name}</div>
+      <div className="text-sm text-green-400 mt-0.5">{description}</div>
     </div>
   );
 }
 
 function PowerRow({ name, description }: { name: string; description: string }) {
   return (
-    <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex gap-3">
-      <span className="text-yellow-500 text-xl mt-0.5">⚡</span>
-      <div>
-        <div className="font-bold text-yellow-900">{name}</div>
-        <div className="text-sm text-yellow-800 mt-0.5">{description}</div>
-      </div>
+    <div className="rounded-xl border border-yellow-400/30 bg-yellow-400/5 px-5 py-4">
+      <div className="text-xs font-black uppercase tracking-[0.15em] text-yellow-300 mb-1">{name}</div>
+      <div className="text-sm text-green-100 leading-relaxed">{description}</div>
     </div>
   );
 }
@@ -373,15 +374,15 @@ function PowerRow({ name, description }: { name: string; description: string }) 
 function RulesTab() {
   const [zoom, setZoom] = useState<1 | 1.25 | 1.5>(1);
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-green-950 min-h-screen">
       <div className="max-w-2xl mx-auto px-4 py-8">
-        <div className="flex justify-end gap-1 mb-4">
+        <div className="flex justify-end gap-1 mb-6">
           {([1, 1.25, 1.5] as const).map((z, i) => (
             <button
               key={z}
               onClick={() => setZoom(z)}
-              className={`rounded-lg px-2.5 py-1 font-bold leading-none transition-colors border
-                ${zoom === z ? "bg-green-700 text-white border-green-700" : "bg-white text-gray-500 border-gray-200 hover:border-green-400"}`}
+              className={`rounded-lg px-2.5 py-1 font-black leading-none transition-colors border
+                ${zoom === z ? "bg-yellow-300 text-green-950 border-yellow-300" : "bg-transparent text-green-500 border-green-700 hover:border-green-400 hover:text-green-300"}`}
               style={{ fontSize: `${0.75 + i * 0.15}rem` }}
               title={["Normal", "Large", "Extra large"][i]}
             >
@@ -431,23 +432,25 @@ function RulesTab() {
         </div>
 
         <Section title="How It Works">
-          <div className="space-y-4 text-gray-700 leading-relaxed">
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <div className="font-bold text-green-800 mb-1">Phase 1 — Group Stage Picks</div>
-              <div className="text-sm text-gray-500 mb-2">Deadline: before the first match</div>
-              <p className="text-sm">For each of the 12 groups, rank all four teams in finishing order (1st–4th). Also name your champion. Picks lock when the tournament begins.</p>
+          <div className="space-y-4">
+            <div className="rounded-xl border border-green-800 bg-green-900/40 p-5">
+              <div className="text-xs font-black uppercase tracking-[0.15em] text-yellow-300 mb-2">Phase 1</div>
+              <div className="font-bold text-white mb-1">Group Stage Picks</div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-green-500 mb-3">Deadline: before the first match</div>
+              <p className="text-sm text-green-100 leading-relaxed">For each of the 12 groups, rank all four teams in finishing order (1st–4th). Also name your champion. Picks lock when the tournament begins.</p>
             </div>
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <div className="font-bold text-green-800 mb-1">Phase 2 — Knockout Bracket Picks</div>
-              <div className="text-sm text-gray-500 mb-2">Deadline: before the Round of 32</div>
-              <p className="text-sm">Once the group stage is over, the real bracket is set. Everyone picks the knockout rounds fresh — Round of 32 through the Final — using the teams that actually qualified.</p>
+            <div className="rounded-xl border border-green-800 bg-green-900/40 p-5">
+              <div className="text-xs font-black uppercase tracking-[0.15em] text-yellow-300 mb-2">Phase 2</div>
+              <div className="font-bold text-white mb-1">Knockout Bracket Picks</div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-green-500 mb-3">Deadline: before the Round of 32</div>
+              <p className="text-sm text-green-100 leading-relaxed">Once the group stage is over, the real bracket is set. Everyone picks the knockout rounds fresh — Round of 32 through the Final — using the teams that actually qualified.</p>
             </div>
           </div>
         </Section>
 
         <Section title="Scoring">
           <Sub title="Group Stage">
-            <div className="bg-white rounded-xl border border-gray-200 px-4 divide-y divide-gray-100">
+            <div className="rounded-xl border border-green-800 bg-green-900/40 px-4">
               <ScoreRow label="1st or 2nd pick — team advances (any top-2 finish)" pts="2 pts" />
               <ScoreRow label="1st or 2nd pick — team in the exact position you picked" pts="+1 pt" />
               <ScoreRow label="3rd place pick — team finishes exactly 3rd" pts="1 pt" />
@@ -457,33 +460,33 @@ function RulesTab() {
             </div>
           </Sub>
           <Sub title="Knockout Rounds">
-            <div className="bg-white rounded-xl border border-gray-200 px-4 divide-y divide-gray-100">
+            <div className="rounded-xl border border-green-800 bg-green-900/40 px-4">
               <ScoreRow label="Round of 32" pts="3 pts" />
               <ScoreRow label="Round of 16" pts="6 pts" />
               <ScoreRow label="Quarterfinals" pts="12 pts" />
               <ScoreRow label="Semifinals" pts="24 pts" />
               <ScoreRow label="Final" pts="48 pts" />
             </div>
-            <p className="text-xs text-gray-400 mt-2 px-1">Each round has the same total points available (48 pts). No round matters more than any other — they just feel like they do.</p>
+            <p className="text-xs text-green-500 mt-2 px-1">Each round has the same total points available (48 pts). No round matters more than any other — they just feel like they do.</p>
           </Sub>
           <Sub title="Champion Bonus">
-            <div className="bg-white rounded-xl border border-gray-200 px-4 divide-y divide-gray-100">
+            <div className="rounded-xl border border-green-800 bg-green-900/40 px-4">
               <ScoreRow label="Your champion pick wins the tournament" pts="+10 pts" />
             </div>
-            <p className="text-xs text-gray-400 mt-2 px-1">Named during Phase 1. The real reward is built into the bracket — this is just a little extra for calling it before a ball was kicked.</p>
+            <p className="text-xs text-green-500 mt-2 px-1">Named during Phase 1. The real reward is built into the bracket — this is just a little extra for calling it before a ball was kicked.</p>
           </Sub>
           <Sub title="Shootout Mercy Rule">
-            <div className="bg-white rounded-xl border border-gray-200 px-4">
+            <div className="rounded-xl border border-green-800 bg-green-900/40 px-4">
               <ScoreRow label="Your pick loses in a penalty shootout" pts="½ pts" />
             </div>
-            <p className="text-xs text-gray-400 mt-2 px-1">Getting eliminated in the cruelest way possible shouldn&apos;t also cost you full points.</p>
+            <p className="text-xs text-green-500 mt-2 px-1">Getting eliminated in the cruelest way possible shouldn&apos;t also cost you full points.</p>
           </Sub>
         </Section>
 
         <Section title="Awards">
           <p className="text-sm text-gray-500 mb-4">Everyone wins something. Awards are announced after the Final.</p>
           <Sub title="Glory">
-            <div className="bg-white rounded-xl border border-gray-200 px-4 divide-y divide-gray-100">
+            <div className="rounded-xl border border-green-800 bg-green-900/40 px-4">
               <AwardRow name="The Champion" description="Most total points overall" />
               <AwardRow name="True Believer" description="Named the actual World Cup winner as their champion pick before the tournament" />
               <AwardRow name="Group Stage Guru" description="Most points in the group stage — rewards knowing the obscure teams" />
@@ -494,7 +497,7 @@ function RulesTab() {
             </div>
           </Sub>
           <Sub title="Funny &amp; Consolation">
-            <div className="bg-white rounded-xl border border-gray-200 px-4 divide-y divide-gray-100">
+            <div className="rounded-xl border border-green-800 bg-green-900/40 px-4">
               <AwardRow name="Wooden Spoon" description="Dead last — awarded with full ceremony and a literal wooden spoon" />
               <AwardRow name="Heartbreak Hotel" description="Most picks that lost specifically in penalty shootouts — the universe has a grudge" />
               <AwardRow name="The Human Coin Flip" description="Accuracy closest to exactly 50% — perfectly, uselessly neutral" />
@@ -504,14 +507,14 @@ function RulesTab() {
             </div>
           </Sub>
           <Sub title="Skill">
-            <div className="bg-white rounded-xl border border-gray-200 px-4 divide-y divide-gray-100">
+            <div className="rounded-xl border border-green-800 bg-green-900/40 px-4">
               <AwardRow name="Perfect Round" description="Got every single pick correct in one round (any round counts)" />
               <AwardRow name="Upset Artist" description="Most correctly predicted upsets — lower-ranked team beats higher-ranked" />
               <AwardRow name="Crystal Ball" description="Most total correct picks by raw count across the whole tournament" />
             </div>
           </Sub>
           <Sub title="Special">
-            <div className="bg-white rounded-xl border border-gray-200 px-4 divide-y divide-gray-100">
+            <div className="rounded-xl border border-green-800 bg-green-900/40 px-4">
               <AwardRow name="Rookie Star" description="Best score among players age 10 and under — kids compete against each other" />
               <AwardRow name="Comeback Kid" description="Biggest point swing — most improved from the bottom half of the standings to the top" />
               <AwardRow name="The Commentator" description="Most enthusiastic trash-talker on the leaderboard (voted, not scored)" />
