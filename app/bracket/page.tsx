@@ -553,6 +553,7 @@ function ChampionPicker({ picks, onPick }: { picks: Picks; onPick: (stage: strin
           </h2>
           <div className="h-px w-10 bg-gradient-to-l from-transparent to-yellow-300/60" />
         </div>
+        <p className="text-white/40 text-sm mt-3">A correctly chosen champion is worth +10 bonus points, +20 for kids.</p>
       </div>
       <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-1.5">
         {allTeams.map((team) => {
