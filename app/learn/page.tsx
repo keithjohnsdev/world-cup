@@ -30,7 +30,8 @@ export default function LearnPage() {
   return (
     <div className="h-screen bg-surface-deep flex flex-col overflow-hidden">
       <NavHeader
-        variant="dark"
+        className="border-b border-white/10"
+        style={{ background: "linear-gradient(160deg, #060d1a 0%, #0d2137 50%, #0a1a0f 100%)" }}
         left={
           <>
             <Link href="/bracket">
