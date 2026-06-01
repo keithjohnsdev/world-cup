@@ -484,7 +484,7 @@ function RulesTab() {
         </Section>
 
         <Section title="Awards">
-          <p className="text-sm text-gray-500 mb-4">Everyone wins something. Awards are announced after the Final.</p>
+          <p className="text-sm text-green-400 mb-4">Everyone wins something. Awards are announced after the Final.</p>
           <Sub title="Glory">
             <div className="rounded-xl border border-green-800 bg-green-900/40 px-4">
               <AwardRow name="The Champion" description="Most total points overall" />
@@ -523,8 +523,8 @@ function RulesTab() {
           </Sub>
         </Section>
 
-        <Section title="Kid Powers ⚡">
-          <p className="text-sm text-gray-500 mb-4">Players age 10 and under get special powers. Each can only be used once. Tell a grown-up before you use one.</p>
+        <Section title="Kid Powers">
+          <p className="text-sm text-green-400 mb-4">Players age 10 and under get special powers. Each can only be used once. Tell a grown-up before you use one.</p>
           <div className="space-y-3">
             <PowerRow name="Champion Boost" description="Your champion bonus is worth +20 pts instead of +10 if they win it all." />
             <PowerRow name="Comeback Chip" description="Starting a round in last place? You get 3 free bonus points. Automatic. Can happen more than once." />
@@ -534,12 +534,12 @@ function RulesTab() {
         </Section>
 
         <Section title="General Rules">
-          <div className="bg-white rounded-xl border border-gray-200 px-4 divide-y divide-gray-100 text-sm text-gray-700">
+          <div className="rounded-xl border border-green-800 bg-green-900/40 px-4 divide-y divide-green-800 text-sm text-green-100">
             <div className="py-3">All picks must be submitted before the relevant deadline or they will not count.</div>
             <div className="py-3">Picks are final once locked, except where a Kid Power specifically allows otherwise.</div>
             <div className="py-3">In case of a tie, the co-champions may agree to share the title — or settle it the fun way: all the kids secretly hold up some fingers behind their backs. Each tied player guesses even or odd. Kids reveal. Whoever guesses right wins.</div>
             <div className="py-3">Awards are announced together after the Final.</div>
-            <div className="py-3 font-medium">The Wooden Spoon is non-negotiable and must be accepted with grace.</div>
+            <div className="py-3 font-bold text-yellow-300">The Wooden Spoon is non-negotiable and must be accepted with grace.</div>
           </div>
         </Section>
 
@@ -681,7 +681,7 @@ export default function BracketPage() {
         <button
           onClick={() => setTab("groups")}
           className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
-            tab === "groups" ? "border-white text-white" : "border-transparent text-brand-300 hover:text-white"
+            tab === "groups" ? "border-yellow-300 text-yellow-300" : "border-transparent text-green-400 hover:text-white"
           }`}
         >
           Groups ({groupPickCount}/12)
@@ -689,7 +689,7 @@ export default function BracketPage() {
         <button
           onClick={() => setTab("bracket")}
           className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
-            tab === "bracket" ? "border-white text-white" : "border-transparent text-brand-300 hover:text-white"
+            tab === "bracket" ? "border-yellow-300 text-yellow-300" : "border-transparent text-green-400 hover:text-white"
           }`}
         >
           Knockout Bracket
@@ -697,7 +697,7 @@ export default function BracketPage() {
         <button
           onClick={() => setTab("rules")}
           className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
-            tab === "rules" ? "border-white text-white" : "border-transparent text-brand-300 hover:text-white"
+            tab === "rules" ? "border-yellow-300 text-yellow-300" : "border-transparent text-green-400 hover:text-white"
           }`}
         >
           The Rules

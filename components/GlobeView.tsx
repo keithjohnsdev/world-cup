@@ -32,9 +32,9 @@ const ISO_TO_CC: Record<string, string> = (() => {
   return out;
 })();
 
-// Material color values
-const TINT_NORMAL = 0x999999; // dimmed flag when not hovered
-const TINT_HOVER  = 0xffffff; // full brightness on hover
+// MeshBasicMaterial.color multiplies the texture: gray dims, white = full brightness
+const TINT_NORMAL = 0x999999;
+const TINT_HOVER  = 0xffffff;
 
 function getIso(feature: unknown): string {
   const f = feature as { id?: unknown; properties?: Record<string, string> };
@@ -64,6 +64,8 @@ export default function GlobeView({ onHover, onCountryClick }: Props) {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const materialCache = useRef<Record<string, any>>({});
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const nonWcMaterial = useRef<any>(null);
 
   // Observe wrapper size
   useEffect(() => {
@@ -114,7 +116,7 @@ export default function GlobeView({ onHover, onCountryClick }: Props) {
     });
   }, [loading]);
 
-  // Update tint and border color whenever hover changes
+  // Update material tint whenever hover changes
   useEffect(() => {
     Object.entries(materialCache.current).forEach(([iso, mat]) => {
       if (!mat?.color) return;
@@ -138,8 +140,19 @@ export default function GlobeView({ onHover, onCountryClick }: Props) {
 
   const getPolygonCapMaterial = (feature: unknown) => {
     const iso = getIso(feature);
-    if (!WC_ISO[iso]) return "#1e3a5f";
-    return materialCache.current[iso] ?? "#22c55e"; // fallback until texture loads
+    if (!WC_ISO[iso]) {
+      if (!nonWcMaterial.current) {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { MeshBasicMaterial } = require("three");
+        nonWcMaterial.current = new MeshBasicMaterial({
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+        });
+      }
+      return nonWcMaterial.current;
+    }
+    return materialCache.current[iso] ?? "#22c55e";
   };
 
   return (
@@ -156,15 +169,15 @@ export default function GlobeView({ onHover, onCountryClick }: Props) {
           ref={globeRef}
           width={dimensions.width}
           height={dimensions.height}
-          globeImageUrl="//unpkg.com/three-globe/example/img/earth-night.jpg"
+          globeImageUrl="//unpkg.com/three-globe/example/img/earth-blue-marble.jpg"
           polygonsData={countries}
           polygonAltitude={0.01}
           polygonCapMaterial={getPolygonCapMaterial}
-          polygonSideColor={() => "#0f1f35"}
+          polygonSideColor={() => "rgba(0,0,0,0)"}
           polygonStrokeColor={(feature: unknown) => {
             const iso = getIso(feature);
-            if (!WC_ISO[iso]) return "#0f1f35";
-            return iso === hoveredIso ? "#ffffff" : "#4ade80";
+            if (!WC_ISO[iso]) return "#1a2744";
+            return iso === hoveredIso ? "#ffffff" : "#cccccc";
           }}
           polygonLabel={(feature: unknown) => {
             const iso = getIso(feature);
@@ -178,16 +191,31 @@ export default function GlobeView({ onHover, onCountryClick }: Props) {
           onPolygonHover={handlePolygonHover}
           onPolygonClick={handlePolygonClick}
           polygonsTransitionDuration={200}
-          atmosphereColor="#1e3a5f"
-          atmosphereAltitude={0.15}
+          atmosphereColor="#82c8ff"
+          atmosphereAltitude={0.18}
           animateIn={true}
           enablePointerInteraction={true}
           onGlobeReady={() => {
-            if (globeRef.current) {
-              const controls = globeRef.current.controls();
-              controls.autoRotate = true;
-              controls.autoRotateSpeed = 0.4;
-            }
+            if (!globeRef.current) return;
+
+            const controls = globeRef.current.controls();
+            controls.autoRotate = true;
+            controls.autoRotateSpeed = 0.4;
+
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+            const THREE = require("three");
+            const scene = globeRef.current.scene();
+
+            // Dim the default ambient light so the night side is actually dark
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            scene.traverse((obj: any) => {
+              if (obj.isAmbientLight) obj.intensity = 0.6;
+            });
+
+            // Fixed sun — doesn't rotate with the globe, creating a real terminator line
+            const sun = new THREE.DirectionalLight(0xfff8e7, 1.8);
+            sun.position.set(2, 0.4, 1);
+            scene.add(sun);
           }}
         />
       )}
