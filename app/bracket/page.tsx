@@ -697,7 +697,7 @@ export default function BracketPage() {
         <div className="bg-green-950 min-h-screen">
           <div className="p-4 max-w-5xl mx-auto">
             <div className="mb-6 mt-4 text-center">
-              <p className="text-white/40 font-black uppercase tracking-[0.5em] text-xs mb-1">The</p>
+              <p className="font-black uppercase leading-none text-white mb-1" style={{ fontSize: "clamp(2.2rem, 7vw, 3rem)", letterSpacing: "-0.02em" }}>The</p>
               <div className="flex items-center justify-center gap-3">
                 <div className="h-px w-10 bg-gradient-to-r from-transparent to-yellow-300/60" />
                 <h2 className="font-black uppercase leading-none text-yellow-300" style={{ fontSize: "clamp(2.2rem, 7vw, 3rem)", letterSpacing: "-0.02em" }}>
