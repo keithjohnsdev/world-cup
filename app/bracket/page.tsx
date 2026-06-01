@@ -489,6 +489,7 @@ function RulesTab() {
             <PowerRow name="🚃 Kaboose Boost" description="Starting a round in last place? You get 3 free bonus points. Automatic. Can happen more than once." />
             <PowerRow name="❤️ Heart Pick" description="Name your favorite team before the tournament. Every time they win any game — even ones you didn't pick — you earn 1 bonus point." />
             <PowerRow name="⭐ Star Power" description="Pick one game and declare it your Star Pick before it starts. Get it right and earn double points. One star. Use it well." />
+            <PowerRow name="🤝 With Our Powers Combined" description="If your combined score is less than the leader when the bracket stage begins, you can merge into one team and play the rest of the tournament together as a single entry." />
           </div>
         </Section>
 
