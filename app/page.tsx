@@ -3,7 +3,23 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-const FLAGS = ["🇧🇷","🇦🇷","🇫🇷","🇩🇪","🇪🇸","🏴󠁧󠁢󠁥󠁮󠁧󠁿","🇵🇹","🇳🇱","🇺🇸","🇲🇽","🇯🇵","🇲🇦","🇧🇪","🇺🇾","🇸🇳","🇳🇴","🇨🇦","🇨🇭","🇰🇷","🇦🇺"];
+// All 48 World Cup 2026 teams, in group order
+const ALL_FLAGS = [
+  "🇲🇽","🇿🇦","🇰🇷","🇨🇿",
+  "🇨🇦","🇧🇦","🇶🇦","🇨🇭",
+  "🇧🇷","🇲🇦","🇭🇹","🏴󠁧󠁢󠁳󠁣󠁴󠁿",
+  "🇺🇸","🇵🇾","🇦🇺","🇹🇷",
+  "🇩🇪","🇨🇼","🇨🇮","🇪🇨",
+  "🇳🇱","🇯🇵","🇸🇪","🇹🇳",
+  "🇧🇪","🇪🇬","🇮🇷","🇳🇿",
+  "🇪🇸","🇨🇻","🇸🇦","🇺🇾",
+  "🇫🇷","🇸🇳","🇮🇶","🇳🇴",
+  "🇦🇷","🇩🇿","🇦🇹","🇯🇴",
+  "🇵🇹","🇨🇩","🇺🇿","🇨🇴",
+  "🏴󠁧󠁢󠁥󠁮󠁧󠁿","🇭🇷","🇬🇭","🇵🇦",
+];
+
+const RADIUS = 185;
 
 export default function Home() {
   const [name, setName] = useState("");
@@ -45,81 +61,81 @@ export default function Home() {
 
   return (
     <main
-      className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden"
+      className="min-h-screen flex flex-col items-center justify-center gap-10 p-6 relative overflow-hidden"
       style={{ background: "linear-gradient(160deg, #060d1a 0%, #0d2137 50%, #0a1a0f 100%)" }}
     >
       {/* Ambient glow */}
       <div
         className="absolute inset-0 pointer-events-none"
-        style={{ background: "radial-gradient(ellipse 80% 50% at 50% 30%, rgba(22,163,74,0.12) 0%, transparent 70%)" }}
+        style={{ background: "radial-gradient(ellipse 70% 60% at 50% 40%, rgba(22,163,74,0.14) 0%, transparent 70%)" }}
       />
 
-      {/* Top flag strip */}
-      <div className="absolute top-0 left-0 right-0 flex justify-center gap-2 px-2 pt-3 opacity-25 pointer-events-none select-none">
-        {[...FLAGS, ...FLAGS].map((f, i) => (
-          <span key={i} className="text-xl flex-shrink-0">{f}</span>
-        ))}
+      {/* Flag ring + crest */}
+      <div className="relative flex items-center justify-center" style={{ width: RADIUS * 2 + 40, height: RADIUS * 2 + 40, flexShrink: 0 }}>
+        {ALL_FLAGS.map((flag, i) => {
+          const angle = (i / ALL_FLAGS.length) * 2 * Math.PI - Math.PI / 2;
+          const x = Math.cos(angle) * RADIUS;
+          const y = Math.sin(angle) * RADIUS;
+          return (
+            <span
+              key={i}
+              className="absolute select-none pointer-events-none leading-none"
+              style={{
+                left: "50%",
+                top: "50%",
+                transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`,
+                fontSize: "1.2rem",
+              }}
+            >
+              {flag}
+            </span>
+          );
+        })}
+
+        {/* Crest center */}
+        <div className="relative z-10 text-center">
+          <div className="text-6xl leading-none mb-3">🏆</div>
+          <p className="text-brand-400 text-[9px] font-black uppercase tracking-[0.4em] mb-1">
+            Est. 2026
+          </p>
+          <h1 className="font-black text-white uppercase leading-none tracking-tight" style={{ fontSize: "clamp(1.6rem, 7vw, 2.4rem)" }}>
+            Johnsies
+          </h1>
+          <h2 className="font-black text-amber-400 uppercase leading-none tracking-tight" style={{ fontSize: "clamp(1.4rem, 6vw, 2rem)" }}>
+            World Cup
+          </h2>
+        </div>
       </div>
 
-      {/* Main content */}
-      <div className="relative text-center w-full max-w-xs">
-        <div className="text-8xl mb-2 drop-shadow-2xl leading-none">🏆</div>
-
-        <p className="text-amber-400/80 text-xs font-bold tracking-[0.5em] uppercase mt-4 mb-1">
-          Family Bracket Challenge
-        </p>
-        <h1 className="text-6xl font-black text-white uppercase leading-none tracking-tight">
-          World<br />Cup
-        </h1>
-        <p className="text-5xl font-black text-amber-400 uppercase leading-none tracking-tight mt-1">
-          2026
-        </p>
-
-        {/* Flag row */}
-        <div className="flex justify-center gap-1.5 mt-6 mb-8 flex-wrap">
-          {FLAGS.slice(0, 10).map((f, i) => (
-            <span key={i} className="text-2xl">{f}</span>
-          ))}
-        </div>
-
-        {/* Form */}
+      {/* Form — outside the ring */}
+      <div className="relative z-10 w-full max-w-xs">
         <form onSubmit={handleSubmit} className="space-y-3">
           <input
             type="text"
             placeholder="Enter your name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-2xl px-4 py-3.5 text-lg text-center text-white placeholder:text-white/30 focus:outline-none transition-colors"
-            style={{
-              background: "rgba(255,255,255,0.08)",
-              border: "2px solid rgba(255,255,255,0.15)",
-            }}
-            onFocus={(e) => (e.currentTarget.style.border = "2px solid #fbbf24")}
-            onBlur={(e) => (e.currentTarget.style.border = "2px solid rgba(255,255,255,0.15)")}
+            className="w-full rounded-2xl px-4 py-3.5 text-lg text-center text-gray-900 placeholder:text-gray-400 focus:outline-none transition-all bg-white"
+            style={{ border: "3px solid #e5e7eb" }}
+            onFocus={(e) => (e.currentTarget.style.border = "3px solid #fbbf24")}
+            onBlur={(e) => (e.currentTarget.style.border = "3px solid #e5e7eb")}
             maxLength={50}
             autoFocus
           />
-          {error && <p className="text-red-400 text-sm">{error}</p>}
+          {error && <p className="text-red-400 text-sm text-center">{error}</p>}
           <button
             type="submit"
             disabled={!name.trim() || loading}
             className="w-full rounded-2xl py-3.5 text-lg font-black uppercase tracking-wide transition-all"
             style={{
-              background: name.trim() && !loading ? "#fbbf24" : "rgba(255,255,255,0.08)",
-              color: name.trim() && !loading ? "#78350f" : "rgba(255,255,255,0.2)",
-              boxShadow: name.trim() ? "0 8px 32px rgba(251,191,36,0.25)" : "none",
+              background: name.trim() && !loading ? "#fbbf24" : "rgba(255,255,255,0.1)",
+              color: name.trim() && !loading ? "#78350f" : "rgba(255,255,255,0.25)",
+              boxShadow: name.trim() && !loading ? "0 6px 30px rgba(251,191,36,0.4)" : "none",
             }}
           >
             {loading ? "Loading…" : "Make My Picks →"}
           </button>
         </form>
-      </div>
-
-      {/* Bottom flag strip */}
-      <div className="absolute bottom-0 left-0 right-0 flex justify-center gap-2 px-2 pb-3 opacity-25 pointer-events-none select-none">
-        {[...FLAGS].reverse().concat([...FLAGS].reverse()).map((f, i) => (
-          <span key={i} className="text-xl flex-shrink-0">{f}</span>
-        ))}
       </div>
     </main>
   );
