@@ -126,7 +126,7 @@ function DraggableGroupCard({
   const hs = GROUP_HEADER_STYLE;
 
   return (
-    <div className="rounded-2xl overflow-hidden shadow-lg" style={{ border: "1px solid rgba(255,255,255,0.13)" }}>
+    <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.13)", borderTop: "2px solid rgba(251,191,36,0.45)", boxShadow: "0 6px 28px rgba(0,0,0,0.55)" }}>
       {/* Card header */}
       <div className="px-4 py-3 flex items-center justify-between" style={{ background: hs.bg }}>
         <div className="flex items-baseline gap-1.5">
