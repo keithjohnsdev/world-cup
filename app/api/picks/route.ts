@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sql, initDb } from "@/lib/db";
+import { getSql, initDb } from "@/lib/db";
 
 async function getUser(req: NextRequest) {
   const token = req.headers.get("x-session-token");
   if (!token) return null;
+  const sql = getSql();
   const rows = await sql`SELECT id FROM users WHERE session_token = ${token}`;
   return rows[0] ?? null;
 }
@@ -13,6 +14,7 @@ export async function GET(req: NextRequest) {
   const user = await getUser(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const sql = getSql();
   const picks = await sql`
     SELECT stage, slot, team_id FROM picks WHERE user_id = ${user.id}
   `;
@@ -29,6 +31,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
 
+  const sql = getSql();
   await sql`
     INSERT INTO picks (user_id, stage, slot, team_id)
     VALUES (${user.id}, ${stage}, ${slot}, ${teamId})
