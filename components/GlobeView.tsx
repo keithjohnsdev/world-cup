@@ -32,6 +32,10 @@ const ISO_TO_CC: Record<string, string> = (() => {
   return out;
 })();
 
+// Material color values
+const TINT_NORMAL = 0x999999; // dimmed flag when not hovered
+const TINT_HOVER  = 0xffffff; // full brightness on hover
+
 function getIso(feature: unknown): string {
   const f = feature as { id?: unknown; properties?: Record<string, string> };
   if (f.id) return String(f.id);
@@ -56,35 +60,24 @@ export default function GlobeView({ onHover, onCountryClick }: Props) {
   const [countries, setCountries] = useState<GeoFeature[]>([]);
   const [loading, setLoading] = useState(true);
   const [hoveredIso, setHoveredIso] = useState<string | null>(null);
-  // incremented when a flag texture finishes loading, forcing the globe to re-evaluate materials
   const [, setTextureVersion] = useState(0);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const materialCache = useRef<Record<string, any>>({});
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const wcDefaultMaterial = useRef<any>(null);
 
   // Observe wrapper size
   useEffect(() => {
     const el = wrapperRef.current;
     if (!el) return;
-
     const ro = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const { width, height } = entry.contentRect;
-        if (width > 0 && height > 0) {
-          setDimensions({ width, height });
-        }
+        if (width > 0 && height > 0) setDimensions({ width, height });
       }
     });
-
     ro.observe(el);
-
     const { width, height } = el.getBoundingClientRect();
-    if (width > 0 && height > 0) {
-      setDimensions({ width, height });
-    }
-
+    if (width > 0 && height > 0) setDimensions({ width, height });
     return () => ro.disconnect();
   }, []);
 
@@ -92,111 +85,69 @@ export default function GlobeView({ onHover, onCountryClick }: Props) {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-
-    fetch(
-      "https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson"
-    )
+    fetch("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson")
       .then((res) => res.json())
       .then((data) => {
-        if (!cancelled) {
-          setCountries(data.features ?? []);
-          setLoading(false);
-        }
+        if (!cancelled) { setCountries(data.features ?? []); setLoading(false); }
       })
-      .catch(() => {
-        if (!cancelled) setLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
+      .catch(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, []);
 
-  const handlePolygonHover = (feature: unknown) => {
-    if (!feature) {
-      setHoveredIso(null);
-      onHover(null);
-      return;
-    }
-    const iso = getIso(feature);
-    setHoveredIso(iso);
-    const teamId = WC_ISO[iso] ?? null;
-    onHover(teamId);
-  };
-
-  const handlePolygonClick = (feature: unknown) => {
-    const iso = getIso(feature);
-    const teamId = WC_ISO[iso];
-    if (teamId) {
-      onCountryClick(teamId);
-    }
-  };
-
-  const getPolygonCapMaterial = (feature: unknown) => {
-    const iso = getIso(feature);
-
-    if (!WC_ISO[iso]) return "#1e3a5f";
-
-    if (iso !== hoveredIso) {
-      if (!wcDefaultMaterial.current) {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const { MeshBasicMaterial } = require("three");
-        wcDefaultMaterial.current = new MeshBasicMaterial({
-          color: 0x22c55e,
-          transparent: true,
-          opacity: 0.45,
-        });
-      }
-      return wcDefaultMaterial.current;
-    }
-
-    const cc = ISO_TO_CC[iso];
-    if (!cc) return "#bbf7d0";
-
-    if (!materialCache.current[iso]) {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { TextureLoader, MeshBasicMaterial } = require("three");
+  // Pre-load all WC flag textures once GeoJSON is ready
+  useEffect(() => {
+    if (loading) return;
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { TextureLoader, MeshBasicMaterial } = require("three");
+    Object.entries(ISO_TO_CC).forEach(([geoIso, cc]) => {
+      if (materialCache.current[geoIso]) return;
       const loader = new TextureLoader();
       loader.crossOrigin = "anonymous";
       const texture = loader.load(
         `https://flagcdn.com/w320/${cc}.png`,
         () => setTextureVersion((v) => v + 1)
       );
-      materialCache.current[iso] = new MeshBasicMaterial({ map: texture, transparent: true });
-    }
+      materialCache.current[geoIso] = new MeshBasicMaterial({
+        map: texture,
+        color: TINT_NORMAL,
+      });
+    });
+  }, [loading]);
 
-    return materialCache.current[iso];
+  // Update tint and border color whenever hover changes
+  useEffect(() => {
+    Object.entries(materialCache.current).forEach(([iso, mat]) => {
+      if (!mat?.color) return;
+      mat.color.setHex(iso === hoveredIso ? TINT_HOVER : TINT_NORMAL);
+      mat.needsUpdate = true;
+    });
+  }, [hoveredIso]);
+
+  const handlePolygonHover = (feature: unknown) => {
+    if (!feature) { setHoveredIso(null); onHover(null); return; }
+    const iso = getIso(feature);
+    setHoveredIso(iso);
+    onHover(WC_ISO[iso] ?? null);
+  };
+
+  const handlePolygonClick = (feature: unknown) => {
+    const iso = getIso(feature);
+    const teamId = WC_ISO[iso];
+    if (teamId) onCountryClick(teamId);
+  };
+
+  const getPolygonCapMaterial = (feature: unknown) => {
+    const iso = getIso(feature);
+    if (!WC_ISO[iso]) return "#1e3a5f";
+    return materialCache.current[iso] ?? "#22c55e"; // fallback until texture loads
   };
 
   return (
     <div ref={wrapperRef} style={{ width: "100%", height: "100%", position: "relative" }}>
       {loading && (
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 10,
-            backgroundColor: "rgba(0,0,0,0.4)",
-          }}
-        >
-          <div
-            style={{
-              width: 48,
-              height: 48,
-              border: "4px solid #22c55e",
-              borderTopColor: "transparent",
-              borderRadius: "50%",
-              animation: "globe-spin 0.8s linear infinite",
-            }}
-          />
-          <style>{`
-            @keyframes globe-spin {
-              to { transform: rotate(360deg); }
-            }
-          `}</style>
+        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10, backgroundColor: "rgba(0,0,0,0.4)" }}>
+          <div style={{ width: 48, height: 48, border: "4px solid #22c55e", borderTopColor: "transparent", borderRadius: "50%", animation: "globe-spin 0.8s linear infinite" }} />
+          <style>{`@keyframes globe-spin { to { transform: rotate(360deg); } }`}</style>
         </div>
       )}
 
@@ -212,7 +163,8 @@ export default function GlobeView({ onHover, onCountryClick }: Props) {
           polygonSideColor={() => "#0f1f35"}
           polygonStrokeColor={(feature: unknown) => {
             const iso = getIso(feature);
-            return WC_ISO[iso] ? "#4ade80" : "#0f1f35";
+            if (!WC_ISO[iso]) return "#0f1f35";
+            return iso === hoveredIso ? "#ffffff" : "#4ade80";
           }}
           polygonLabel={(feature: unknown) => {
             const iso = getIso(feature);

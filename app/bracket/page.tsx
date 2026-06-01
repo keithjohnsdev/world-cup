@@ -355,28 +355,42 @@ function RulesTab() {
         </div>
       <div style={{ zoom }}>
 
-        <div className="relative rounded-2xl overflow-hidden mb-10 bg-green-900 text-white px-6 py-8">
-          {/* decorative background elements */}
-          <div className="absolute inset-0 opacity-10 pointer-events-none select-none" aria-hidden>
-            <span className="absolute text-[10rem] leading-none top-[-1rem] right-2">🏆</span>
-            <span className="absolute text-[6rem] leading-none bottom-[-1rem] left-1">⚽</span>
-          </div>
+        <div className="relative rounded-2xl overflow-hidden mb-10 bg-green-950 text-white">
+          {/* top accent bar */}
+          <div className="h-1 w-full bg-gradient-to-r from-green-400 via-yellow-300 to-green-400" />
 
-          <div className="relative">
-            <div className="text-xs font-bold uppercase tracking-widest text-green-400 mb-2">
-              World Cup 2026 · Family Bracket Challenge
+          <div className="px-8 pt-10 pb-11">
+            {/* eyebrow */}
+            <div className="text-xs font-black uppercase tracking-[0.25em] text-green-400 mb-6">
+              World Cup 2026 &mdash; Family Bracket Challenge
             </div>
-            <h2 className="text-2xl font-extrabold leading-snug mb-4">
-              Every four years,<br />the world stops.
+
+            {/* headline */}
+            <h2 className="font-black uppercase leading-none mb-8" style={{ fontSize: "clamp(2.5rem, 8vw, 3.5rem)", letterSpacing: "-0.02em" }}>
+              Every four years,<br />
+              <span className="text-yellow-300">the world stops.</span>
             </h2>
-            <p className="text-green-100 leading-relaxed text-sm mb-5">
-              Forty-eight nations. Six continents. One trophy. Underdogs do the impossible, giants
-              crumble, and heroes etch their names in eternity. Somewhere in all that chaos and
-              beauty, somebody in this family is going to get it exactly right.
-            </p>
-            <p className="text-white font-semibold text-sm">
-              Study the flags. Trust your gut. Make your picks. 🏅
-            </p>
+
+            {/* body */}
+            <div className="space-y-4 text-base text-green-100 leading-relaxed mb-9">
+              <p>
+                Forty-eight nations. Six continents. One trophy. Underdogs do the impossible.
+                Giants crumble. Heroes etch their names in eternity.
+              </p>
+              <p>
+                Somewhere in all that chaos and beauty, somebody in this family is going to
+                get it <em className="text-white not-italic font-semibold">exactly right.</em>
+              </p>
+            </div>
+
+            {/* call to action */}
+            <div className="flex items-center gap-4">
+              <div className="h-px flex-1 bg-green-700" />
+              <p className="text-sm font-black uppercase tracking-[0.2em] text-yellow-300">
+                Study the flags. Trust your gut. Make your picks.
+              </p>
+              <div className="h-px flex-1 bg-green-700" />
+            </div>
           </div>
         </div>
 
