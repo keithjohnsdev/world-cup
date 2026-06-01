@@ -42,6 +42,25 @@ function getIso(feature: unknown): string {
   return f.properties?.ISO_A3 || f.properties?.iso_a3 || "";
 }
 
+// Returns a unit vector pointing from Earth toward the real Sun right now.
+// Uses solar declination (axial tilt effect) + sub-solar longitude (time of day).
+function getSunDirection(): { x: number; y: number; z: number } {
+  const now = new Date();
+  const utcH = now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600;
+  const dayOfYear = Math.floor(
+    (now.getTime() - Date.UTC(now.getUTCFullYear(), 0, 1)) / 86_400_000
+  ) + 1;
+  // Solar declination: Earth's axial tilt puts the sub-solar latitude between ±23.45°
+  const decl = -23.45 * Math.cos(((2 * Math.PI) / 365) * (dayOfYear + 10)) * (Math.PI / 180);
+  // Sub-solar longitude: solar noon at prime meridian = UTC 12:00; 15°/hour westward
+  const lon = (12 - utcH) * 15 * (Math.PI / 180);
+  return {
+    x: Math.cos(decl) * Math.sin(lon),
+    y: Math.sin(decl),
+    z: Math.cos(decl) * Math.cos(lon),
+  };
+}
+
 interface Props {
   onHover: (teamId: string | null) => void;
   onCountryClick: (teamId: string) => void;
@@ -66,6 +85,19 @@ export default function GlobeView({ onHover, onCountryClick }: Props) {
   const materialCache = useRef<Record<string, any>>({});
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const nonWcMaterial = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sunRef = useRef<any>(null);
+
+  // Update sun position every minute so the terminator line stays accurate
+  useEffect(() => {
+    const tick = () => {
+      if (!sunRef.current) return;
+      const { x, y, z } = getSunDirection();
+      sunRef.current.position.set(x * 5, y * 5, z * 5);
+    };
+    const id = setInterval(tick, 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   // Observe wrapper size
   useEffect(() => {
@@ -206,16 +238,19 @@ export default function GlobeView({ onHover, onCountryClick }: Props) {
             const THREE = require("three");
             const scene = globeRef.current.scene();
 
-            // Dim the default ambient light so the night side is actually dark
+            // Keep night side dim but not pitch black (moonlight/city glow feel)
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             scene.traverse((obj: any) => {
-              if (obj.isAmbientLight) obj.intensity = 0.6;
+              if (obj.isAmbientLight) obj.intensity = 0.12;
             });
 
-            // Fixed sun — doesn't rotate with the globe, creating a real terminator line
-            const sun = new THREE.DirectionalLight(0xfff8e7, 1.8);
-            sun.position.set(2, 0.4, 1);
+            // Sun positioned at the real sub-solar point for the current UTC time
+            const sun = new THREE.DirectionalLight(0xfff8e7, 2.2);
+            sun.name = "sun";
+            const dir = getSunDirection();
+            sun.position.set(dir.x * 5, dir.y * 5, dir.z * 5);
             scene.add(sun);
+            sunRef.current = sun;
           }}
         />
       )}

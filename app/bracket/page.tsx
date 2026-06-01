@@ -654,16 +654,19 @@ export default function BracketPage() {
                 className={`py-3 px-4 text-xs font-black uppercase tracking-[0.15em] whitespace-nowrap border-b-2 transition-all cursor-pointer ${
                   tab === t
                     ? "border-yellow-300 text-yellow-300"
-                    : "border-transparent text-amber-100/50 hover:text-white hover:border-white/40"
+                    : "border-transparent text-amber-100/70"
                 }`}
-                style={tab !== t ? undefined : { textShadow: "0 0 16px rgba(253,224,71,0.7)" }}
+                onMouseEnter={e => { if (tab !== t) (e.currentTarget as HTMLElement).style.textShadow = "0 0 10px rgba(255,255,255,0.55)"; }}
+                onMouseLeave={e => { if (tab !== t) (e.currentTarget as HTMLElement).style.textShadow = ""; }}
               >
                 {t === "groups" ? `Groups (${groupPickCount}/12)` : t === "bracket" ? "Knockout" : "The Rules"}
               </button>
             ))}
             <a
               href="/learn"
-              className="py-3 px-4 text-xs font-black uppercase tracking-[0.15em] whitespace-nowrap border-b-2 border-transparent text-amber-100/50 hover:text-white hover:border-white/40 transition-all"
+              className="py-3 px-4 text-xs font-black uppercase tracking-[0.15em] whitespace-nowrap border-b-2 border-transparent text-amber-100/70 transition-all"
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.textShadow = "0 0 10px rgba(255,255,255,0.55)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.textShadow = ""; }}
             >
               🌍 The World
             </a>
