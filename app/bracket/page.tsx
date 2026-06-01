@@ -802,8 +802,8 @@ export default function BracketPage() {
         }
       />
 
-      {/* Champion banner */}
-      {championTeam && tab !== "world" && (
+      {/* Champion banner — hidden for now */}
+      {false && championTeam && tab !== "world" && (
         <div className="py-3 px-4 flex items-center justify-center gap-4" style={{ background: "linear-gradient(90deg, #92400e, #d97706, #fbbf24, #d97706, #92400e)" }}>
           <span className="text-2xl">🏆</span>
           <div className="text-center">
