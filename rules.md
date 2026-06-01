@@ -49,7 +49,7 @@ Max knockout total: **3+6+12+24+48 = 93 pts** (if you sweep every round)
 
 ### Champion Bonus
 
-Before the tournament begins, everyone names their **champion pick**. If your champion wins the whole thing, you earn **+50 bonus points** at the end — regardless of how the rest of your bracket looks. This keeps everyone watching the Final.
+During Phase 1, everyone names their **champion pick**. If your champion wins the whole thing, you earn **+10 bonus points**. The real reward for picking right is already built into the bracket — this is just a little extra for calling it before a ball was kicked.
 
 ### Shootout Mercy Rule
 
@@ -107,8 +107,7 @@ Players age 10 and under get special abilities to keep the tournament fun and co
 
 | Power | How It Works |
 |-------|-------------|
-| **Extra Life** | If your champion gets knocked out, you may name a new champion. If the new champion wins, you earn half the champion bonus (25 pts instead of 50). |
-| **Double Down** | Before any match starts, declare it your Double Down pick. If correct, points are doubled. Must be announced out loud before the match. |
+| **Champion Boost** | Your champion bonus is worth **+20 pts** instead of +10 if they win it all. Pick your champion wisely. |
 | **Comeback Chip** | If you enter any round in last place, you automatically receive a **3-point head start** for that round. Can trigger multiple times if you keep finding yourself in last. |
 | **Heart Pick** | Before the tournament, name your favorite team. Every time that team wins any match — whether you picked them or not — you earn **1 bonus point**. Keeps you rooting even when the bracket goes sideways. |
 | **Star Power** | Designate any one knockout pick as your Star Pick before the match. If correct, worth **double points**. |
@@ -118,7 +117,7 @@ Players age 10 and under get special abilities to keep the tournament fun and co
 ## General Rules
 
 - All picks must be submitted before the relevant deadline or they will not count.
-- Picks are final once locked (except where a Kid Power allows otherwise).
-- In case of a tie in the overall standings, the tiebreaker is most correct picks by raw count. If still tied, the player who submitted their picks earliest wins the tiebreak.
+- Picks are final once locked (except where a Kid Power specifically allows otherwise).
+- In case of a tie in the overall standings, the co-champions may agree to share the title — or settle it the fun way: all the kids secretly hold up some fingers behind their backs. Each tied player guesses whether the total is **even or odd**. Kids reveal. Whoever guesses right wins. If both guess the same, the kids put up new fingers and you go again.
 - Awards are determined after the Final and announced together.
 - The Wooden Spoon is non-negotiable and must be accepted with grace.
