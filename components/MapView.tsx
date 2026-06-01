@@ -86,7 +86,7 @@ export default function MapView({ onHover, onCountryClick }: Props) {
                 ? isHovered ? "#ffffff" : "rgba(255,255,255,0.2)"
                 : "#0f2340";
               const strokeWidth = isHovered ? 1.5 : 0.5;
-              const opacity = !isWC ? 1 : isHovered ? 1 : 0.45;
+              const opacity = !isWC ? 1 : isHovered ? 1 : 0.65;
 
               return (
                 <Geography
