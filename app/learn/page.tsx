@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { getTeam } from "@/lib/data";
@@ -9,7 +9,6 @@ import { FlagIcon } from "@/components/FlagIcon";
 import { NavHeader } from "@/components/ui/NavHeader";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import Link from "next/link";
 
 const GlobeView = dynamic(() => import("@/components/GlobeView"), { ssr: false });
 const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
@@ -19,7 +18,12 @@ type View = "globe" | "map";
 export default function LearnPage() {
   const [view, setView] = useState<View>("globe");
   const [hoveredTeam, setHoveredTeam] = useState<string | null>(null);
+  const [userName, setUserName] = useState("");
   const router = useRouter();
+
+  useEffect(() => {
+    setUserName(localStorage.getItem("wc_name") || "");
+  }, []);
 
   const handleHover = useCallback((teamId: string | null) => setHoveredTeam(teamId), []);
   const handleClick = useCallback((teamId: string) => router.push(`/learn/${teamId}`), [router]);
@@ -33,34 +37,46 @@ export default function LearnPage() {
         className="border-b border-white/10"
         style={{ background: "linear-gradient(160deg, #060d1a 0%, #0d2137 50%, #0a1a0f 100%)" }}
         left={
+          <div className="select-none">
+            <div className="leading-none">
+              <span className="font-black text-white uppercase tracking-tight text-sm">Johnsies </span>
+              <span className="font-black text-amber-400 uppercase tracking-tight text-sm">World Cup</span>
+            </div>
+            <div className="text-green-600 text-[8px] font-black uppercase tracking-[0.2em] mt-0.5">2026</div>
+          </div>
+        }
+        center={
+          <div className="flex items-end">
+            <a
+              href="/bracket"
+              className="py-3 px-4 -mb-px text-xs font-black uppercase tracking-[0.15em] whitespace-nowrap border-b-2 border-transparent text-slate-200 transition-all"
+              onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.color = "#ffffff"; el.style.textShadow = "0 0 10px rgba(255,255,255,0.5)"; }}
+              onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = ""; el.style.textShadow = ""; }}
+            >
+              ← Picks
+            </a>
+            {(["globe", "map"] as const).map((v) => (
+              <button
+                key={v}
+                onClick={() => setView(v)}
+                className={`py-3 px-4 -mb-px text-xs font-black uppercase tracking-[0.15em] whitespace-nowrap border-b-2 transition-all cursor-pointer ${
+                  view === v ? "border-yellow-300 text-yellow-300" : "border-transparent text-slate-200"
+                }`}
+                onMouseEnter={e => { if (view !== v) { const el = e.currentTarget as HTMLElement; el.style.color = "#ffffff"; el.style.textShadow = "0 0 10px rgba(255,255,255,0.5)"; }}}
+                onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = ""; el.style.textShadow = ""; }}
+              >
+                {v === "globe" ? "🌐 Globe" : "🗺 Map"}
+              </button>
+            ))}
+          </div>
+        }
+        right={
           <>
-            <Link href="/bracket">
-              <Button variant="ghost" size="sm">← Back to picks</Button>
-            </Link>
-            <span className="text-white/30">|</span>
-            <h1 className="text-white font-bold">🌍 Explore the Teams</h1>
+            {userName && <span className="text-green-400 text-sm font-medium hidden sm:inline">{userName}</span>}
+            <Button variant="ghost" size="sm" onClick={() => router.push("/bracket")}>Sign out</Button>
           </>
         }
       />
-
-      {/* View tabs */}
-      <div className="flex justify-center py-3">
-        <div className="flex gap-1">
-          {(["globe", "map"] as const).map((v) => (
-            <button
-              key={v}
-              onClick={() => setView(v)}
-              className={`px-5 py-2 text-xs font-black uppercase tracking-[0.2em] border-b-2 transition-colors ${
-                view === v
-                  ? "border-yellow-300 text-yellow-300"
-                  : "border-transparent text-white/40 hover:text-white/70"
-              }`}
-            >
-              {v === "globe" ? "🌐 Globe" : "🗺 Map"}
-            </button>
-          ))}
-        </div>
-      </div>
 
       <div className="flex-1 relative min-h-0">
         {/* Hint overlay — floats above the globe, takes no layout space */}
