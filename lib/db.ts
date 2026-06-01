@@ -24,6 +24,7 @@ export async function initDb() {
       name VARCHAR(100) NOT NULL,
       session_token VARCHAR(64) UNIQUE NOT NULL,
       is_kid BOOLEAN DEFAULT false,
+      chargeup_active BOOLEAN DEFAULT false,
       heart_pick_team_id VARCHAR(10),
       created_at TIMESTAMP DEFAULT NOW()
     )
@@ -31,6 +32,7 @@ export async function initDb() {
 
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_kid BOOLEAN DEFAULT false`;
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS heart_pick_team_id VARCHAR(10)`;
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS chargeup_active BOOLEAN DEFAULT false`;
 
   await sql`
     CREATE TABLE IF NOT EXISTS picks (

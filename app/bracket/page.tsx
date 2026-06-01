@@ -673,7 +673,7 @@ function ChampionPicker({ picks, onPick }: { picks: Picks; onPick: (stage: strin
 
 export default function BracketPage() {
   const [picks, setPicks] = useState<Picks>({});
-  const [tab, setTab] = useState<"groups" | "bracket" | "rules" | "world">("rules");
+  const [tab, setTab] = useState<"groups" | "bracket" | "rules" | "world" | "leaderboard">("rules");
   const [userName, setUserName] = useState("");
   const [worldView, setWorldView] = useState<"globe" | "map">("globe");
   const [hoveredTeam, setHoveredTeam] = useState<string | null>(null);
@@ -688,8 +688,8 @@ export default function BracketPage() {
     if (!token) { router.replace("/"); return; }
     setUserName(name || "");
 
-    const urlTab = new URLSearchParams(window.location.search).get("tab") as "rules" | "groups" | "bracket" | "world" | null;
-    if (urlTab && ["rules", "groups", "bracket", "world"].includes(urlTab)) setTab(urlTab);
+    const urlTab = new URLSearchParams(window.location.search).get("tab") as "rules" | "groups" | "bracket" | "world" | "leaderboard" | null;
+    if (urlTab && ["rules", "groups", "bracket", "world", "leaderboard"].includes(urlTab)) setTab(urlTab);
 
     fetch("/api/picks", { headers: { "x-session-token": token } })
       .then((r) => r.json())
