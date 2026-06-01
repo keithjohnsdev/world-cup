@@ -397,7 +397,7 @@ function RulesTab() {
           <div className="px-8 pt-10 pb-11 text-center">
             {/* official emblem */}
             <img
-              src="https://upload.wikimedia.org/wikipedia/en/thumb/1/17/2026_FIFA_World_Cup_emblem.svg/400px-2026_FIFA_World_Cup_emblem.svg.png"
+              src="https://upload.wikimedia.org/wikipedia/commons/1/17/2026_FIFA_World_Cup_emblem.svg"
               alt="2026 FIFA World Cup"
               className="w-28 h-auto mx-auto mb-8"
             />
