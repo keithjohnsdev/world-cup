@@ -393,9 +393,6 @@ function RulesTab() {
       <div style={{ zoom }}>
 
         <div className="relative rounded-2xl overflow-hidden mb-10 bg-green-950 text-white">
-          {/* top accent bar */}
-          <div className="h-1 w-full bg-gradient-to-r from-green-400 via-yellow-300 to-green-400" />
-
           <div className="px-8 pt-10 pb-11">
             {/* eyebrow */}
             <div className="text-xs font-black uppercase tracking-[0.25em] text-green-400 mb-6">
@@ -631,7 +628,7 @@ export default function BracketPage() {
   }
 
   return (
-    <div className="min-h-screen bg-brand-900">
+    <div className="min-h-screen bg-green-950">
       <NavHeader
         center={
           <div className="text-center select-none">
@@ -674,17 +671,17 @@ export default function BracketPage() {
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`py-3 px-4 text-xs font-black uppercase tracking-[0.2em] whitespace-nowrap border-b-2 transition-colors ${
+              className={`py-3 px-6 text-xs font-black uppercase tracking-[0.2em] whitespace-nowrap border-b-2 transition-all cursor-pointer ${
                 tab === t
                   ? "border-yellow-300 text-yellow-300"
-                  : "border-transparent text-green-500 hover:text-green-300"
+                  : "border-transparent text-green-500 hover:text-white hover:border-green-500"
               }`}
+              style={tab !== t ? undefined : { textShadow: "0 0 16px rgba(253,224,71,0.7)" }}
             >
               {t === "groups" ? `Groups (${groupPickCount}/12)` : t === "bracket" ? "Knockout Bracket" : "The Rules"}
             </button>
           ))}
         </div>
-        <div className="h-px bg-gradient-to-r from-green-400 via-yellow-300 to-green-400 opacity-30" />
       </div>
 
       {/* Groups tab */}
