@@ -20,6 +20,18 @@ function getVisualIndex(arrayIndex: number, dragIdx: number, insertIdx: number):
   return arrayIndex;
 }
 
+// Cycle through 4 header styles across groups so the user can compare
+const GROUP_HEADER_STYLES = [
+  // A, E, I — dark green gradient
+  { bg: "linear-gradient(135deg, #14532d 0%, #166534 100%)", labelColor: "#4ade80", letterColor: "#ffffff", chipBg: "rgba(255,255,255,0.12)", chipText: "rgba(255,255,255,0.7)" },
+  // B, F, J — near-black charcoal
+  { bg: "#111827",             labelColor: "#6b7280", letterColor: "#ffffff", chipBg: "rgba(255,255,255,0.10)", chipText: "rgba(255,255,255,0.6)" },
+  // C, G, K — slate-blue
+  { bg: "#1e293b",             labelColor: "#94a3b8", letterColor: "#ffffff", chipBg: "rgba(255,255,255,0.10)", chipText: "rgba(255,255,255,0.6)" },
+  // D, H, L — blends into page (green-950)
+  { bg: "#052e16",             labelColor: "#166534", letterColor: "#d1fae5", chipBg: "rgba(255,255,255,0.07)", chipText: "rgba(255,255,255,0.5)" },
+];
+
 function DraggableGroupCard({
   group,
   picks,
@@ -116,23 +128,26 @@ function DraggableGroupCard({
   const top1 = picks[`group:${group.id}`] ? getTeam(picks[`group:${group.id}`]) : null;
   const top2 = picks[`runner:${group.id}`] ? getTeam(picks[`runner:${group.id}`]) : null;
 
+  const groupIdx = "ABCDEFGHIJKL".indexOf(group.id);
+  const hs = GROUP_HEADER_STYLES[groupIdx % 4];
+
   return (
     <div className="rounded-2xl overflow-hidden shadow-lg" style={{ border: "1px solid rgba(255,255,255,0.07)" }}>
       {/* Card header */}
-      <div className="bg-yellow-400 px-4 py-3 flex items-center justify-between">
+      <div className="px-4 py-3 flex items-center justify-between" style={{ background: hs.bg }}>
         <div className="flex items-baseline gap-1.5">
-          <span className="text-yellow-800 text-[10px] font-bold uppercase tracking-[0.25em]">Group</span>
-          <span className="text-green-950 font-black text-3xl leading-none">{group.id}</span>
+          <span className="text-[10px] font-bold uppercase tracking-[0.25em]" style={{ color: hs.labelColor }}>Group</span>
+          <span className="font-black text-3xl leading-none" style={{ color: hs.letterColor }}>{group.id}</span>
         </div>
         <div className="flex items-center gap-1.5">
           {[top1, top2].map((t, i) =>
             t ? (
-              <div key={i} className="flex items-center gap-1 rounded-lg px-1.5 py-0.5 bg-green-900/20">
+              <div key={i} className="flex items-center gap-1 rounded-lg px-1.5 py-0.5" style={{ background: hs.chipBg }}>
                 <FlagIcon cc={t.cc} name={t.name} className="w-5 h-3.5" />
-                <span className="text-green-900 text-[10px] font-bold">{i === 0 ? "1st" : "2nd"}</span>
+                <span className="text-[10px] font-bold" style={{ color: hs.chipText }}>{i === 0 ? "1st" : "2nd"}</span>
               </div>
             ) : (
-              <div key={i} className="w-14 h-6 rounded-lg bg-green-900/10" />
+              <div key={i} className="w-14 h-6 rounded-lg" style={{ background: hs.chipBg }} />
             )
           )}
         </div>
@@ -395,7 +410,7 @@ function RulesTab() {
       <div style={{ zoom }}>
 
         <div className="relative rounded-2xl overflow-hidden mb-10 bg-green-950 text-white">
-          <div className="px-8 pt-10 pb-11">
+          <div className="px-8 pt-10 pb-11 text-center">
             {/* eyebrow */}
             <div className="text-xs font-black uppercase tracking-[0.25em] text-green-400 mb-6">
               World Cup 2026 &mdash; Family Bracket Challenge
@@ -409,23 +424,15 @@ function RulesTab() {
 
             {/* body */}
             <div className="space-y-4 text-base text-green-100 leading-relaxed mb-9">
-              <p>
-                Forty-eight nations. Six continents. One trophy.
-              </p>
-              <p>
-                Underdogs do the impossible.
-                Giants crumble. Heroes etch their names in eternity.
-              </p>
-              <p>
-                And somewhere in all that chaos and beauty, somebody in this family is going to
-                get it <em className="text-white not-italic font-semibold">exactly right.</em>
-              </p>
+              <p>Forty-eight nations. Six continents. One trophy.</p>
+              <p>Underdogs do the impossible. Giants crumble. Heroes etch their names in eternity.</p>
+              <p>And somewhere in all that chaos and beauty, somebody in this family is going to get it <em className="text-white not-italic font-semibold">exactly right.</em></p>
             </div>
 
             {/* call to action */}
             <div className="flex items-center gap-4">
               <div className="h-px flex-1 bg-green-700" />
-              <p className="text-sm font-black uppercase tracking-[0.2em] text-yellow-300 text-center">
+              <p className="text-sm font-black uppercase tracking-[0.2em] text-yellow-300">
                 Study the flags.<br />
                 Trust your gut.<br />
                 Make your picks.
