@@ -2,10 +2,15 @@
 
 import { ComposableMap, Geographies, Geography } from "react-simple-maps";
 import { useState, useMemo } from "react";
+import { TEAMS } from "@/lib/data";
 import { COUNTRY_INFO } from "@/lib/countries";
 
 const GEO_URL =
   "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
+
+// teamId → flagcdn 2-letter cc
+const TEAM_CC: Record<string, string> = {};
+TEAMS.forEach((t) => { TEAM_CC[t.id] = t.cc; });
 
 interface Props {
   onHover: (teamId: string | null) => void;
@@ -15,25 +20,13 @@ interface Props {
 export default function MapView({ onHover, onCountryClick }: Props) {
   const [hoveredTeam, setHoveredTeam] = useState<string | null>(null);
 
-  // Build a lookup from ISO numeric → teamId for fast geo matching
   const numericToTeam = useMemo<Record<number, string>>(() => {
     const map: Record<number, string> = {};
     for (const [teamId, info] of Object.entries(COUNTRY_INFO)) {
-      // Scotland and England both map to GBR / 826.
-      // We want to highlight the UK polygon for both; last writer wins,
-      // but we handle the click correctly below by checking hoveredTeam.
       map[info.isoNumeric] = teamId;
     }
     return map;
   }, []);
-
-  // Handle the Scotland / England ambiguity: both share isoNumeric 826.
-  // We render the polygon once; clicking it when Scotland or England is
-  // present should prefer whichever one is in the tournament.
-  // Since both are in the tournament, we fall back to ENG as the canonical
-  // click target for the single GBR polygon — callers can filter by group.
-  // (A proper solution would use subnational geometries; for now this is
-  // acceptable as a single polygon that represents Great Britain.)
 
   function getTeamForFeature(featureId: string | number): string | null {
     const numeric = parseInt(String(featureId), 10);
@@ -51,10 +44,6 @@ export default function MapView({ onHover, onCountryClick }: Props) {
     onHover(null);
   }
 
-  function handleClick(teamId: string) {
-    onCountryClick(teamId);
-  }
-
   return (
     <div style={{ width: "100%", aspectRatio: "16 / 9" }}>
       <ComposableMap
@@ -63,6 +52,27 @@ export default function MapView({ onHover, onCountryClick }: Props) {
         viewBox="0 0 800 450"
         style={{ width: "100%", height: "100%" }}
       >
+        <defs>
+          {Object.entries(TEAM_CC).map(([teamId, cc]) => (
+            <pattern
+              key={teamId}
+              id={`flag-${teamId}`}
+              patternUnits="objectBoundingBox"
+              width="1"
+              height="1"
+            >
+              <image
+                href={`https://flagcdn.com/w160/${cc}.png`}
+                x="0"
+                y="0"
+                width="1"
+                height="1"
+                preserveAspectRatio="xMidYMid slice"
+              />
+            </pattern>
+          ))}
+        </defs>
+
         <Geographies geography={GEO_URL}>
           {({ geographies }) =>
             geographies.map((geo) => {
@@ -70,16 +80,11 @@ export default function MapView({ onHover, onCountryClick }: Props) {
               const isWC = teamId !== null;
               const isHovered = isWC && hoveredTeam === teamId;
 
-              let fill: string;
-              if (!isWC) {
-                fill = "#1e3a5f";
-              } else if (isHovered) {
-                fill = "#4ade80";
-              } else {
-                fill = "#22c55e";
-              }
-
-              const stroke = isWC ? "#16a34a" : "#0f2340";
+              const fill = !isWC ? "#1e3a5f" : `url(#flag-${teamId})`;
+              const stroke = isWC
+                ? isHovered ? "#ffffff" : "rgba(255,255,255,0.3)"
+                : "#0f2340";
+              const strokeWidth = isHovered ? 1.5 : 0.5;
 
               return (
                 <Geography
@@ -87,17 +92,15 @@ export default function MapView({ onHover, onCountryClick }: Props) {
                   geography={geo}
                   fill={fill}
                   stroke={stroke}
-                  strokeWidth={0.5}
+                  strokeWidth={strokeWidth}
                   style={{
                     default: { outline: "none" },
                     hover: { outline: "none" },
                     pressed: { outline: "none" },
                   }}
-                  onMouseEnter={
-                    isWC ? () => handleMouseEnter(teamId!) : undefined
-                  }
+                  onMouseEnter={isWC ? () => handleMouseEnter(teamId!) : undefined}
                   onMouseLeave={isWC ? handleMouseLeave : undefined}
-                  onClick={isWC ? () => handleClick(teamId!) : undefined}
+                  onClick={isWC ? () => onCountryClick(teamId!) : undefined}
                   cursor={isWC ? "pointer" : "default"}
                 />
               );
