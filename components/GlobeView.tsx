@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { TEAMS } from "@/lib/data";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const Globe = require("react-globe.gl").default;
@@ -19,6 +20,17 @@ const WC_ISO: Record<string, string> = {
   PRT: "POR", COD: "COD", UZB: "UZB", COL: "COL",
   HRV: "CRO", GHA: "GHA", PAN: "PAN",
 };
+
+// GeoJSON ISO-A3 → flagcdn 2-letter country code
+const ISO_TO_CC: Record<string, string> = (() => {
+  const byId: Record<string, string> = {};
+  TEAMS.forEach((t) => { byId[t.id] = t.cc; });
+  const out: Record<string, string> = {};
+  Object.entries(WC_ISO).forEach(([geoIso, teamId]) => {
+    if (byId[teamId]) out[geoIso] = byId[teamId];
+  });
+  return out;
+})();
 
 function getIso(feature: unknown): string {
   const f = feature as { id?: unknown; properties?: Record<string, string> };
@@ -44,6 +56,11 @@ export default function GlobeView({ onHover, onCountryClick }: Props) {
   const [countries, setCountries] = useState<GeoFeature[]>([]);
   const [loading, setLoading] = useState(true);
   const [hoveredIso, setHoveredIso] = useState<string | null>(null);
+  // incremented when a flag texture finishes loading, forcing the globe to re-evaluate materials
+  const [, setTextureVersion] = useState(0);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const materialCache = useRef<Record<string, any>>({});
 
   // Observe wrapper size
   useEffect(() => {
@@ -61,7 +78,6 @@ export default function GlobeView({ onHover, onCountryClick }: Props) {
 
     ro.observe(el);
 
-    // Set initial size
     const { width, height } = el.getBoundingClientRect();
     if (width > 0 && height > 0) {
       setDimensions({ width, height });
@@ -114,10 +130,28 @@ export default function GlobeView({ onHover, onCountryClick }: Props) {
     }
   };
 
-  const getPolygonColor = (feature: unknown) => {
+  const getPolygonCapMaterial = (feature: unknown) => {
     const iso = getIso(feature);
+
     if (!WC_ISO[iso]) return "#1e3a5f";
-    return iso === hoveredIso ? "#bbf7d0" : "#22c55e";
+    if (iso !== hoveredIso) return "#22c55e";
+
+    const cc = ISO_TO_CC[iso];
+    if (!cc) return "#bbf7d0";
+
+    if (!materialCache.current[iso]) {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { TextureLoader, MeshBasicMaterial } = require("three");
+      const loader = new TextureLoader();
+      loader.crossOrigin = "anonymous";
+      const texture = loader.load(
+        `https://flagcdn.com/w320/${cc}.png`,
+        () => setTextureVersion((v) => v + 1)
+      );
+      materialCache.current[iso] = new MeshBasicMaterial({ map: texture, transparent: true });
+    }
+
+    return materialCache.current[iso];
   };
 
   return (
@@ -160,7 +194,7 @@ export default function GlobeView({ onHover, onCountryClick }: Props) {
           globeImageUrl="//unpkg.com/three-globe/example/img/earth-night.jpg"
           polygonsData={countries}
           polygonAltitude={0.01}
-          polygonCapColor={getPolygonColor}
+          polygonCapMaterial={getPolygonCapMaterial}
           polygonSideColor={() => "#0f1f35"}
           polygonStrokeColor={() => "#0f1f35"}
           polygonLabel={(feature: unknown) => {
