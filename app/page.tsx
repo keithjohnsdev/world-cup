@@ -52,7 +52,7 @@ export default function Home() {
               placeholder="Enter your name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-lg text-center focus:outline-none focus:border-green-500 transition-colors"
+              className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-lg text-center text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-green-500 transition-colors"
               maxLength={50}
               autoFocus
             />
