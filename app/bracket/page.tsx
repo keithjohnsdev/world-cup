@@ -730,6 +730,7 @@ export default function BracketPage() {
   const [userName, setUserName] = useState("");
   const [worldView, setWorldView] = useState<"globe" | "map">("globe");
   const [hoveredTeam, setHoveredTeam] = useState<string | null>(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const router = useRouter();
 
   const picksRef = useRef<Picks>({});
@@ -905,7 +906,10 @@ export default function BracketPage() {
 
       {/* World tab */}
       {tab === "world" && (
-        <div className={worldView === "globe" ? "flex-1 relative min-h-0" : "relative"}>
+        <div
+          className={worldView === "globe" ? "flex-1 relative min-h-0" : "relative"}
+          onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
+        >
           <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 rounded-full bg-black/30 p-1 backdrop-blur-sm">
             {(["globe", "map"] as const).map((v) => (
               <button
@@ -932,8 +936,13 @@ export default function BracketPage() {
           {hoveredTeam && COUNTRY_INFO[hoveredTeam] && (() => {
             const team = getTeam(hoveredTeam);
             const info = COUNTRY_INFO[hoveredTeam];
+            const flipX = mousePos.x + 16 + 320 > window.innerWidth;
+            const flipY = mousePos.y + 16 + 200 > window.innerHeight;
+            const cardStyle = worldView === "map"
+              ? { left: flipX ? mousePos.x - 336 : mousePos.x + 16, top: flipY ? mousePos.y - 216 : mousePos.y + 16 }
+              : { left: "50%" as const, bottom: "1.5rem", transform: "translateX(-50%)" };
             return team && info ? (
-              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+              <div className="fixed z-20 pointer-events-none" style={cardStyle}>
                 <Card variant="dark" className="px-5 py-4 min-w-[260px] max-w-xs">
                   <div className="flex items-center gap-3 mb-3">
                     <FlagIcon cc={team.cc} name={team.name} className="w-10 h-7 rounded" />
