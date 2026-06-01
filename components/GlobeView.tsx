@@ -33,7 +33,7 @@ const ISO_TO_CC: Record<string, string> = (() => {
 })();
 
 // MeshBasicMaterial.color multiplies the texture: gray dims, white = full brightness
-const TINT_NORMAL = 0x999999;
+const TINT_NORMAL = 0xcccccc;
 const TINT_HOVER  = 0xffffff;
 
 function getIso(feature: unknown): string {
@@ -278,7 +278,7 @@ export default function GlobeView({ onHover, onCountryClick }: Props) {
                 void main() {
                   float d = dot(vDir, normalize(sunDir));
                   float t = smoothstep(0.06, -0.06, d);
-                  gl_FragColor = vec4(0.0, 0.01, 0.06, t * 0.85);
+                  gl_FragColor = vec4(0.0, 0.01, 0.06, t * 0.55);
                 }
               `,
               transparent: true,
