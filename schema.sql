@@ -32,6 +32,13 @@ CREATE TABLE IF NOT EXISTS results (
   UNIQUE(stage, slot)
 );
 
+-- Tracks which API-Football fixture IDs the cron has already written,
+-- making re-runs fully idempotent.
+CREATE TABLE IF NOT EXISTS processed_fixtures (
+  fixture_id INTEGER PRIMARY KEY,
+  processed_at TIMESTAMP DEFAULT NOW()
+);
+
 -- Simple key/value store for tournament state.
 -- Key "phase" controls pick locking:
 --   phase1_open | phase1_locked | phase2_open | phase2_locked | complete

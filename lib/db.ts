@@ -49,6 +49,15 @@ export async function initDb() {
 
   await sql`ALTER TABLE picks ADD COLUMN IF NOT EXISTS is_star_power BOOLEAN DEFAULT false`;
 
+  // Tracks which API-Football fixture IDs the cron has already processed,
+  // so re-runs are idempotent.
+  await sql`
+    CREATE TABLE IF NOT EXISTS processed_fixtures (
+      fixture_id INTEGER PRIMARY KEY,
+      processed_at TIMESTAMP DEFAULT NOW()
+    )
+  `;
+
   // Actual tournament outcomes entered by admin.
   // stage/slot mirrors the picks table convention.
   // was_shootout enables the shootout mercy rule (half points).

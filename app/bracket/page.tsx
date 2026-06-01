@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { GROUPS, getTeam, type Team } from "@/lib/data";
+import { BRACKET_PAIRS } from "@/lib/bracket";
 import { COUNTRY_INFO } from "@/lib/countries";
 import { FlagIcon } from "@/components/FlagIcon";
 import { NavHeader } from "@/components/ui/NavHeader";
@@ -273,15 +274,7 @@ function KnockoutRound({
 // 2026 format: 32 teams advance (top 2 from each of 12 groups + 8 best 3rd place)
 // For simplicity we show R16 using group winners/runners in fixed slots
 function buildR32Matches(picks: Picks) {
-  // Each group produces a winner (1st) and runner-up (2nd)
-  // R32 matchup pairs based on FIFA 2026 bracket structure (simplified)
-  const bracketPairs: [string, string][] = [
-    ["A", "B"], ["C", "D"], ["E", "F"], ["G", "H"],
-    ["I", "J"], ["K", "L"], ["A", "C"], ["B", "D"],
-    ["E", "G"], ["F", "H"], ["I", "K"], ["J", "L"],
-    ["A", "D"], ["B", "C"], ["E", "H"], ["F", "G"],
-  ];
-  return bracketPairs.map(([g1, g2], i) => ({
+  return BRACKET_PAIRS.map(([g1, g2], i) => ({
     slot: `m${i + 1}`,
     team1: picks[`group:${g1}`] || undefined,
     team2: picks[`runner:${g2}`] || undefined,
