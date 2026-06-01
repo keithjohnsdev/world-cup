@@ -485,7 +485,7 @@ function RulesTab() {
               <AwardRow name="The Closer" description="Most points scored in the quarterfinals and beyond — peaked at the right time" />
               <AwardRow name="The Hipster" description="Named the lowest-ranked team to make the deepest run" />
               <AwardRow name="Bracket Brainiac" description="Highest accuracy percentage in the knockout rounds" />
-              <AwardRow name="Dead Cert" description="Correctly predicted the winner of every group (1st place, all 12) — near impossible" />
+              <AwardRow name="The Oracle" description="Correctly predicted the winner of every group (1st place, all 12) — near impossible" />
             </div>
           </Sub>
           <Sub title="Funny &amp; Consolation">
