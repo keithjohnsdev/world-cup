@@ -544,6 +544,66 @@ function RulesTab() {
 
 
 
+function LeaderboardTab() {
+  const [entries, setEntries] = useState<{ id: number; name: string; is_kid: boolean; group_score: number; bracket_score: number; total_score: number }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const token = localStorage.getItem("wc_token");
+    if (!token) return;
+    fetch("/api/leaderboard", { headers: { "x-session-token": token } })
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setEntries(data); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  return (
+    <div className="min-h-screen" style={{ background: "linear-gradient(160deg, #060d1a 0%, #0d2137 60%, #071628 100%)" }}>
+      <div className="px-4 pt-10 pb-16 max-w-2xl mx-auto">
+        <div className="mb-10 text-center">
+          <p className="font-black uppercase leading-none text-white mb-1" style={{ fontSize: "clamp(2.2rem, 7vw, 3rem)", letterSpacing: "-0.02em" }}>The</p>
+          <div className="flex items-center justify-center gap-3">
+            <div className="h-px w-10 bg-gradient-to-r from-transparent to-yellow-300/60" />
+            <h2 className="font-black uppercase leading-none text-yellow-300" style={{ fontSize: "clamp(2.2rem, 7vw, 3rem)", letterSpacing: "-0.02em" }}>Leaderboard</h2>
+            <div className="h-px w-10 bg-gradient-to-l from-transparent to-yellow-300/60" />
+          </div>
+          <p className="text-white/75 text-sm mt-3">Scores update once the tournament begins.</p>
+        </div>
+
+        {loading ? (
+          <div className="text-center text-white/30 text-sm py-16">Loading…</div>
+        ) : (
+          <div className="rounded-2xl overflow-hidden border border-white/10">
+            <div className="grid items-center px-4 py-3 bg-white/5 border-b border-white/10" style={{ gridTemplateColumns: "2rem 1fr 5rem 5rem 5rem" }}>
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 text-center">#</div>
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30">Player</div>
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 text-right">Groups</div>
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 text-right">Bracket</div>
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-300/50 text-right">Total</div>
+            </div>
+            {entries.map((entry, i) => (
+              <div
+                key={entry.id}
+                className={`grid items-center px-4 py-4 border-b border-white/5 last:border-0 ${i === 0 ? "bg-yellow-300/5" : ""}`}
+                style={{ gridTemplateColumns: "2rem 1fr 5rem 5rem 5rem" }}
+              >
+                <div className={`text-sm font-black text-center tabular-nums ${i === 0 ? "text-yellow-300" : i === 1 ? "text-white/40" : i === 2 ? "text-amber-700/60" : "text-white/20"}`}>{i + 1}</div>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-white font-bold text-sm truncate">{entry.name}</span>
+                  {entry.is_kid && <span className="text-sm shrink-0">⚡</span>}
+                </div>
+                <div className="text-white/40 text-sm tabular-nums text-right">{entry.group_score}</div>
+                <div className="text-white/40 text-sm tabular-nums text-right">{entry.bracket_score}</div>
+                <div className="text-yellow-300 font-black text-sm tabular-nums text-right">{entry.total_score}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function KidPowerSection({ picks, onPick }: { picks: Picks; onPick: (stage: string, slot: string, teamId: string) => void }) {
   const isKid = picks["meta:isKid"] === "true";
   return (
@@ -776,7 +836,7 @@ export default function BracketPage() {
         }
         center={
           <div className="flex h-full">
-            {(["rules", "groups", "bracket", "world"] as const).map((t) => (
+            {(["rules", "groups", "bracket", "leaderboard", "world"] as const).map((t) => (
               <button
                 key={t}
                 onClick={e => { (e.currentTarget as HTMLElement).style.color = ""; (e.currentTarget as HTMLElement).style.textShadow = ""; setTab(t); }}
@@ -788,7 +848,7 @@ export default function BracketPage() {
                 onMouseEnter={e => { if (tab !== t) { const el = e.currentTarget as HTMLElement; el.style.color = "#ffffff"; el.style.textShadow = "0 0 10px rgba(255,255,255,0.5)"; }}}
                 onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = ""; el.style.textShadow = ""; }}
               >
-                {t === "groups" ? "Phase 1 - Groups" : t === "bracket" ? "Phase 2 - Bracket" : t === "world" ? "🌍 The World" : "The Rules"}
+                {t === "groups" ? "Phase 1 - Groups" : t === "bracket" ? "Phase 2 - Bracket" : t === "world" ? "🌍 The World" : t === "leaderboard" ? "Leaderboard" : "The Rules"}
                 <span className={`absolute bottom-[-1px] inset-x-0 h-[2px] ${tab === t ? "bg-yellow-300" : ""}`} />
               </button>
             ))}
@@ -848,6 +908,7 @@ export default function BracketPage() {
 
       {/* Rules tab */}
       {tab === "rules" && <RulesTab />}
+      {tab === "leaderboard" && <LeaderboardTab />}
 
       {/* World tab */}
       {tab === "world" && (
