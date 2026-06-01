@@ -542,6 +542,38 @@ function RulesTab() {
   );
 }
 
+function ChampionPicker({ picks, onPick }: { picks: Picks; onPick: (stage: string, slot: string, teamId: string) => void }) {
+  const selected = picks["champion:pick"];
+  const allTeams = GROUPS.flatMap((g) => g.teams);
+  return (
+    <div className="max-w-5xl mx-auto px-4 pb-10">
+      <div className="mt-10 mb-5 text-center">
+        <div className="text-[0.6rem] font-black uppercase tracking-[0.3em] text-yellow-300/60 mb-1">Phase 1</div>
+        <h3 className="text-xl font-black uppercase text-white" style={{ letterSpacing: "-0.01em" }}>Your Champion</h3>
+        <p className="text-white/40 text-sm mt-1">Pick the team you think will win the World Cup.</p>
+      </div>
+      <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-1.5">
+        {allTeams.map((team) => {
+          const isSelected = selected === team.id;
+          return (
+            <button
+              key={team.id}
+              onClick={() => onPick("champion", "pick", team.id)}
+              className={`flex flex-col items-center gap-1 rounded-xl p-2 border-2 transition-all
+                ${isSelected ? "border-yellow-400 bg-yellow-400/10" : "border-white/10 bg-white/5 hover:border-white/30"}`}
+            >
+              <FlagIcon cc={team.cc} name={team.name} className="w-8 h-6 rounded-sm" />
+              <span className={`text-[9px] font-bold text-center leading-tight w-full truncate ${isSelected ? "text-yellow-300" : "text-white/50"}`}>
+                {team.name}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function BracketPage() {
   const [picks, setPicks] = useState<Picks>({});
   const [tab, setTab] = useState<"groups" | "bracket" | "rules" | "world">("rules");
@@ -614,8 +646,9 @@ export default function BracketPage() {
     team1: picks[`sf:${sfmatches[0]?.slot}`],
     team2: picks[`sf:${sfmatches[1]?.slot}`],
   };
-  const champion = picks["final:m1"];
+  const champion = picks["champion:pick"];
   const championTeam = champion ? getTeam(champion) : undefined;
+  const finalWinner = picks["final:m1"];
 
   const groupPickCount = GROUPS.filter((g) => picks[`group:${g.id}`]).length;
 
@@ -711,6 +744,7 @@ export default function BracketPage() {
               ))}
             </div>
           </div>
+          <ChampionPicker picks={picks} onPick={handlePick} />
         </div>
       )}
 
@@ -791,20 +825,20 @@ export default function BracketPage() {
                     <SlotBox
                       label={t1 ? t1.name : "TBD"}
                       teamId={match.team1}
-                      highlight={champion === match.team1}
+                      highlight={finalWinner === match.team1}
                       onClick={canPick ? () => handlePick("final", "m1", match.team1!) : undefined}
                     />
                     <span className="text-white text-xs font-bold">vs</span>
                     <SlotBox
                       label={t2 ? t2.name : "TBD"}
                       teamId={match.team2}
-                      highlight={champion === match.team2}
+                      highlight={finalWinner === match.team2}
                       onClick={canPick ? () => handlePick("final", "m1", match.team2!) : undefined}
                     />
-                    {champion && (() => { const ct = getTeam(champion); return ct ? (
+                    {finalWinner && (() => { const ct = getTeam(finalWinner); return ct ? (
                       <div className="mt-2 text-center flex flex-col items-center gap-1">
                         <FlagIcon cc={ct.cc} name={ct.name} className="w-14 h-10" />
-                        <div className="text-yellow-400 font-bold text-xs">CHAMPION</div>
+                        <div className="text-yellow-400 font-bold text-xs">Final</div>
                       </div>
                     ) : null; })()}
                   </div>
