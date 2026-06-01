@@ -5,7 +5,7 @@ async function getUser(req: NextRequest) {
   const token = req.headers.get("x-session-token");
   if (!token) return null;
   const sql = getSql();
-  const rows = await sql`SELECT id FROM users WHERE session_token = ${token}`;
+  const rows = (await sql`SELECT id FROM users WHERE session_token = ${token}`) as { id: number }[];
   return rows[0] ?? null;
 }
 

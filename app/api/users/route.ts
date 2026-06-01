@@ -11,10 +11,10 @@ export async function POST(req: NextRequest) {
   await initDb();
   const sql = getSql();
   const token = randomBytes(32).toString("hex");
-  const rows = await sql`
+  const rows = (await sql`
     INSERT INTO users (name, session_token) VALUES (${name.trim()}, ${token})
     RETURNING id, name, session_token
-  `;
+  `) as { id: number; name: string; session_token: string }[];
   return NextResponse.json(rows[0]);
 }
 
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
 
   await initDb();
   const sql = getSql();
-  const rows = await sql`SELECT id, name FROM users WHERE session_token = ${token}`;
+  const rows = (await sql`SELECT id, name FROM users WHERE session_token = ${token}`) as { id: number; name: string }[];
   if (!rows.length) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json(rows[0]);
 }
