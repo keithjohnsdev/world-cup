@@ -599,7 +599,11 @@ function KidPowerSection({ picks, onPick }: { picks: Picks; onPick: (stage: stri
                   className={`flex flex-col items-center justify-center gap-1 rounded-xl p-2 border-2 transition-all cursor-pointer
                     ${isSelected ? "border-red-400 bg-red-400/10" : "border-white/10 bg-white/5 hover:border-white/30"}`}
                 >
-                  <FlagIcon cc={team.cc} name={team.name} className="w-10 h-7 rounded-sm" />
+                  <div className="flex items-center gap-1">
+                    {isSelected && <span className="text-xl leading-none">❤️</span>}
+                    <FlagIcon cc={team.cc} name={team.name} className="w-10 h-7 rounded-sm" />
+                    {isSelected && <span className="text-xl leading-none">❤️</span>}
+                  </div>
                   <span className={`text-[11px] font-bold text-center leading-tight truncate w-full ${isSelected ? "text-red-400" : "text-white/50"}`}>
                     {team.name}
                   </span>
@@ -652,9 +656,9 @@ function ChampionPicker({ picks, onPick }: { picks: Picks; onPick: (stage: strin
                 ${isSelected ? "border-yellow-400 bg-yellow-400/10" : "border-white/10 bg-white/5 hover:border-white/30"}`}
             >
               <div className="flex items-center gap-1">
-                {isSelected && <span className="text-sm leading-none">🏆</span>}
+                {isSelected && <span className="text-xl leading-none">🏆</span>}
                 <FlagIcon cc={team.cc} name={team.name} className="w-10 h-7 rounded-sm" />
-                {isSelected && <span className="text-sm leading-none">🏆</span>}
+                {isSelected && <span className="text-xl leading-none">🏆</span>}
               </div>
               <span className={`text-[11px] font-bold text-center leading-tight truncate w-full ${isSelected ? "text-yellow-300" : "text-white/50"}`}>
                 {team.name}
