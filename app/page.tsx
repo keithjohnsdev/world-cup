@@ -4,24 +4,62 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { TEAMS } from "@/lib/data";
 
-// "Let's go!" in the languages of the 48 WC nations, one per group
-const PHRASES = [
-  { text: "¡Vamos!",    flag: "🇦🇷" }, // Spanish  — Argentina, Mexico, Colombia, Spain, Uruguay…
-  { text: "Let's Go!",  flag: "🇺🇸" }, // English  — USA, England, Australia, New Zealand, Scotland
-  { text: "Allez!",     flag: "🇫🇷" }, // French   — France, Belgium, Senegal, Ivory Coast, DR Congo…
-  { text: "Vai!",       flag: "🇧🇷" }, // Portuguese — Brazil, Portugal
-  { text: "Los geht's!",flag: "🇩🇪" }, // German   — Germany, Austria, Switzerland
-  { text: "Yalla!",     flag: "🇸🇦" }, // Arabic   — Saudi Arabia, Egypt, Iraq, Jordan, Morocco…
-  { text: "Ikuzo!",     flag: "🇯🇵" }, // Japanese — Japan
-  { text: "Kom op!",    flag: "🇳🇱" }, // Dutch    — Netherlands
-  { text: "Hadi!",      flag: "🇹🇷" }, // Turkish  — Türkiye
-  { text: "Hajde!",     flag: "🇭🇷" }, // Croatian — Croatia, Bosnia & Herzegovina
-  { text: "Gaja!",      flag: "🇰🇷" }, // Korean   — South Korea
-  { text: "Ketdik!",    flag: "🇺🇿" }, // Uzbek    — Uzbekistan
+// "Let's go!" in the native language of every WC 2026 nation
+const PHRASES: { teamId: string; text: string }[] = [
+  { teamId: "MEX", text: "¡Ándale!" },     // Mexican Spanish
+  { teamId: "RSA", text: "Asihambe!" },    // Zulu
+  { teamId: "KOR", text: "Gaja!" },        // Korean
+  { teamId: "CZE", text: "Jdeme!" },       // Czech
+  { teamId: "CAN", text: "Allons-y!" },    // Canadian French
+  { teamId: "BIH", text: "Hajde!" },       // Bosnian
+  { teamId: "QAT", text: "Yalla!" },       // Arabic
+  { teamId: "SUI", text: "Hopp!" },        // Swiss German
+  { teamId: "BRA", text: "Vai!" },         // Brazilian Portuguese
+  { teamId: "MAR", text: "Yalla!" },       // Moroccan Darija
+  { teamId: "HAI", text: "Alé!" },         // Haitian Creole
+  { teamId: "SCO", text: "C'mon!" },       // Scots English
+  { teamId: "USA", text: "Let's Go!" },
+  { teamId: "PAR", text: "¡Vamos!" },
+  { teamId: "AUS", text: "C'mon Aussie!" },
+  { teamId: "TUR", text: "Hadi!" },        // Turkish
+  { teamId: "GER", text: "Los geht's!" },  // German
+  { teamId: "CUW", text: "Bai!" },         // Papiamentu
+  { teamId: "CIV", text: "Allez!" },       // French
+  { teamId: "ECU", text: "¡Dale!" },       // Ecuadorian slang
+  { teamId: "NED", text: "Kom op!" },      // Dutch
+  { teamId: "JPN", text: "Ikuzo!" },       // Japanese
+  { teamId: "SWE", text: "Kom igen!" },    // Swedish
+  { teamId: "TUN", text: "Yalla!" },
+  { teamId: "BEL", text: "Allez!" },
+  { teamId: "EGY", text: "Yalla!" },
+  { teamId: "IRN", text: "Berim!" },       // Persian
+  { teamId: "NZL", text: "Kia kaha!" },    // Māori
+  { teamId: "ESP", text: "¡Vamos!" },
+  { teamId: "CPV", text: "Bai!" },         // Cape Verdean Creole
+  { teamId: "KSA", text: "Yalla!" },
+  { teamId: "URU", text: "¡Vamos!" },
+  { teamId: "FRA", text: "Allez!" },
+  { teamId: "SEN", text: "Dem na!" },      // Wolof
+  { teamId: "IRQ", text: "Yalla!" },
+  { teamId: "NOR", text: "Kom igjen!" },   // Norwegian
+  { teamId: "ARG", text: "¡Vamos!" },
+  { teamId: "ALG", text: "Yalla!" },
+  { teamId: "AUT", text: "Los geht's!" },
+  { teamId: "JOR", text: "Yalla!" },
+  { teamId: "POR", text: "Vai!" },
+  { teamId: "COD", text: "Tokende!" },     // Lingala
+  { teamId: "UZB", text: "Ketdik!" },      // Uzbek
+  { teamId: "COL", text: "¡Vamos!" },
+  { teamId: "ENG", text: "Let's Go!" },
+  { teamId: "CRO", text: "Hajdemo!" },     // Croatian
+  { teamId: "GHA", text: "Kɔ!" },          // Twi
+  { teamId: "PAN", text: "¡Vamos!" },
 ];
 
-const RADIUS = 235;
-const SIZE = RADIUS * 2 + 56;
+const INTERVAL_MS = 3500;
+const RING_S = 80; // seconds per full rotation
+const RADIUS = 265;
+const SIZE = RADIUS * 2 + 130;
 
 export default function Home() {
   const [name, setName] = useState("");
@@ -31,7 +69,7 @@ export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    const id = setInterval(() => setPhraseIdx((i) => (i + 1) % PHRASES.length), 2000);
+    const id = setInterval(() => setPhraseIdx((i) => (i + 1) % PHRASES.length), INTERVAL_MS);
     return () => clearInterval(id);
   }, []);
 
@@ -67,51 +105,141 @@ export default function Home() {
     }
   }
 
+  const currentPhrase = PHRASES[phraseIdx];
+  const currentTeam = TEAMS.find((t) => t.id === currentPhrase.teamId);
+
   return (
     <main
       className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden"
       style={{ background: "linear-gradient(160deg, #060d1a 0%, #0d2137 50%, #0a1a0f 100%)" }}
     >
+      <style>{`
+        @keyframes ring-spin {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
+        }
+        @keyframes counter-spin {
+          from { rotate: 0deg; }
+          to   { rotate: -360deg; }
+        }
+        @keyframes slot-tick {
+          0%   { transform: translateY(110%); opacity: 0; }
+          10%  { transform: translateY(0);    opacity: 1; }
+          88%  { transform: translateY(0);    opacity: 1; }
+          100% { transform: translateY(-110%); opacity: 0; }
+        }
+        @keyframes bubble-pop {
+          0%   { transform: translateX(-50%) scale(0.5); opacity: 0; }
+          10%  { transform: translateX(-50%) scale(1.08); opacity: 1; }
+          16%  { transform: translateX(-50%) scale(1);   opacity: 1; }
+          84%  { transform: translateX(-50%) scale(1);   opacity: 1; }
+          100% { transform: translateX(-50%) scale(0.8); opacity: 0; }
+        }
+      `}</style>
+
       {/* Ambient glow */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{ background: "radial-gradient(ellipse 70% 60% at 50% 40%, rgba(22,163,74,0.14) 0%, transparent 70%)" }}
       />
 
-      {/* Flag ring — encompasses crest + form */}
-      <div
-        className="relative flex items-center justify-center flex-shrink-0"
-        style={{ width: SIZE, height: SIZE }}
-      >
-        {TEAMS.map((team, i) => {
-          const angle = (i / TEAMS.length) * 2 * Math.PI - Math.PI / 2;
-          const x = Math.cos(angle) * RADIUS;
-          const y = Math.sin(angle) * RADIUS;
-          return (
-            <img
-              key={team.id}
-              src={`https://flagcdn.com/w40/${team.cc}.png`}
-              alt={team.name}
-              className="absolute rounded-sm object-cover pointer-events-none select-none"
-              style={{
-                width: 28,
-                height: 20,
-                left: "50%",
-                top: "50%",
-                transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`,
-                opacity: 0.85,
-              }}
-            />
-          );
-        })}
+      {/* Outer sizing box */}
+      <div style={{ position: "relative", width: SIZE, height: SIZE, flexShrink: 0 }}>
 
-        {/* Center: crest + form */}
-        <div className="relative z-10 flex flex-col items-center gap-7" style={{ width: 300 }}>
-          {/* Crest */}
+        {/* Slowly rotating ring */}
+        <div style={{ position: "absolute", inset: 0, animation: `ring-spin ${RING_S}s linear infinite` }}>
+          {TEAMS.map((team, i) => {
+            const angleDeg = (i / TEAMS.length) * 360 - 90;
+            const rad = (angleDeg * Math.PI) / 180;
+            const x = Math.cos(rad) * RADIUS;
+            const y = Math.sin(rad) * RADIUS;
+            const isActive = team.id === currentPhrase.teamId;
+
+            return (
+              <div
+                key={team.id}
+                style={{
+                  position: "absolute",
+                  left: `calc(50% + ${x}px)`,
+                  top: `calc(50% + ${y}px)`,
+                  // center on orbit point; counter-rotate to stay upright
+                  transform: "translate(-50%, -50%)",
+                  animation: `counter-spin ${RING_S}s linear infinite`,
+                  zIndex: isActive ? 2 : 1,
+                }}
+              >
+                {/* Speech bubble */}
+                {isActive && (
+                  <div
+                    key={phraseIdx}
+                    style={{
+                      position: "absolute",
+                      bottom: "calc(100% + 10px)",
+                      left: "50%",
+                      animation: `bubble-pop ${INTERVAL_MS}ms ease both`,
+                      background: "white",
+                      color: "#111",
+                      fontSize: 11,
+                      fontWeight: 800,
+                      letterSpacing: "0.03em",
+                      padding: "3px 8px",
+                      borderRadius: 6,
+                      whiteSpace: "nowrap",
+                      pointerEvents: "none",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+                    }}
+                  >
+                    {currentPhrase.text}
+                    <span style={{
+                      position: "absolute",
+                      top: "100%",
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      width: 0,
+                      height: 0,
+                      borderLeft: "5px solid transparent",
+                      borderRight: "5px solid transparent",
+                      borderTop: "5px solid white",
+                    }} />
+                  </div>
+                )}
+
+                <img
+                  src={`https://flagcdn.com/w80/${team.cc}.png`}
+                  alt={team.name}
+                  style={{
+                    width: 40,
+                    height: 28,
+                    borderRadius: 4,
+                    objectFit: "cover",
+                    display: "block",
+                    opacity: isActive ? 1 : 0.75,
+                    boxShadow: isActive
+                      ? "0 0 0 2px #fbbf24, 0 4px 12px rgba(251,191,36,0.5)"
+                      : "0 1px 4px rgba(0,0,0,0.4)",
+                    transition: "opacity 0.3s, box-shadow 0.3s",
+                  }}
+                />
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Center crest + form — outside the rotating ring */}
+        <div style={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          zIndex: 10,
+          width: 300,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 28,
+        }}>
           <div className="text-center">
-            <p className="text-green-500 text-[9px] font-black uppercase tracking-[0.4em] mb-2">
-              Est. 2026
-            </p>
+            <p className="text-green-500 text-[9px] font-black uppercase tracking-[0.4em] mb-2">Est. 2026</p>
             <h1 className="font-black text-white uppercase leading-none tracking-tight" style={{ fontSize: "clamp(1.8rem, 7vw, 2.6rem)" }}>
               Johnsies
             </h1>
@@ -120,7 +248,6 @@ export default function Home() {
             </h2>
           </div>
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className="w-full space-y-3">
             <input
               type="text"
@@ -135,33 +262,43 @@ export default function Home() {
               autoFocus
             />
             {error && <p className="text-red-400 text-sm text-center">{error}</p>}
-            <style>{`
-              @keyframes slot-tick {
-                0%   { transform: translateY(110%); opacity: 0; }
-                12%  { transform: translateY(0);    opacity: 1; }
-                88%  { transform: translateY(0);    opacity: 1; }
-                100% { transform: translateY(-110%); opacity: 0; }
-              }
-            `}</style>
+
             <button
               type="submit"
               disabled={!name.trim() || loading}
-              className="w-full rounded-2xl py-3.5 font-black uppercase tracking-wide transition-all overflow-hidden"
+              className="w-full rounded-2xl font-black uppercase tracking-wide transition-all"
               style={{
                 background: name.trim() && !loading ? "#fbbf24" : "rgba(255,255,255,0.1)",
                 color: name.trim() && !loading ? "#78350f" : "rgba(255,255,255,0.25)",
                 boxShadow: name.trim() && !loading ? "0 6px 30px rgba(251,191,36,0.4)" : "none",
                 height: "3.25rem",
-                fontSize: "1.125rem",
+                fontSize: "1.1rem",
+                overflow: "hidden",
+                position: "relative",
               }}
             >
               {loading ? "Loading…" : (
-                <span style={{ display: "block", position: "relative", height: "1.3em", overflow: "hidden" }}>
+                <span style={{ display: "block", position: "relative", height: "1.4em", overflow: "hidden" }}>
                   <span
                     key={phraseIdx}
-                    style={{ display: "block", position: "absolute", width: "100%", animation: "slot-tick 2s ease both" }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 8,
+                      position: "absolute",
+                      inset: 0,
+                      animation: `slot-tick ${INTERVAL_MS}ms ease both`,
+                    }}
                   >
-                    {PHRASES[phraseIdx].flag} {PHRASES[phraseIdx].text}
+                    {currentTeam && (
+                      <img
+                        src={`https://flagcdn.com/w40/${currentTeam.cc}.png`}
+                        alt=""
+                        style={{ height: "1.1em", width: "auto", borderRadius: 2, flexShrink: 0 }}
+                      />
+                    )}
+                    {currentPhrase.text}
                   </span>
                 </span>
               )}

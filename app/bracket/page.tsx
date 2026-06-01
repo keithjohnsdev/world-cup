@@ -375,21 +375,23 @@ function RulesTab() {
   const [zoom, setZoom] = useState<1 | 1.25 | 1.5>(1);
   return (
     <div className="bg-green-950 min-h-screen">
+      {/* Font size picker — fixed top-right, always visible */}
+      <div className="fixed top-16 right-3 z-50 flex items-center gap-1">
+        {([1, 1.25, 1.5] as const).map((z, i) => (
+          <button
+            key={z}
+            onClick={() => setZoom(z)}
+            className={`rounded-lg px-2.5 py-1.5 font-black leading-none transition-colors border
+              ${zoom === z ? "bg-yellow-300 text-green-950 border-yellow-300" : "bg-green-900 text-green-400 border-green-700 hover:border-green-400 hover:text-green-200"}`}
+            style={{ fontSize: `${0.75 + i * 0.15}rem` }}
+            title={["Normal", "Large", "Extra large"][i]}
+          >
+            A
+          </button>
+        ))}
+      </div>
+
       <div className="max-w-2xl mx-auto px-4 py-8">
-        <div className="flex justify-end gap-1 mb-6">
-          {([1, 1.25, 1.5] as const).map((z, i) => (
-            <button
-              key={z}
-              onClick={() => setZoom(z)}
-              className={`rounded-lg px-2.5 py-1 font-black leading-none transition-colors border
-                ${zoom === z ? "bg-yellow-300 text-green-950 border-yellow-300" : "bg-transparent text-green-500 border-green-700 hover:border-green-400 hover:text-green-300"}`}
-              style={{ fontSize: `${0.75 + i * 0.15}rem` }}
-              title={["Normal", "Large", "Extra large"][i]}
-            >
-              A
-            </button>
-          ))}
-        </div>
       <div style={{ zoom }}>
 
         <div className="relative rounded-2xl overflow-hidden mb-10 bg-green-950 text-white">
