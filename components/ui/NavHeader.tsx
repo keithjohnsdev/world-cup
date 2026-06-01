@@ -22,7 +22,7 @@ export function NavHeader({ left, center, right, variant = "brand", className = 
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <header className={`sticky top-0 z-10 ${variantClasses[variant]} ${className}`} style={style}>
+    <header className={`sticky top-0 z-30 ${variantClasses[variant]} ${className}`} style={style}>
       {/* Main bar */}
       <div className="relative flex items-center px-4 py-3">
         <div className="flex items-center gap-3 flex-1">{left}</div>
