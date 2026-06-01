@@ -61,6 +61,8 @@ export default function GlobeView({ onHover, onCountryClick }: Props) {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const materialCache = useRef<Record<string, any>>({});
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const wcDefaultMaterial = useRef<any>(null);
 
   // Observe wrapper size
   useEffect(() => {
@@ -134,7 +136,19 @@ export default function GlobeView({ onHover, onCountryClick }: Props) {
     const iso = getIso(feature);
 
     if (!WC_ISO[iso]) return "#1e3a5f";
-    if (iso !== hoveredIso) return "#22c55e";
+
+    if (iso !== hoveredIso) {
+      if (!wcDefaultMaterial.current) {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { MeshBasicMaterial } = require("three");
+        wcDefaultMaterial.current = new MeshBasicMaterial({
+          color: 0x22c55e,
+          transparent: true,
+          opacity: 0.45,
+        });
+      }
+      return wcDefaultMaterial.current;
+    }
 
     const cc = ISO_TO_CC[iso];
     if (!cc) return "#bbf7d0";
@@ -196,7 +210,10 @@ export default function GlobeView({ onHover, onCountryClick }: Props) {
           polygonAltitude={0.01}
           polygonCapMaterial={getPolygonCapMaterial}
           polygonSideColor={() => "#0f1f35"}
-          polygonStrokeColor={() => "#0f1f35"}
+          polygonStrokeColor={(feature: unknown) => {
+            const iso = getIso(feature);
+            return WC_ISO[iso] ? "#4ade80" : "#0f1f35";
+          }}
           polygonLabel={(feature: unknown) => {
             const iso = getIso(feature);
             const teamId = WC_ISO[iso];
