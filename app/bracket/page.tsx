@@ -559,11 +559,11 @@ function ChampionPicker({ picks, onPick }: { picks: Picks; onPick: (stage: strin
             <button
               key={team.id}
               onClick={() => onPick("champion", "pick", team.id)}
-              className={`flex flex-col items-center gap-1 rounded-xl p-2 border-2 transition-all
+              className={`flex flex-col items-center justify-center gap-1 rounded-xl p-2 border-2 transition-all cursor-pointer
                 ${isSelected ? "border-yellow-400 bg-yellow-400/10" : "border-white/10 bg-white/5 hover:border-white/30"}`}
             >
               <FlagIcon cc={team.cc} name={team.name} className="w-8 h-6 rounded-sm" />
-              <span className={`text-[9px] font-bold text-center leading-tight w-full truncate ${isSelected ? "text-yellow-300" : "text-white/50"}`}>
+              <span className={`text-[9px] font-bold text-center leading-tight truncate w-full ${isSelected ? "text-yellow-300" : "text-white/50"}`}>
                 {team.name}
               </span>
             </button>
