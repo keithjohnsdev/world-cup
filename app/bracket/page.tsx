@@ -698,7 +698,7 @@ export default function BracketPage() {
 
       {/* Groups tab */}
       {tab === "groups" && (
-        <div className="bg-amber-100 min-h-screen">
+        <div className="bg-stone-300 min-h-screen">
           <div className="p-4 max-w-5xl mx-auto">
             <div className="mb-6 mt-2">
               <div className="text-[0.6rem] font-black uppercase tracking-[0.3em] text-green-700 mb-1.5">— Section</div>
