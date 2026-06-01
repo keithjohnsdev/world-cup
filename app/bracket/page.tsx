@@ -325,7 +325,6 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   return (
     <section className="mb-12">
       <div className="mb-6">
-        <div className="text-[0.6rem] font-black uppercase tracking-[0.3em] text-green-500 mb-1.5">— Section</div>
         <h2 className="text-2xl font-black uppercase text-white leading-none" style={{ letterSpacing: "-0.01em" }}>{title}</h2>
         <div className="mt-3 h-px bg-gradient-to-r from-yellow-300 via-green-600 to-transparent" />
       </div>
@@ -483,9 +482,8 @@ function RulesTab() {
             <div className="rounded-xl border border-green-800 bg-green-900/40 px-4">
               <AwardRow name="The Champion" description="Most total points overall" />
               <AwardRow name="True Believer" description="Named the actual World Cup winner as their champion pick before the tournament" />
-              <AwardRow name="Group Stage Guru" description="Most points in the group stage" />
               <AwardRow name="The Closer" description="Most points scored in the quarterfinals and beyond — peaked at the right time" />
-              <AwardRow name="Dark Horse Whisperer" description="Named the lowest-ranked team to make the deepest run" />
+              <AwardRow name="The Hipster" description="Named the lowest-ranked team to make the deepest run" />
               <AwardRow name="Bracket Brainiac" description="Highest accuracy percentage in the knockout rounds" />
               <AwardRow name="Dead Cert" description="Correctly predicted the winner of every group (1st place, all 12) — near impossible" />
             </div>
@@ -495,24 +493,19 @@ function RulesTab() {
               <AwardRow name="Wooden Spoon" description="Dead last — awarded with full ceremony and a literal wooden spoon" />
               <AwardRow name="Heartbreak Hotel" description="Most picks that lost specifically in penalty shootouts — the universe has a grudge" />
               <AwardRow name="The Human Coin Flip" description="Accuracy closest to exactly 50% — perfectly, uselessly neutral" />
-              <AwardRow name="Help, I've Gone Cross-Eyed" description="Most picks where the team advanced but in the wrong position — so close, so often" />
+              <AwardRow name="Help, I've Gone Cross-Eyed" description="Most picks where the team advanced but in the wrong position" />
               <AwardRow name="The Trendsetter" description="Made the most unique picks that nobody else made — a true contrarian" />
               <AwardRow name="Reverse Oracle" description="Most incorrect picks overall — so reliably wrong you're almost useful" />
             </div>
           </Sub>
           <Sub title="Skill">
             <div className="rounded-xl border border-green-800 bg-green-900/40 px-4">
-              <AwardRow name="Perfect Round" description="Got every single pick correct in one round (any round counts)" />
               <AwardRow name="Upset Artist" description="Most correctly predicted upsets — lower-ranked team beats higher-ranked" />
-              <AwardRow name="Crystal Ball" description="Most total correct picks by raw count across the whole tournament" />
             </div>
           </Sub>
           <Sub title="Special">
             <div className="rounded-xl border border-green-800 bg-green-900/40 px-4">
-              <AwardRow name="Rookie Star" description="Best score among players age 10 and under — kids compete against each other" />
               <AwardRow name="Comeback Kid" description="Biggest point swing — most improved from the bottom half of the standings to the top" />
-              <AwardRow name="The Commentator" description="Most enthusiastic trash-talker on the leaderboard (voted, not scored)" />
-              <AwardRow name="The Hipster" description="Whose champion pick was the most obscure team that went the farthest — scored as seed × rounds advanced" />
             </div>
           </Sub>
         </Section>
