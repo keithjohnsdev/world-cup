@@ -1,6 +1,7 @@
 import { neon } from "@neondatabase/serverless";
 
 let _sql: ReturnType<typeof neon> | undefined;
+let _initialized = false;
 
 export function getSql() {
   if (!_sql) {
@@ -13,6 +14,8 @@ export function getSql() {
 }
 
 export async function initDb() {
+  if (_initialized) return;
+  _initialized = true;
   const sql = getSql();
 
   await sql`
