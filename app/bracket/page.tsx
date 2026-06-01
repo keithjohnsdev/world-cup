@@ -560,17 +560,51 @@ function KidPowerSection({ picks, onPick }: { picks: Picks; onPick: (stage: stri
       </div>
 
       {isKid ? (
-        <div className="text-center">
-          <div className="inline-flex flex-col items-center gap-3 rounded-2xl border border-yellow-300/30 bg-yellow-300/8 px-10 py-8">
-            <span className="text-5xl">⚡</span>
-            <div className="text-yellow-300 font-black text-xl uppercase tracking-tight">Kid Powers: Unlocked!</div>
-            <p className="text-white/60 text-sm max-w-xs">Your special powers are active. Check the rules to see what you can do.</p>
-            <button
-              onClick={() => onPick("meta", "isKid", "false")}
-              className="mt-2 text-white/25 text-xs underline hover:text-white/50 transition-colors cursor-pointer"
-            >
-              Actually I&apos;m a grownup
-            </button>
+        <div>
+          <div className="text-center mb-10">
+            <div className="inline-flex flex-col items-center gap-3 rounded-2xl border border-yellow-300/30 bg-yellow-300/8 px-10 py-8">
+              <span className="text-5xl">⚡</span>
+              <div className="text-yellow-300 font-black text-xl uppercase tracking-tight">Kid Powers: Unlocked!</div>
+              <p className="text-white/60 text-sm max-w-xs">Your special powers are active. Check the rules to see what you can do.</p>
+              <button
+                onClick={() => onPick("meta", "isKid", "false")}
+                className="mt-2 text-white/25 text-xs underline hover:text-white/50 transition-colors cursor-pointer"
+              >
+                Actually I&apos;m a grownup
+              </button>
+            </div>
+          </div>
+
+          {/* Heart Pick */}
+          <div className="text-center mb-5">
+            <div className="h-px bg-gradient-to-r from-transparent via-white/15 to-transparent mb-10" />
+            <p className="font-black uppercase leading-none text-white mb-1" style={{ fontSize: "clamp(1rem, 3vw, 1.25rem)", letterSpacing: "-0.01em" }}>Choose your</p>
+            <div className="flex items-center justify-center gap-3">
+              <div className="h-px w-10 bg-gradient-to-r from-transparent to-red-400/60" />
+              <h2 className="font-black uppercase leading-none text-red-400" style={{ fontSize: "clamp(2.2rem, 7vw, 3rem)", letterSpacing: "-0.02em" }}>
+                ❤️ Heart Team
+              </h2>
+              <div className="h-px w-10 bg-gradient-to-l from-transparent to-red-400/60" />
+            </div>
+            <p className="text-white/75 text-sm mt-3">Your favourite team — every game they win earns you +1 bonus point, even ones you didn&apos;t pick.</p>
+          </div>
+          <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-1.5">
+            {GROUPS.flatMap((g) => g.teams).map((team) => {
+              const isSelected = picks["heart:pick"] === team.id;
+              return (
+                <button
+                  key={team.id}
+                  onClick={() => onPick("heart", "pick", team.id)}
+                  className={`flex flex-col items-center justify-center gap-1 rounded-xl p-2 border-2 transition-all cursor-pointer
+                    ${isSelected ? "border-red-400 bg-red-400/10" : "border-white/10 bg-white/5 hover:border-white/30"}`}
+                >
+                  <FlagIcon cc={team.cc} name={team.name} className="w-8 h-6 rounded-sm" />
+                  <span className={`text-[9px] font-bold text-center leading-tight truncate w-full ${isSelected ? "text-red-400" : "text-white/50"}`}>
+                    {team.name}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
       ) : (
