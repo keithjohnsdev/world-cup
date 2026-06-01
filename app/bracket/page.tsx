@@ -801,51 +801,8 @@ export default function BracketPage() {
 
       {/* Bracket tab */}
       {tab === "bracket" && (
-        <div className="p-4 overflow-x-auto">
-          <p className="text-green-300 text-sm mb-4 text-center">
-            Pick group winners first, then click teams here to advance them through the bracket.
-          </p>
-          <div className="flex gap-6 items-start min-w-max mx-auto pb-4">
-            <KnockoutRound title="Round of 32" matches={r32matches.slice(0, 8)} picks={picks} onPick={handlePick} stage="r32" />
-            <KnockoutRound title="Round of 16" matches={r16matches.slice(0, 4)} picks={picks} onPick={handlePick} stage="r16" />
-            <KnockoutRound title="Quarters" matches={qfmatches.slice(0, 2)} picks={picks} onPick={handlePick} stage="qf" />
-            <KnockoutRound title="Semis" matches={[sfmatches[0]]} picks={picks} onPick={handlePick} stage="sf" />
-            <div className="flex flex-col items-center gap-4">
-              <h3 className="font-bold text-yellow-400 text-center text-sm">🏆 Final</h3>
-              {[finalMatch].map((match) => {
-                const t1 = match.team1 ? getTeam(match.team1) : undefined;
-                const t2 = match.team2 ? getTeam(match.team2) : undefined;
-                const canPick = !!(t1 && t2);
-                return (
-                  <div key="final" className="flex flex-col items-center gap-1">
-                    <SlotBox
-                      label={t1 ? t1.name : "TBD"}
-                      teamId={match.team1}
-                      highlight={finalWinner === match.team1}
-                      onClick={canPick ? () => handlePick("final", "m1", match.team1!) : undefined}
-                    />
-                    <span className="text-white text-xs font-bold">vs</span>
-                    <SlotBox
-                      label={t2 ? t2.name : "TBD"}
-                      teamId={match.team2}
-                      highlight={finalWinner === match.team2}
-                      onClick={canPick ? () => handlePick("final", "m1", match.team2!) : undefined}
-                    />
-                    {finalWinner && (() => { const ct = getTeam(finalWinner); return ct ? (
-                      <div className="mt-2 text-center flex flex-col items-center gap-1">
-                        <FlagIcon cc={ct.cc} name={ct.name} className="w-14 h-10" />
-                        <div className="text-yellow-400 font-bold text-xs">Final</div>
-                      </div>
-                    ) : null; })()}
-                  </div>
-                );
-              })}
-            </div>
-            <KnockoutRound title="Semis" matches={[sfmatches[1]]} picks={picks} onPick={handlePick} stage="sf" />
-            <KnockoutRound title="Quarters" matches={qfmatches.slice(2)} picks={picks} onPick={handlePick} stage="qf" />
-            <KnockoutRound title="Round of 16" matches={r16matches.slice(4)} picks={picks} onPick={handlePick} stage="r16" />
-            <KnockoutRound title="Round of 32" matches={r32matches.slice(8)} picks={picks} onPick={handlePick} stage="r32" />
-          </div>
+        <div className="min-h-screen flex items-center justify-center bg-green-950">
+          <p className="text-white/50 text-sm text-center px-8">Bracket will be available to pick once the group stage is complete.</p>
         </div>
       )}
     </div>
