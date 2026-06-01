@@ -694,7 +694,7 @@ export default function BracketPage() {
                 onMouseEnter={e => { if (tab !== t) { const el = e.currentTarget as HTMLElement; el.style.color = "#ffffff"; el.style.textShadow = "0 0 10px rgba(255,255,255,0.5)"; }}}
                 onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = ""; el.style.textShadow = ""; }}
               >
-                {t === "groups" ? "Phase 1 - Groups" : t === "bracket" ? "Phase 2 - Knockout" : t === "world" ? "🌍 The World" : "The Rules"}
+                {t === "groups" ? "Phase 1 - Groups" : t === "bracket" ? "Phase 2 - Bracket" : t === "world" ? "🌍 The World" : "The Rules"}
                 <span className={`absolute bottom-[-1px] inset-x-0 h-[2px] ${tab === t ? "bg-yellow-300" : ""}`} />
               </button>
             ))}
@@ -815,7 +815,7 @@ export default function BracketPage() {
               <div className="flex items-center justify-center gap-3">
                 <div className="h-px w-10 bg-gradient-to-r from-transparent to-yellow-300/60" />
                 <h2 className="font-black uppercase leading-none text-yellow-300" style={{ fontSize: "clamp(2.2rem, 7vw, 3rem)", letterSpacing: "-0.02em" }}>
-                  Knockout
+                  Bracket Stage
                 </h2>
                 <div className="h-px w-10 bg-gradient-to-l from-transparent to-yellow-300/60" />
               </div>
