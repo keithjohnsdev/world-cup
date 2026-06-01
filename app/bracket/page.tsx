@@ -457,7 +457,7 @@ function RulesTab() {
           <Sub title="Group Stage">
             <div className="rounded-xl border border-green-800 bg-green-900/40 px-4">
               <ScoreRow label="1st or 2nd pick — team advances (any top-2 finish)" pts="2 pts" />
-              <ScoreRow label="Any pick — team finishes in the exact position you picked (1st–4th)" pts="+1 pt" />
+              <ScoreRow label="Any pick — team finishes in the exact position you picked (1st–4th)" pts="1 pt" />
               <ScoreRow label="Max per group" pts="8 pts" />
               <ScoreRow label="Max group stage total (12 groups)" pts="96 pts" />
             </div>
