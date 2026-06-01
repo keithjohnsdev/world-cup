@@ -667,23 +667,22 @@ export default function BracketPage() {
       )}
 
       {/* Tab navigation — inside the content column */}
-      <div className="max-w-2xl mx-auto px-4 pt-6 pb-2">
-        <div className="flex justify-center">
-          <div className="flex bg-black/30 rounded-xl p-1 gap-0.5">
-            {(["rules", "groups", "bracket"] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-[0.15em] whitespace-nowrap transition-all ${
-                  tab === t
-                    ? "bg-yellow-300 text-green-950 shadow"
-                    : "text-white/50 hover:text-white/80"
-                }`}
-              >
-                {t === "groups" ? `Groups (${groupPickCount}/12)` : t === "bracket" ? "Knockout" : "The Rules"}
-              </button>
-            ))}
-          </div>
+      <div className="max-w-2xl mx-auto px-4 pt-6">
+        <div className="flex justify-center overflow-x-auto -mx-4 px-4">
+          {(["rules", "groups", "bracket"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`py-3 px-6 text-xs font-black uppercase tracking-[0.2em] whitespace-nowrap border-b-2 transition-all cursor-pointer ${
+                tab === t
+                  ? "border-yellow-300 text-yellow-300"
+                  : "border-transparent text-green-500 hover:text-white hover:border-green-500"
+              }`}
+              style={tab !== t ? undefined : { textShadow: "0 0 16px rgba(253,224,71,0.7)" }}
+            >
+              {t === "groups" ? `Groups (${groupPickCount}/12)` : t === "bracket" ? "Knockout Bracket" : "The Rules"}
+            </button>
+          ))}
         </div>
       </div>
 
