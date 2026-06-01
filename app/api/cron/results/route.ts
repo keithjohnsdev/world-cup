@@ -1,14 +1,10 @@
-// Vercel Cron / external cron handler — polls API-Football for completed
-// World Cup matches and writes results to the DB.
-//
-// Schedule: every 15 minutes during the tournament (June 11 – July 19 2026).
-//   • Vercel Pro: set "*/15 * * * *" in vercel.json  ← recommended
-//   • Vercel Hobby (daily limit only): use cron-job.org (free) pointing here
-//     with header  Authorization: Bearer <CRON_SECRET>
+// Cron handler — triggered by cron-job.org every 15 minutes.
+// cron-job.org is configured to POST:
+//   https://<your-domain>/api/cron/results?secret=<CRON_SECRET>
 //
 // Env vars required:
 //   API_FOOTBALL_KEY  — from api-football.com dashboard
-//   CRON_SECRET       — any random string; set in Vercel + cron-job.org
+//   CRON_SECRET       — any random string; set in both Vercel and cron-job.org
 
 import { NextRequest, NextResponse } from "next/server";
 import { initDb, getSql } from "@/lib/db";
@@ -41,7 +37,7 @@ function inMatchWindow(d: Date): boolean {
 
 export const dynamic = "force-dynamic";
 
-export async function GET(req: NextRequest) {
+async function handler(req: NextRequest) {
   if (!authorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -106,6 +102,10 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({ date: dateStr, done, skipped, errors });
 }
+
+// cron-job.org sends POST; export both so the endpoint works either way
+export const POST = handler;
+export const GET  = handler;
 
 // ─── Group stage handler ───────────────────────────────────────────────────────
 // Only finalises standings after the last group matchday (round "3"),
