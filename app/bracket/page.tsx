@@ -113,46 +113,82 @@ function DraggableGroupCard({
     "border-gray-300 bg-white text-gray-500",
   ];
 
+  const top1 = picks[`group:${group.id}`] ? getTeam(picks[`group:${group.id}`]) : null;
+  const top2 = picks[`runner:${group.id}`] ? getTeam(picks[`runner:${group.id}`]) : null;
+
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-      <h3 className="font-bold text-gray-800 text-lg mb-1">{group.name}</h3>
-      <p className="text-xs text-gray-400 mb-3">Drag to rank — top 2 advance</p>
-      <div ref={containerRef} className="space-y-1.5" style={{ touchAction: "none" }}>
-        {order.map((team, index) => {
-          const isDragging = dragging === index;
-          const translateY = getTranslateY(index);
-          const visualIndex =
-            dragging !== null && insertAt !== null
-              ? getVisualIndex(index, dragging, insertAt)
-              : index;
-          return (
-            <div
-              key={team.id}
-              onPointerDown={(e) => handlePointerDown(e, index)}
-              onPointerMove={(e) => handlePointerMove(e, index)}
-              onPointerUp={handlePointerUp}
-              onPointerCancel={handlePointerUp}
-              style={{
-                transform: `translateY(${translateY}px)`,
-                transition: isDragging ? "box-shadow 150ms ease" : "transform 200ms ease",
-                zIndex: isDragging ? 10 : 1,
-                position: "relative",
-                boxShadow: isDragging ? "0 8px 24px rgba(0,0,0,0.13)" : undefined,
-              }}
-              className={`flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 select-none
-                ${isDragging ? "cursor-grabbing" : "cursor-grab"}
-                ${rankColors[visualIndex]}
-              `}
-            >
-              <span className="text-gray-300 text-lg leading-none">⠿</span>
-              <FlagIcon cc={team.cc} name={team.name} className="w-7 h-5" />
-              <span className="text-sm font-medium truncate">{team.name}</span>
-              <span className={`ml-auto text-xs font-bold ${visualIndex < 2 ? "" : "opacity-30"}`}>
-                {rankLabel[visualIndex]}
-              </span>
-            </div>
-          );
-        })}
+    <div className="rounded-2xl overflow-hidden shadow-md" style={{ border: "1px solid rgba(22,101,52,0.2)" }}>
+      {/* Dark header */}
+      <div className="bg-brand-900 px-4 py-3 flex items-center justify-between">
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-brand-400 text-[10px] font-bold uppercase tracking-[0.25em]">Group</span>
+          <span className="text-white font-black text-3xl leading-none">{group.id}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {[top1, top2].map((t, i) =>
+            t ? (
+              <div key={i} className="flex items-center gap-1 rounded-lg px-1.5 py-0.5" style={{ background: "rgba(255,255,255,0.12)" }}>
+                <FlagIcon cc={t.cc} name={t.name} className="w-5 h-3.5" />
+                <span className="text-white/60 text-[10px] font-bold">{i === 0 ? "1st" : "2nd"}</span>
+              </div>
+            ) : (
+              <div key={i} className="w-14 h-6 rounded-lg" style={{ background: "rgba(255,255,255,0.07)" }} />
+            )
+          )}
+        </div>
+      </div>
+
+      {/* Teams */}
+      <div className="bg-white p-3">
+        <div ref={containerRef} className="space-y-1.5" style={{ touchAction: "none" }}>
+          {order.flatMap((team, index) => {
+            const isDragging = dragging === index;
+            const translateY = getTranslateY(index);
+            const visualIndex =
+              dragging !== null && insertAt !== null
+                ? getVisualIndex(index, dragging, insertAt)
+                : index;
+            const item = (
+              <div
+                key={team.id}
+                onPointerDown={(e) => handlePointerDown(e, index)}
+                onPointerMove={(e) => handlePointerMove(e, index)}
+                onPointerUp={handlePointerUp}
+                onPointerCancel={handlePointerUp}
+                style={{
+                  transform: `translateY(${translateY}px)`,
+                  transition: isDragging ? "box-shadow 150ms ease" : "transform 200ms ease",
+                  zIndex: isDragging ? 10 : 1,
+                  position: "relative",
+                  boxShadow: isDragging ? "0 8px 24px rgba(0,0,0,0.13)" : undefined,
+                }}
+                className={`flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 select-none
+                  ${isDragging ? "cursor-grabbing" : "cursor-grab"}
+                  ${rankColors[visualIndex]}
+                `}
+              >
+                <span className="text-gray-300 text-base leading-none">⠿</span>
+                <FlagIcon cc={team.cc} name={team.name} className="w-7 h-5" />
+                <span className="text-sm font-medium truncate">{team.name}</span>
+                <span className={`ml-auto text-xs font-bold tabular-nums ${visualIndex < 2 ? "" : "opacity-40"}`}>
+                  {rankLabel[visualIndex]}
+                </span>
+              </div>
+            );
+
+            if (index === 1) {
+              return [
+                item,
+                <div key="sep" className="flex items-center gap-2 py-0.5 select-none pointer-events-none" style={{ position: "relative", zIndex: 0 }}>
+                  <div className="h-px flex-1 bg-green-200" />
+                  <span className="text-[9px] font-black text-green-500 uppercase tracking-[0.2em] whitespace-nowrap">advances</span>
+                  <div className="h-px flex-1 bg-green-200" />
+                </div>,
+              ];
+            }
+            return [item];
+          })}
+        </div>
       </div>
     </div>
   );
@@ -624,10 +660,16 @@ export default function BracketPage() {
 
       {/* Champion banner */}
       {championTeam && (
-        <div className="bg-yellow-400 text-yellow-900 text-center py-2 font-bold flex items-center justify-center gap-2">
-          <span>🥇 Your champion pick:</span>
-          <FlagIcon cc={championTeam.cc} name={championTeam.name} className="w-7 h-5" />
-          <span>{championTeam.name}</span>
+        <div className="py-3 px-4 flex items-center justify-center gap-4" style={{ background: "linear-gradient(90deg, #92400e, #d97706, #fbbf24, #d97706, #92400e)" }}>
+          <span className="text-2xl">🏆</span>
+          <div className="text-center">
+            <div className="text-amber-900 text-[10px] font-black uppercase tracking-[0.25em] opacity-70">Your Champion</div>
+            <div className="flex items-center gap-2 justify-center mt-0.5">
+              <FlagIcon cc={championTeam.cc} name={championTeam.name} className="w-8 h-6 rounded shadow" />
+              <span className="font-black text-amber-900 text-lg leading-tight">{championTeam.name}</span>
+            </div>
+          </div>
+          <span className="text-2xl">🏆</span>
         </div>
       )}
 
