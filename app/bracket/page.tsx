@@ -667,21 +667,24 @@ export default function BracketPage() {
         </div>
       )}
 
-      {/* Tab pills */}
-      <div className="px-4 pt-4 pb-3 flex gap-2 overflow-x-auto">
-        {(["groups", "bracket", "rules"] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${
-              tab === t
-                ? "bg-amber-400 text-amber-900 shadow-lg"
-                : "bg-brand-800 text-brand-300 hover:text-white hover:bg-brand-700"
-            }`}
-          >
-            {t === "groups" ? `Groups (${groupPickCount}/12)` : t === "bracket" ? "Knockout Bracket" : "The Rules"}
-          </button>
-        ))}
+      {/* Tab navigation */}
+      <div className="bg-green-950">
+        <div className="flex overflow-x-auto px-2">
+          {(["groups", "bracket", "rules"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`py-4 px-5 text-xs font-black uppercase tracking-[0.2em] whitespace-nowrap border-b-2 transition-colors ${
+                tab === t
+                  ? "border-yellow-300 text-yellow-300"
+                  : "border-transparent text-green-500 hover:text-green-300"
+              }`}
+            >
+              {t === "groups" ? `Groups (${groupPickCount}/12)` : t === "bracket" ? "Knockout Bracket" : "The Rules"}
+            </button>
+          ))}
+        </div>
+        <div className="h-px bg-gradient-to-r from-green-400 via-yellow-300 to-green-400 opacity-30" />
       </div>
 
       {/* Groups tab */}
