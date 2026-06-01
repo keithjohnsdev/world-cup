@@ -498,13 +498,9 @@ function RulesTab() {
               <AwardRow name="Reverse Oracle" description="Most incorrect picks overall — so reliably wrong you're almost useful" />
             </div>
           </Sub>
-          <Sub title="Skill">
-            <div className="rounded-xl border border-green-800 bg-green-900/40 px-4">
-              <AwardRow name="Upset Artist" description="Most correctly predicted upsets — lower-ranked team beats higher-ranked" />
-            </div>
-          </Sub>
           <Sub title="Special">
             <div className="rounded-xl border border-green-800 bg-green-900/40 px-4">
+              <AwardRow name="Upset Artist" description="Most correctly predicted upsets — lower-ranked team beats higher-ranked" />
               <AwardRow name="Comeback Kid" description="Biggest point swing — most improved from the bottom half of the standings to the top" />
             </div>
           </Sub>
