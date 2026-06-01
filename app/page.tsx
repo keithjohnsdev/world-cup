@@ -261,13 +261,22 @@ export default function Home() {
           gap: 28,
         }}>
           <div className="text-center">
-            <p className="text-green-500 text-[9px] font-black uppercase tracking-[0.4em] mb-2">Est. 2026</p>
+            <img
+              src="/world_cup_trophy.png"
+              alt="World Cup Trophy"
+              style={{ width: 64, height: "auto", margin: "0 auto 10px" }}
+            />
             <h1 className="font-black text-white uppercase leading-none tracking-tight" style={{ fontSize: "clamp(1.8rem, 7vw, 2.6rem)" }}>
               Johnsies
             </h1>
             <h2 className="font-black text-yellow-300 uppercase leading-none tracking-tight" style={{ fontSize: "clamp(1.4rem, 5.5vw, 2rem)" }}>
               World Cup
             </h2>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginTop: 6, lineHeight: 1 }}>
+              <span className="font-black text-white" style={{ fontSize: "clamp(2.4rem, 9vw, 3.2rem)" }}>2</span>
+              <span style={{ fontSize: "clamp(2rem, 8vw, 2.8rem)", lineHeight: 1 }}>🌍</span>
+              <span className="font-black text-white" style={{ fontSize: "clamp(2.4rem, 9vw, 3.2rem)" }}>26</span>
+            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="w-full space-y-3">
