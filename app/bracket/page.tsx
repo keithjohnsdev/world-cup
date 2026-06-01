@@ -483,7 +483,7 @@ function RulesTab() {
 
 export default function BracketPage() {
   const [picks, setPicks] = useState<Picks>({});
-  const [tab, setTab] = useState<"groups" | "groups-drag" | "bracket" | "rules">("groups");
+  const [tab, setTab] = useState<"groups" | "bracket" | "rules">("groups");
   const [userName, setUserName] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
@@ -613,14 +613,6 @@ export default function BracketPage() {
           Groups ({groupPickCount}/12)
         </button>
         <button
-          onClick={() => setTab("groups-drag")}
-          className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
-            tab === "groups-drag" ? "border-white text-white" : "border-transparent text-brand-300 hover:text-white"
-          }`}
-        >
-          Groups (drag)
-        </button>
-        <button
           onClick={() => setTab("bracket")}
           className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
             tab === "bracket" ? "border-white text-white" : "border-transparent text-brand-300 hover:text-white"
@@ -642,21 +634,7 @@ export default function BracketPage() {
       {tab === "groups" && (
         <div className="p-4 max-w-5xl mx-auto">
           <p className="text-green-300 text-sm mb-4 text-center">
-            Click a team to pick them as group winner. Use "2nd" to pick the runner-up.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {GROUPS.map((group) => (
-              <GroupCard key={group.id} group={group} picks={picks} onPick={handlePick} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Groups (drag) tab */}
-      {tab === "groups-drag" && (
-        <div className="p-4 max-w-5xl mx-auto">
-          <p className="text-green-300 text-sm mb-4 text-center">
-            Drag teams to rank them — 1st and 2nd place advance to the knockout round.
+            Drag teams to rank all four finishing positions — top 2 advance to the knockout round.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {GROUPS.map((group) => (
