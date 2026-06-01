@@ -166,7 +166,7 @@ function DraggableGroupCard({
                 onPointerCancel={handlePointerUp}
                 style={{
                   transform: `translateY(${translateY}px)`,
-                  transition: isDragging ? "box-shadow 150ms ease" : "transform 200ms ease",
+                  transition: isDragging ? "box-shadow 150ms ease" : dragging !== null ? "transform 200ms ease" : "box-shadow 150ms ease",
                   zIndex: isDragging ? 10 : 1,
                   position: "relative",
                   boxShadow: isDragging ? "0 8px 24px rgba(0,0,0,0.13)" : undefined,
