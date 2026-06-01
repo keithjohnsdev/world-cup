@@ -40,25 +40,26 @@ export default function LearnPage() {
             <h1 className="text-white font-bold">🌍 Explore the Teams</h1>
           </>
         }
-        right={
-          <div className="flex bg-white/10 rounded-xl p-1 gap-1">
-            <Button
-              variant={view === "globe" ? "primary" : "ghost"}
-              size="sm"
-              onClick={() => setView("globe")}
-            >
-              🌐 Globe
-            </Button>
-            <Button
-              variant={view === "map" ? "primary" : "ghost"}
-              size="sm"
-              onClick={() => setView("map")}
-            >
-              🗺 Map
-            </Button>
-          </div>
-        }
       />
+
+      {/* View tabs */}
+      <div className="flex justify-center py-3">
+        <div className="flex gap-1">
+          {(["globe", "map"] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              className={`px-5 py-2 text-xs font-black uppercase tracking-[0.2em] border-b-2 transition-colors ${
+                view === v
+                  ? "border-yellow-300 text-yellow-300"
+                  : "border-transparent text-white/40 hover:text-white/70"
+              }`}
+            >
+              {v === "globe" ? "🌐 Globe" : "🗺 Map"}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="flex-1 relative min-h-0">
         {/* Hint overlay — floats above the globe, takes no layout space */}
