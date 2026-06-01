@@ -87,13 +87,17 @@ export default function GlobeView({ onHover, onCountryClick }: Props) {
   const nonWcMaterial = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sunRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const nightOverlayRef = useRef<any>(null);
 
-  // Update sun position every minute so the terminator line stays accurate
+  // Update sun direction every minute — moves both the light and the night overlay shader
   useEffect(() => {
     const tick = () => {
-      if (!sunRef.current) return;
       const { x, y, z } = getSunDirection();
-      sunRef.current.position.set(x * 5, y * 5, z * 5);
+      if (sunRef.current) sunRef.current.position.set(x * 5, y * 5, z * 5);
+      if (nightOverlayRef.current) {
+        nightOverlayRef.current.material.uniforms.sunDir.value.set(x, y, z);
+      }
     };
     const id = setInterval(tick, 60_000);
     return () => clearInterval(id);
@@ -238,19 +242,52 @@ export default function GlobeView({ onHover, onCountryClick }: Props) {
             const THREE = require("three");
             const scene = globeRef.current.scene();
 
-            // Keep night side dim but not pitch black (moonlight/city glow feel)
+            // Restore ambient so the day side looks natural
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             scene.traverse((obj: any) => {
-              if (obj.isAmbientLight) obj.intensity = 0.12;
+              if (obj.isAmbientLight) obj.intensity = 0.7;
             });
 
-            // Sun positioned at the real sub-solar point for the current UTC time
-            const sun = new THREE.DirectionalLight(0xfff8e7, 2.2);
-            sun.name = "sun";
+            // Sun light for the directional shading pass
             const dir = getSunDirection();
+            const sun = new THREE.DirectionalLight(0xfff8e7, 1.4);
+            sun.name = "sun";
             sun.position.set(dir.x * 5, dir.y * 5, dir.z * 5);
             scene.add(sun);
             sunRef.current = sun;
+
+            // Night overlay — a slightly larger sphere whose shader darkens
+            // everything facing away from the sun, oceans and countries alike.
+            const GLOBE_R = 100; // three-globe default radius
+            const nightMat = new THREE.ShaderMaterial({
+              uniforms: { sunDir: { value: new THREE.Vector3(dir.x, dir.y, dir.z) } },
+              vertexShader: `
+                varying vec3 vNormal;
+                void main() {
+                  vNormal = normalize(normalMatrix * normal);
+                  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+              `,
+              fragmentShader: `
+                uniform vec3 sunDir;
+                varying vec3 vNormal;
+                void main() {
+                  float d = dot(vNormal, normalize(sunDir));
+                  // Smooth terminator: day side = 0 opacity, night side = 0.88
+                  float t = smoothstep(0.08, -0.08, d);
+                  gl_FragColor = vec4(0.0, 0.01, 0.05, t * 0.88);
+                }
+              `,
+              transparent: true,
+              depthWrite: false,
+              side: THREE.FrontSide,
+            });
+            const nightMesh = new THREE.Mesh(
+              new THREE.SphereGeometry(GLOBE_R * 1.002, 64, 64),
+              nightMat
+            );
+            scene.add(nightMesh);
+            nightOverlayRef.current = nightMesh;
           }}
         />
       )}
