@@ -544,9 +544,14 @@ function ChampionPicker({ picks, onPick }: { picks: Picks; onPick: (stage: strin
   return (
     <div className="max-w-5xl mx-auto px-4 pb-10">
       <div className="mt-10 mb-5 text-center">
-        <div className="text-[0.6rem] font-black uppercase tracking-[0.3em] text-yellow-300/60 mb-1">Phase 1</div>
-        <h3 className="text-xl font-black uppercase text-white" style={{ letterSpacing: "-0.01em" }}>Your Champion</h3>
-        <p className="text-white/40 text-sm mt-1">Pick the team you think will win the World Cup.</p>
+        <p className="font-black uppercase leading-none text-white mb-1" style={{ fontSize: "clamp(2.2rem, 7vw, 3rem)", letterSpacing: "-0.02em" }}>Choose your</p>
+        <div className="flex items-center justify-center gap-3">
+          <div className="h-px w-10 bg-gradient-to-r from-transparent to-yellow-300/60" />
+          <h2 className="font-black uppercase leading-none text-yellow-300" style={{ fontSize: "clamp(2.2rem, 7vw, 3rem)", letterSpacing: "-0.02em" }}>
+            Champion
+          </h2>
+          <div className="h-px w-10 bg-gradient-to-l from-transparent to-yellow-300/60" />
+        </div>
       </div>
       <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-1.5">
         {allTeams.map((team) => {
@@ -687,7 +692,7 @@ export default function BracketPage() {
                 onMouseEnter={e => { if (tab !== t) { const el = e.currentTarget as HTMLElement; el.style.color = "#ffffff"; el.style.textShadow = "0 0 10px rgba(255,255,255,0.5)"; }}}
                 onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = ""; el.style.textShadow = ""; }}
               >
-                {t === "groups" ? `Groups (${groupPickCount}/12)` : t === "bracket" ? "Knockout" : t === "world" ? "🌍 The World" : "The Rules"}
+                {t === "groups" ? "Phase 1 - Groups" : t === "bracket" ? "Phase 2 - Knockout" : t === "world" ? "🌍 The World" : "The Rules"}
                 <span className={`absolute bottom-[-1px] inset-x-0 h-[2px] ${tab === t ? "bg-yellow-300" : ""}`} />
               </button>
             ))}
