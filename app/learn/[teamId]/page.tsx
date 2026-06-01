@@ -46,6 +46,15 @@ export default async function CountryPage({
       {/* Content */}
       <div className="max-w-2xl mx-auto px-4 py-8 space-y-8">
 
+        <div className="flex gap-3">
+          <Link href="/learn" className="flex-1 text-center bg-white/10 hover:bg-white/20 text-white py-3 rounded-xl font-medium transition-colors">
+            ← Back to Globe
+          </Link>
+          <Link href="/bracket" className="flex-1 text-center bg-brand-600 hover:bg-brand-700 text-white py-3 rounded-xl font-medium transition-colors">
+            Make Picks →
+          </Link>
+        </div>
+
         <section>
           <h2 className="text-brand-400 text-xs font-bold uppercase tracking-widest mb-3">⚽ Soccer History</h2>
           <p className="text-white/80 leading-relaxed">{info.soccerHistory}</p>
