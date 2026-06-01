@@ -20,17 +20,7 @@ function getVisualIndex(arrayIndex: number, dragIdx: number, insertIdx: number):
   return arrayIndex;
 }
 
-// Cycle through 4 header styles across groups so the user can compare
-const GROUP_HEADER_STYLES = [
-  // A, E, I — dark green gradient
-  { bg: "linear-gradient(135deg, #14532d 0%, #166534 100%)", labelColor: "#4ade80", letterColor: "#ffffff", chipBg: "rgba(255,255,255,0.12)", chipText: "rgba(255,255,255,0.7)" },
-  // B, F, J — near-black charcoal
-  { bg: "#111827",             labelColor: "#6b7280", letterColor: "#ffffff", chipBg: "rgba(255,255,255,0.10)", chipText: "rgba(255,255,255,0.6)" },
-  // C, G, K — slate-blue
-  { bg: "#1e293b",             labelColor: "#94a3b8", letterColor: "#ffffff", chipBg: "rgba(255,255,255,0.10)", chipText: "rgba(255,255,255,0.6)" },
-  // D, H, L — blends into page (green-950)
-  { bg: "#052e16",             labelColor: "#166534", letterColor: "#d1fae5", chipBg: "rgba(255,255,255,0.07)", chipText: "rgba(255,255,255,0.5)" },
-];
+const GROUP_HEADER_STYLE = { bg: "linear-gradient(135deg, #14532d 0%, #166534 100%)", labelColor: "#4ade80", letterColor: "#ffffff", chipBg: "rgba(255,255,255,0.12)", chipText: "rgba(255,255,255,0.7)" };
 
 function DraggableGroupCard({
   group,
@@ -128,8 +118,7 @@ function DraggableGroupCard({
   const top1 = picks[`group:${group.id}`] ? getTeam(picks[`group:${group.id}`]) : null;
   const top2 = picks[`runner:${group.id}`] ? getTeam(picks[`runner:${group.id}`]) : null;
 
-  const groupIdx = "ABCDEFGHIJKL".indexOf(group.id);
-  const hs = GROUP_HEADER_STYLES[groupIdx % 4];
+  const hs = GROUP_HEADER_STYLE;
 
   return (
     <div className="rounded-2xl overflow-hidden shadow-lg" style={{ border: "1px solid rgba(255,255,255,0.07)" }}>
@@ -154,7 +143,7 @@ function DraggableGroupCard({
       </div>
 
       {/* Teams */}
-      <div className="bg-gray-50 p-3">
+      <div className="p-3" style={{ background: "#d1fae5" }}>
         <div ref={containerRef} className="space-y-1.5" style={{ touchAction: "none" }}>
           {order.flatMap((team, index) => {
             const isDragging = dragging === index;
@@ -406,7 +395,7 @@ function RulesTab() {
         ))}
       </div>
 
-      <div className="max-w-2xl mx-auto px-4 py-8">
+      <div className="max-w-2xl mx-auto px-4 pt-2 pb-20">
       <div style={{ zoom }}>
 
         <div className="relative rounded-2xl overflow-hidden mb-10 bg-green-950 text-white">

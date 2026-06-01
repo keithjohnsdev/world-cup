@@ -256,47 +256,42 @@ export default function GlobeView({ onHover, onCountryClick }: Props) {
             scene.add(sun);
             sunRef.current = sun;
 
-            // Night overlay — a slightly larger sphere whose shader darkens
-            // everything facing away from the sun, oceans and countries alike.
-            // Must be a child of the globe's rotating group so it tracks geography.
-            const GLOBE_R = 100; // three-globe default radius
+            // Night overlay — sphere slightly larger than globe.
+            // Camera orbits (globe stays fixed in world space), so a world-space
+            // overlay aligns correctly with geography without needing globe's rotation.
+            // depthTest:false bypasses the atmosphere sphere's depth writes.
+            const GLOBE_R = 100;
             const nightMat = new THREE.ShaderMaterial({
               uniforms: { sunDir: { value: new THREE.Vector3(dir.x, dir.y, dir.z) } },
               vertexShader: `
-                varying vec3 vWorldNormal;
+                varying vec3 vDir;
                 void main() {
-                  // World-space normal so sunDir (world space) comparison is correct
-                  vWorldNormal = normalize(mat3(modelMatrix) * normal);
+                  // World-space direction from globe center to this vertex.
+                  // For a sphere at the origin this equals the world-space surface normal.
+                  vDir = normalize((modelMatrix * vec4(position, 1.0)).xyz);
                   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
                 }
               `,
               fragmentShader: `
                 uniform vec3 sunDir;
-                varying vec3 vWorldNormal;
+                varying vec3 vDir;
                 void main() {
-                  float d = dot(vWorldNormal, normalize(sunDir));
-                  // Smooth terminator: day side transparent, night side dark navy
-                  float t = smoothstep(0.08, -0.08, d);
-                  gl_FragColor = vec4(0.0, 0.01, 0.05, t * 0.88);
+                  float d = dot(vDir, normalize(sunDir));
+                  float t = smoothstep(0.06, -0.06, d);
+                  gl_FragColor = vec4(0.0, 0.01, 0.06, t * 0.85);
                 }
               `,
               transparent: true,
+              depthTest: false,   // atmosphere writes depth first; skip the test
               depthWrite: false,
               side: THREE.FrontSide,
             });
             const nightMesh = new THREE.Mesh(
-              new THREE.SphereGeometry(GLOBE_R * 1.002, 64, 64),
+              new THREE.SphereGeometry(GLOBE_R * 1.001, 64, 64),
               nightMat
             );
-
-            // Attach to the globe's rotating group so the overlay rotates with it
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const globeGroup = scene.children.find((c: any) => c.isGroup);
-            if (globeGroup) {
-              globeGroup.add(nightMesh);
-            } else {
-              scene.add(nightMesh);
-            }
+            nightMesh.renderOrder = 10; // draw after globe + atmosphere
+            scene.add(nightMesh);       // scene root — globe doesn't rotate, camera does
             nightOverlayRef.current = nightMesh;
           }}
         />
