@@ -355,15 +355,30 @@ function RulesTab() {
         </div>
       <div style={{ zoom }}>
 
-        <p className="text-gray-600 leading-relaxed italic mb-8 px-1">
-          Every four years, the world stops. Forty-eight nations travel from six continents to prove
-          something — to themselves, to their history, to a billion people watching from living rooms
-          and rooftops and corner bars. Underdogs do the impossible. Giants crumble. Heroes rise to
-          etch their names in eternity. And somewhere in all of that chaos and beauty, somebody in
-          this family is going to get it exactly right. This is your chance to be that person. Study
-          the flags. Trust your gut. Make your picks. And when the final whistle blows in July, may
-          your bracket be the last one standing.
-        </p>
+        <div className="relative rounded-2xl overflow-hidden mb-10 bg-green-900 text-white px-6 py-8">
+          {/* decorative background elements */}
+          <div className="absolute inset-0 opacity-10 pointer-events-none select-none" aria-hidden>
+            <span className="absolute text-[10rem] leading-none top-[-1rem] right-2">🏆</span>
+            <span className="absolute text-[6rem] leading-none bottom-[-1rem] left-1">⚽</span>
+          </div>
+
+          <div className="relative">
+            <div className="text-xs font-bold uppercase tracking-widest text-green-400 mb-2">
+              World Cup 2026 · Family Bracket Challenge
+            </div>
+            <h2 className="text-2xl font-extrabold leading-snug mb-4">
+              Every four years,<br />the world stops.
+            </h2>
+            <p className="text-green-100 leading-relaxed text-sm mb-5">
+              Forty-eight nations. Six continents. One trophy. Underdogs do the impossible, giants
+              crumble, and heroes etch their names in eternity. Somewhere in all that chaos and
+              beauty, somebody in this family is going to get it exactly right.
+            </p>
+            <p className="text-white font-semibold text-sm">
+              Study the flags. Trust your gut. Make your picks. 🏅
+            </p>
+          </div>
+        </div>
 
         <Section title="How It Works">
           <div className="space-y-4 text-gray-700 leading-relaxed">
