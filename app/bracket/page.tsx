@@ -684,6 +684,14 @@ export default function BracketPage() {
       {/* Tabs */}
       <div className="flex border-b border-brand-700 bg-brand-800 px-4">
         <button
+          onClick={() => setTab("rules")}
+          className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
+            tab === "rules" ? "border-yellow-300 text-yellow-300" : "border-transparent text-green-400 hover:text-white"
+          }`}
+        >
+          The Rules
+        </button>
+        <button
           onClick={() => setTab("groups")}
           className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
             tab === "groups" ? "border-yellow-300 text-yellow-300" : "border-transparent text-green-400 hover:text-white"
@@ -698,14 +706,6 @@ export default function BracketPage() {
           }`}
         >
           Knockout Bracket
-        </button>
-        <button
-          onClick={() => setTab("rules")}
-          className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
-            tab === "rules" ? "border-yellow-300 text-yellow-300" : "border-transparent text-green-400 hover:text-white"
-          }`}
-        >
-          The Rules
         </button>
         <a
           href="/learn"
