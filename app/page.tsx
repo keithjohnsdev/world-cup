@@ -260,15 +260,11 @@ export default function Home() {
           alignItems: "center",
           gap: 28,
         }}>
-          <div className="text-center">
-            <p className="text-green-500 text-[9px] font-black uppercase tracking-[0.4em] mb-2">Est. 2026</p>
-            <h1 className="font-black text-white uppercase leading-none tracking-tight" style={{ fontSize: "clamp(1.8rem, 7vw, 2.6rem)" }}>
-              Johnsies
-            </h1>
-            <h2 className="font-black text-yellow-300 uppercase leading-none tracking-tight" style={{ fontSize: "clamp(1.4rem, 5.5vw, 2rem)" }}>
-              World Cup
-            </h2>
-          </div>
+          <img
+            src="/johnsies_world_cup_logo_v4_transparent.png"
+            alt="Johnsies World Cup 2026"
+            style={{ width: 200, height: "auto", display: "block" }}
+          />
 
           <form onSubmit={handleSubmit} className="w-full space-y-3">
             <input
