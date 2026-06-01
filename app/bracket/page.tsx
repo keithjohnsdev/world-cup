@@ -25,7 +25,7 @@ function getVisualIndex(arrayIndex: number, dragIdx: number, insertIdx: number):
   return arrayIndex;
 }
 
-const GROUP_HEADER_STYLE = { bg: "linear-gradient(135deg, #14532d 0%, #166534 100%)", labelColor: "#4ade80", letterColor: "#ffffff", chipBg: "rgba(255,255,255,0.12)", chipText: "rgba(255,255,255,0.7)" };
+const GROUP_HEADER_STYLE = { bg: "linear-gradient(135deg, #0f2744 0%, #0b2318 100%)", labelColor: "#4ade80", letterColor: "#fbbf24", chipBg: "rgba(255,255,255,0.1)", chipText: "rgba(255,255,255,0.65)" };
 
 function DraggableGroupCard({
   group,
@@ -126,7 +126,7 @@ function DraggableGroupCard({
   const hs = GROUP_HEADER_STYLE;
 
   return (
-    <div className="rounded-2xl overflow-hidden shadow-lg" style={{ border: "1px solid rgba(255,255,255,0.07)" }}>
+    <div className="rounded-2xl overflow-hidden shadow-lg" style={{ border: "1px solid rgba(255,255,255,0.13)" }}>
       {/* Card header */}
       <div className="px-4 py-3 flex items-center justify-between" style={{ background: hs.bg }}>
         <div className="flex items-baseline gap-1.5">
@@ -700,7 +700,7 @@ export default function BracketPage() {
 
       {/* Groups tab */}
       {tab === "groups" && (
-        <div className="bg-green-950 min-h-screen">
+        <div className="min-h-screen" style={{ background: "linear-gradient(160deg, #060d1a 0%, #0d2137 50%, #0a1a0f 100%)" }}>
           <div className="p-4 max-w-5xl mx-auto">
             <div className="mb-6 mt-4 text-center">
               <p className="font-black uppercase leading-none text-white mb-1" style={{ fontSize: "clamp(2.2rem, 7vw, 3rem)", letterSpacing: "-0.02em" }}>The</p>
