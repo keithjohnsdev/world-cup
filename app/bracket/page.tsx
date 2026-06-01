@@ -669,7 +669,7 @@ export default function BracketPage() {
 
       {/* Tab navigation — inside the content column */}
       <div className="max-w-2xl mx-auto px-4 pt-6">
-        <div className="flex overflow-x-auto -mx-4 px-4">
+        <div className="flex justify-center overflow-x-auto -mx-4 px-4">
           {(["rules", "groups", "bracket"] as const).map((t) => (
             <button
               key={t}
