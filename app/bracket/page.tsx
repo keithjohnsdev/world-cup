@@ -1,12 +1,17 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { GROUPS, getTeam, type Team } from "@/lib/data";
+import { COUNTRY_INFO } from "@/lib/countries";
 import { FlagIcon } from "@/components/FlagIcon";
 import { NavHeader } from "@/components/ui/NavHeader";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+
+const GlobeView = dynamic(() => import("@/components/GlobeView"), { ssr: false });
+const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
 
 type Picks = Record<string, string>; // key: "stage:slot" → teamId
 
@@ -549,8 +554,10 @@ function RulesTab() {
 
 export default function BracketPage() {
   const [picks, setPicks] = useState<Picks>({});
-  const [tab, setTab] = useState<"groups" | "bracket" | "rules">("rules");
+  const [tab, setTab] = useState<"groups" | "bracket" | "rules" | "world">("rules");
   const [userName, setUserName] = useState("");
+  const [worldView, setWorldView] = useState<"globe" | "map">("globe");
+  const [hoveredTeam, setHoveredTeam] = useState<string | null>(null);
   const router = useRouter();
 
   const picksRef = useRef<Picks>({});
@@ -562,8 +569,8 @@ export default function BracketPage() {
     if (!token) { router.replace("/"); return; }
     setUserName(name || "");
 
-    const urlTab = new URLSearchParams(window.location.search).get("tab") as "rules" | "groups" | "bracket" | null;
-    if (urlTab && ["rules", "groups", "bracket"].includes(urlTab)) setTab(urlTab);
+    const urlTab = new URLSearchParams(window.location.search).get("tab") as "rules" | "groups" | "bracket" | "world" | null;
+    if (urlTab && ["rules", "groups", "bracket", "world"].includes(urlTab)) setTab(urlTab);
 
     fetch("/api/picks", { headers: { "x-session-token": token } })
       .then((r) => r.json())
@@ -622,6 +629,9 @@ export default function BracketPage() {
 
   const groupPickCount = GROUPS.filter((g) => picks[`group:${g.id}`]).length;
 
+  const handleGlobeHover = useCallback((teamId: string | null) => setHoveredTeam(teamId), []);
+  const handleGlobeClick = useCallback((teamId: string) => router.push(`/learn/${teamId}`), [router]);
+
   function signOut() {
     localStorage.removeItem("wc_token");
     localStorage.removeItem("wc_name");
@@ -629,7 +639,7 @@ export default function BracketPage() {
   }
 
   return (
-    <div className="min-h-screen bg-green-950">
+    <div className={tab === "world" ? "h-screen flex flex-col overflow-hidden bg-surface-deep" : "min-h-screen bg-green-950"}>
       <NavHeader
         className="border-b border-white/10"
         style={{ background: "linear-gradient(160deg, #060d1a 0%, #0d2137 50%, #0a1a0f 100%)" }}
@@ -646,7 +656,7 @@ export default function BracketPage() {
         }
         center={
           <div className="flex h-full">
-            {(["rules", "groups", "bracket"] as const).map((t) => (
+            {(["rules", "groups", "bracket", "world"] as const).map((t) => (
               <button
                 key={t}
                 onClick={e => { (e.currentTarget as HTMLElement).style.color = ""; (e.currentTarget as HTMLElement).style.textShadow = ""; setTab(t); }}
@@ -658,18 +668,10 @@ export default function BracketPage() {
                 onMouseEnter={e => { if (tab !== t) { const el = e.currentTarget as HTMLElement; el.style.color = "#ffffff"; el.style.textShadow = "0 0 10px rgba(255,255,255,0.5)"; }}}
                 onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = ""; el.style.textShadow = ""; }}
               >
-                {t === "groups" ? `Groups (${groupPickCount}/12)` : t === "bracket" ? "Knockout" : "The Rules"}
+                {t === "groups" ? `Groups (${groupPickCount}/12)` : t === "bracket" ? "Knockout" : t === "world" ? "🌍 The World" : "The Rules"}
                 <span className={`absolute bottom-[-1px] inset-x-0 h-[2px] ${tab === t ? "bg-yellow-300" : ""}`} />
               </button>
             ))}
-            <a
-              href="/learn"
-              className="relative flex items-center h-full px-4 text-xs font-black uppercase tracking-[0.15em] whitespace-nowrap text-slate-200 transition-all"
-              onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.color = "#ffffff"; el.style.textShadow = "0 0 10px rgba(255,255,255,0.5)"; }}
-              onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = ""; el.style.textShadow = ""; }}
-            >
-              🌍 The World
-            </a>
           </div>
         }
         right={
@@ -681,7 +683,7 @@ export default function BracketPage() {
       />
 
       {/* Champion banner */}
-      {championTeam && (
+      {championTeam && tab !== "world" && (
         <div className="py-3 px-4 flex items-center justify-center gap-4" style={{ background: "linear-gradient(90deg, #92400e, #d97706, #fbbf24, #d97706, #92400e)" }}>
           <span className="text-2xl">🏆</span>
           <div className="text-center">
@@ -724,6 +726,58 @@ export default function BracketPage() {
 
       {/* Rules tab */}
       {tab === "rules" && <RulesTab />}
+
+      {/* World tab */}
+      {tab === "world" && (
+        <div className="flex-1 relative min-h-0">
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 rounded-full bg-black/30 p-1 backdrop-blur-sm">
+            {(["globe", "map"] as const).map((v) => (
+              <button
+                key={v}
+                onClick={() => setWorldView(v)}
+                className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-[0.12em] transition-all ${
+                  worldView === v ? "bg-yellow-300 text-green-950" : "text-white/60 hover:text-white"
+                }`}
+              >
+                {v === "globe" ? "🌐 Globe" : "🗺 Map"}
+              </button>
+            ))}
+          </div>
+          <p className="absolute top-12 left-1/2 -translate-x-1/2 z-10 text-white/40 text-xs pointer-events-none whitespace-nowrap">
+            {worldView === "globe"
+              ? "Rotate the globe · hover a green country · click to explore"
+              : "Hover a green country · click to explore"}
+          </p>
+          {worldView === "globe" ? (
+            <GlobeView onHover={handleGlobeHover} onCountryClick={handleGlobeClick} />
+          ) : (
+            <div className="h-full flex items-center">
+              <MapView onHover={handleGlobeHover} onCountryClick={handleGlobeClick} />
+            </div>
+          )}
+          {hoveredTeam && COUNTRY_INFO[hoveredTeam] && (() => {
+            const team = getTeam(hoveredTeam);
+            const info = COUNTRY_INFO[hoveredTeam];
+            return team && info ? (
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+                <Card variant="dark" className="px-5 py-4 min-w-[260px] max-w-xs">
+                  <div className="flex items-center gap-3 mb-3">
+                    <FlagIcon cc={team.cc} name={team.name} className="w-10 h-7 rounded" />
+                    <div>
+                      <div className="text-white font-bold text-lg leading-tight">{team.name}</div>
+                      <div className="text-brand-400 text-xs font-medium">Group {team.group} · {info.capital}</div>
+                    </div>
+                  </div>
+                  <p className="text-white/70 text-xs leading-relaxed line-clamp-3">
+                    {info.soccerHistory.split(".")[0]}.
+                  </p>
+                  <p className="text-brand-400/70 text-xs mt-2">Click to learn more →</p>
+                </Card>
+              </div>
+            ) : null;
+          })()}
+        </div>
+      )}
 
       {/* Bracket tab */}
       {tab === "bracket" && (
