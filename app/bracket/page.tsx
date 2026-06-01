@@ -209,8 +209,8 @@ function DraggableGroupCard({
   const rankColors = [
     "border-green-500 bg-green-50 text-green-700",
     "border-blue-400 bg-blue-50 text-blue-600",
-    "border-gray-200 bg-white text-gray-300",
-    "border-gray-200 bg-white text-gray-300",
+    "border-gray-300 bg-white text-gray-500",
+    "border-gray-300 bg-white text-gray-500",
   ];
 
   return (
