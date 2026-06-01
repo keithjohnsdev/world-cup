@@ -395,10 +395,12 @@ function RulesTab() {
 
         <div className="relative rounded-2xl overflow-hidden mb-10 bg-green-950 text-white">
           <div className="px-8 pt-10 pb-11 text-center">
-            {/* eyebrow */}
-            <div className="text-xs font-black uppercase tracking-[0.25em] text-green-400 mb-6">
-              World Cup 2026 &mdash; Family Bracket Challenge
-            </div>
+            {/* official emblem */}
+            <img
+              src="https://upload.wikimedia.org/wikipedia/en/thumb/1/17/2026_FIFA_World_Cup_emblem.svg/400px-2026_FIFA_World_Cup_emblem.svg.png"
+              alt="2026 FIFA World Cup"
+              className="w-28 h-auto mx-auto mb-8"
+            />
 
             {/* headline */}
             <h2 className="font-black uppercase leading-none mb-8" style={{ fontSize: "clamp(2.5rem, 8vw, 3.5rem)", letterSpacing: "-0.02em" }}>
