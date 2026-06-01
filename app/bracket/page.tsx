@@ -414,8 +414,8 @@ function RulesTab() {
             {/* body */}
             <div className="space-y-3 mb-9">
               <p className="text-lg font-black italic tracking-tight text-green-100 leading-snug">Forty-eight nations. Six continents. One trophy.</p>
-              <p className="text-lg font-black italic tracking-tight text-green-100 leading-snug">Underdogs do the impossible. Giants crumble. Heroes etch their names in eternity.</p>
-              <p className="text-2xl font-black italic tracking-tight text-yellow-300 leading-snug">Will it be you?</p>
+              <p className="text-lg font-black italic tracking-tight text-green-100 leading-snug">Underdogs do the impossible. Giants crumble. Heroes etch their names in eternity…</p>
+              <p className="text-2xl font-black italic tracking-tight text-yellow-300 leading-snug">And a family will name a new champion.</p>
             </div>
 
             {/* call to action */}
