@@ -502,8 +502,8 @@ function RulesTab() {
               <AwardRow name="The Closer" description="Most points scored in the quarterfinals and beyond — peaked at the right time" />
               <AwardRow name="The Hipster" description="Named the lowest-ranked team to make the deepest run" />
               <AwardRow name="Bracket Brainiac" description="Highest accuracy percentage in the knockout rounds" />
-              <AwardRow name="The Oracle" description="Correctly predicted the winner of every group (1st place, all 12) — near impossible" />
-              <AwardRow isNew name="The Pacemaker" description="Led the overall standings for more rounds than anyone else — front-runner all tournament" />
+              <AwardRow name="The Hand of God" description="Correctly predicted the winner of every group (1st place, all 12) — near impossible" />
+              <AwardRow name="The Pacemaker" description="Led the overall standings for more rounds than anyone else — front-runner all tournament" />
             </div>
           </Sub>
           <Sub title="Funny &amp; Consolation">
@@ -514,14 +514,14 @@ function RulesTab() {
               <AwardRow name="Help, I've Gone Cross-Eyed" description="Most picks where the team advanced but in the wrong position" />
               <AwardRow name="The Trendsetter" description="Made the most unique picks that nobody else made — a true contrarian" />
               <AwardRow name="Reverse Oracle" description="Most incorrect picks overall — so reliably wrong you're almost useful" />
-              <AwardRow isNew name="Early Retirement" description="Your pre-tournament champion pick was eliminated in the group stage — sent home before the party started" />
-              <AwardRow isNew name="Close But No Cigar" description="Your champion pick made the Final but lost — you saw it coming, you were almost right, and it hurts" />
+              <AwardRow name="Early Retirement" description="Your pre-tournament champion pick was eliminated in the group stage — sent home before the party started" />
             </div>
           </Sub>
           <Sub title="Special">
             <div className="rounded-xl border border-green-800 bg-green-900/40 px-4">
               <AwardRow name="Upset Artist" description="Most correctly predicted upsets — lower-ranked team beats higher-ranked" />
               <AwardRow name="Comeback Kid" description="Biggest point swing — most improved from the bottom half of the standings to the top" />
+              <AwardRow name="Close But No Cigar" description="Your champion pick made the Final but lost — you saw it coming, you were almost right, and it hurts" />
             </div>
           </Sub>
         </Section>
