@@ -812,7 +812,7 @@ export default function BracketPage() {
   }
 
   return (
-    <div className={tab === "world" ? "h-screen flex flex-col overflow-hidden bg-surface-deep" : "min-h-screen bg-green-950"}>
+    <div className={tab === "world" && worldView === "globe" ? "h-screen flex flex-col overflow-hidden bg-surface-deep" : tab === "world" ? "min-h-screen flex flex-col bg-surface-deep" : "min-h-screen bg-green-950"}>
       <NavHeader
         className="border-b border-white/10"
         style={{ background: "linear-gradient(160deg, #060d1a 0%, #0d2137 50%, #0a1a0f 100%)" }}
@@ -905,7 +905,7 @@ export default function BracketPage() {
 
       {/* World tab */}
       {tab === "world" && (
-        <div className="flex-1 relative min-h-0">
+        <div className={worldView === "globe" ? "flex-1 relative min-h-0" : "relative"}>
           <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 rounded-full bg-black/30 p-1 backdrop-blur-sm">
             {(["globe", "map"] as const).map((v) => (
               <button
