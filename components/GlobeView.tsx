@@ -43,6 +43,7 @@ export default function GlobeView({ onHover, onCountryClick }: Props) {
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const [countries, setCountries] = useState<GeoFeature[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hoveredIso, setHoveredIso] = useState<string | null>(null);
 
   // Observe wrapper size
   useEffect(() => {
@@ -95,10 +96,12 @@ export default function GlobeView({ onHover, onCountryClick }: Props) {
 
   const handlePolygonHover = (feature: unknown) => {
     if (!feature) {
+      setHoveredIso(null);
       onHover(null);
       return;
     }
     const iso = getIso(feature);
+    setHoveredIso(iso);
     const teamId = WC_ISO[iso] ?? null;
     onHover(teamId);
   };
@@ -113,7 +116,8 @@ export default function GlobeView({ onHover, onCountryClick }: Props) {
 
   const getPolygonColor = (feature: unknown) => {
     const iso = getIso(feature);
-    return WC_ISO[iso] ? "#22c55e" : "#1e3a5f";
+    if (!WC_ISO[iso]) return "#1e3a5f";
+    return iso === hoveredIso ? "#bbf7d0" : "#22c55e";
   };
 
   return (
