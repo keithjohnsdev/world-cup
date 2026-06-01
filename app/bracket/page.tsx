@@ -724,8 +724,8 @@ export default function BracketPage() {
       {/* Groups tab */}
       {tab === "groups" && (
         <div className="min-h-screen" style={{ background: "linear-gradient(160deg, #060d1a 0%, #0d2137 60%, #071628 100%)" }}>
-          <div className="p-4 max-w-5xl mx-auto">
-            <div className="mb-6 mt-4 text-center">
+          <div className="px-4 pt-10 pb-8 max-w-5xl mx-auto">
+            <div className="mb-10 text-center">
               <p className="font-black uppercase leading-none text-white mb-1" style={{ fontSize: "clamp(2.2rem, 7vw, 3rem)", letterSpacing: "-0.02em" }}>The</p>
               <div className="flex items-center justify-center gap-3">
                 <div className="h-px w-10 bg-gradient-to-r from-transparent to-yellow-300/60" />
