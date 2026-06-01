@@ -581,7 +581,7 @@ function KidPowerSection({ picks, onPick }: { picks: Picks; onPick: (stage: stri
             className="inline-flex items-center gap-3 bg-yellow-300 hover:bg-yellow-200 text-green-950 font-black text-xl uppercase tracking-tight rounded-2xl px-10 py-5 transition-all cursor-pointer shadow-lg hover:shadow-yellow-300/20 hover:scale-105 active:scale-95"
           >
             <span className="text-3xl">⚡</span>
-            Yes — Kid Power!
+            Yes — Power Me Up!
           </button>
         </div>
       )}
