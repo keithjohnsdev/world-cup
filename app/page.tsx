@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { TEAMS } from "@/lib/data";
 
@@ -57,8 +57,10 @@ const PHRASES: { teamId: string; text: string }[] = [
 ];
 
 const INTERVAL_MS = 4500;
-const RING_S = 120; // seconds per full rotation
+const RING_MS = 140_000; // ms per full rotation
 const RADIUS = 355;
+const FLAG_W = 52;
+const FLAG_H = 36;
 const SIZE = RADIUS * 2 + 150;
 
 export default function Home() {
@@ -67,6 +69,37 @@ export default function Home() {
   const [error, setError] = useState("");
   const [phraseIdx, setPhraseIdx] = useState(0);
   const router = useRouter();
+
+  // One ref per flag — RAF writes translate() directly, no React re-renders
+  const flagRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  useEffect(() => {
+    let rafId: number;
+    let prev: number | undefined;
+    let angle = 0; // degrees
+
+    function tick(ts: number) {
+      if (prev !== undefined) angle = (angle + ((ts - prev) / RING_MS) * 360) % 360;
+      prev = ts;
+
+      const cx = SIZE / 2;
+      const cy = SIZE / 2;
+      TEAMS.forEach((_, i) => {
+        const el = flagRefs.current[i];
+        if (!el) return;
+        const baseDeg = (i / TEAMS.length) * 360 - 90;
+        const rad = ((baseDeg + angle) * Math.PI) / 180;
+        const x = Math.cos(rad) * RADIUS;
+        const y = Math.sin(rad) * RADIUS;
+        el.style.transform = `translate(${cx + x - FLAG_W / 2}px, ${cy + y - FLAG_H / 2}px)`;
+      });
+
+      rafId = requestAnimationFrame(tick);
+    }
+
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, []);
 
   useEffect(() => {
     const id = setInterval(() => setPhraseIdx((i) => {
@@ -118,14 +151,6 @@ export default function Home() {
       style={{ background: "linear-gradient(160deg, #060d1a 0%, #0d2137 50%, #0a1a0f 100%)" }}
     >
       <style>{`
-        @keyframes ring-spin {
-          from { transform: rotate(0deg); }
-          to   { transform: rotate(360deg); }
-        }
-        @keyframes counter-spin {
-          from { rotate: 0deg; }
-          to   { rotate: -360deg; }
-        }
         @keyframes slot-tick {
           0%   { transform: translateY(110%); opacity: 0; }
           10%  { transform: translateY(0);    opacity: 1; }
@@ -150,25 +175,18 @@ export default function Home() {
       {/* Outer sizing box */}
       <div style={{ position: "relative", width: SIZE, height: SIZE, flexShrink: 0 }}>
 
-        {/* Slowly rotating ring */}
-        <div style={{ position: "absolute", inset: 0, animation: `ring-spin ${RING_S}s linear infinite` }}>
-          {TEAMS.map((team, i) => {
-            const angleDeg = (i / TEAMS.length) * 360 - 90;
-            const rad = (angleDeg * Math.PI) / 180;
-            const x = Math.cos(rad) * RADIUS;
-            const y = Math.sin(rad) * RADIUS;
+        {/* Flags — RAF moves each one independently, no CSS rotation */}
+        {TEAMS.map((team, i) => {
             const isActive = team.id === currentPhrase.teamId;
 
             return (
               <div
                 key={team.id}
+                ref={(el) => { flagRefs.current[i] = el; }}
                 style={{
                   position: "absolute",
-                  left: `calc(50% + ${x}px)`,
-                  top: `calc(50% + ${y}px)`,
-                  // center on orbit point; counter-rotate to stay upright
-                  transform: "translate(-50%, -50%)",
-                  animation: `counter-spin ${RING_S}s linear infinite`,
+                  width: FLAG_W,
+                  height: FLAG_H,
                   zIndex: isActive ? 2 : 1,
                 }}
               >
@@ -228,9 +246,8 @@ export default function Home() {
               </div>
             );
           })}
-        </div>
 
-        {/* Center crest + form — outside the rotating ring */}
+        {/* Center crest + form */}
         <div style={{
           position: "absolute",
           top: "50%",
