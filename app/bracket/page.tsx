@@ -141,18 +141,20 @@ function DraggableGroupCard({
 
   useEffect(() => {
     if (hasInitialized.current) return;
-    const winner = picks[`group:${group.id}`];
-    const runnerUp = picks[`runner:${group.id}`];
-    if (!winner && !runnerUp) return;
+    const ids = [
+      picks[`group:${group.id}`],
+      picks[`runner:${group.id}`],
+      picks[`third:${group.id}`],
+      picks[`fourth:${group.id}`],
+    ];
+    if (!ids.some(Boolean)) return;
     hasInitialized.current = true;
-    const winnerTeam = group.teams.find((t) => t.id === winner);
-    const runnerTeam = group.teams.find((t) => t.id === runnerUp);
-    const rest = group.teams.filter((t) => t.id !== winner && t.id !== runnerUp);
-    const ordered: Team[] = [];
-    if (winnerTeam) ordered.push(winnerTeam);
-    if (runnerTeam) ordered.push(runnerTeam);
-    ordered.push(...rest);
-    setOrder(ordered);
+    const ranked = ids
+      .map((id) => id ? group.teams.find((t) => t.id === id) : undefined)
+      .filter(Boolean) as Team[];
+    const rankedIds = new Set(ranked.map((t) => t.id));
+    const rest = group.teams.filter((t) => !rankedIds.has(t.id));
+    setOrder([...ranked, ...rest]);
   }, [picks, group]);
 
   function handlePointerDown(e: React.PointerEvent, index: number) {
@@ -184,8 +186,10 @@ function DraggableGroupCard({
       const [moved] = newOrder.splice(dragging, 1);
       newOrder.splice(insertAt, 0, moved);
       setOrder(newOrder);
-      onPick("group", group.id, newOrder[0].id);
+      onPick("group",  group.id, newOrder[0].id);
       onPick("runner", group.id, newOrder[1].id);
+      onPick("third",  group.id, newOrder[2].id);
+      onPick("fourth", group.id, newOrder[3].id);
     }
     setDragging(null);
     setDragOffset(0);
@@ -456,7 +460,7 @@ function RulesTab() {
             <div className="bg-white rounded-xl border border-gray-200 p-4">
               <div className="font-bold text-green-800 mb-1">Phase 1 — Group Stage Picks</div>
               <div className="text-sm text-gray-500 mb-2">Deadline: before the first match</div>
-              <p className="text-sm">For each of the 12 groups, pick which team finishes 1st and which finishes 2nd. Also name your champion. Picks lock when the tournament begins.</p>
+              <p className="text-sm">For each of the 12 groups, rank all four teams in finishing order (1st–4th). Also name your champion. Picks lock when the tournament begins.</p>
             </div>
             <div className="bg-white rounded-xl border border-gray-200 p-4">
               <div className="font-bold text-green-800 mb-1">Phase 2 — Knockout Bracket Picks</div>
@@ -469,10 +473,12 @@ function RulesTab() {
         <Section title="Scoring">
           <Sub title="Group Stage">
             <div className="bg-white rounded-xl border border-gray-200 px-4 divide-y divide-gray-100">
-              <ScoreRow label="Team correctly advances (either position)" pts="2 pts" />
-              <ScoreRow label="Team finishes in the exact position you picked" pts="+1 pt" />
-              <ScoreRow label="Max per group (2 teams × 3 pts)" pts="6 pts" />
-              <ScoreRow label="Max group stage total (12 groups)" pts="72 pts" />
+              <ScoreRow label="1st or 2nd pick — team advances (any top-2 finish)" pts="2 pts" />
+              <ScoreRow label="1st or 2nd pick — team in the exact position you picked" pts="+1 pt" />
+              <ScoreRow label="3rd place pick — team finishes exactly 3rd" pts="1 pt" />
+              <ScoreRow label="4th place pick — team finishes exactly 4th" pts="1 pt" />
+              <ScoreRow label="Max per group" pts="8 pts" />
+              <ScoreRow label="Max group stage total (12 groups)" pts="96 pts" />
             </div>
           </Sub>
           <Sub title="Knockout Rounds">

@@ -26,14 +26,19 @@ Once the group stage is complete and the real bracket is set, everyone picks the
 
 ### Group Stage
 
-| Result | Points |
-|--------|--------|
-| Team you picked correctly advances (either position) | **2 pts** |
-| Team is also in the correct position (1st or 2nd) | **+1 pt bonus** |
+Pick all four finishing positions for each group. Points are awarded as follows:
 
-- Max per team: **3 pts**
-- Max per group: **6 pts** (3 per team × 2 picks)
-- Max group stage total: **72 pts** (6 pts × 12 groups)
+| Pick | Points |
+|------|--------|
+| Team you picked 1st or 2nd actually advances (any top-2 finish) | **2 pts** |
+| Team also finishes in the exact position you picked (1st or 2nd) | **+1 pt** |
+| Team you picked 3rd finishes exactly 3rd | **1 pt** |
+| Team you picked 4th finishes exactly 4th | **1 pt** |
+
+- Max for a perfect 1st or 2nd pick: **3 pts**
+- Max for a perfect 3rd or 4th pick: **1 pt**
+- Max per group: **8 pts**
+- Max group stage total: **96 pts** (8 pts × 12 groups)
 
 ### Knockout Rounds
 
