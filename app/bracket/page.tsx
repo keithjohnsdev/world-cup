@@ -361,9 +361,15 @@ function AwardRow({ name, description }: { name: string; description: string }) 
 }
 
 function PowerRow({ name, description }: { name: string; description: string }) {
+  const spaceIdx = name.indexOf(" ");
+  const emoji = spaceIdx > 0 ? name.slice(0, spaceIdx) : "";
+  const label = spaceIdx > 0 ? name.slice(spaceIdx + 1) : name;
   return (
     <div className="rounded-xl border border-yellow-400/30 bg-yellow-400/5 px-5 py-4">
-      <div className="text-sm font-black uppercase tracking-[0.15em] text-yellow-300 mb-1">{name}</div>
+      <div className="flex items-center gap-2 mb-1">
+        {emoji && <span className="text-2xl leading-none">{emoji}</span>}
+        <span className="text-sm font-black uppercase tracking-[0.15em] text-yellow-300">{label}</span>
+      </div>
       <div className="text-base text-green-100 leading-relaxed">{description}</div>
     </div>
   );
@@ -479,7 +485,7 @@ function RulesTab() {
         <Section title="Kid Powers">
           <p className="text-base text-green-400 mb-4">Players age 10 and under get special powers. Each can only be used once. Tell a grown-up before you use one.</p>
           <div className="space-y-3">
-            <PowerRow name="🏆 Champion Boost" description="Your champion bonus is worth +20 pts instead of +10 if they win it all." />
+            <PowerRow name="🏆 Champion Charge-Up" description="Your champion bonus is worth +20 pts instead of +10 if they win it all." />
             <PowerRow name="🚃 Kaboose Boost" description="Starting a round in last place? You get 3 free bonus points. Automatic. Can happen more than once." />
             <PowerRow name="❤️ Heart Pick" description="Name your favorite team before the tournament. Every time they win any game — even ones you didn't pick — you earn 1 bonus point." />
             <PowerRow name="⭐ Star Power" description="Pick one game and declare it your Star Pick before it starts. Get it right and earn double points. One star. Use it well." />
