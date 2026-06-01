@@ -670,7 +670,7 @@ export default function BracketPage() {
       {/* Tab navigation */}
       <div className="bg-green-950">
         <div className="flex overflow-x-auto px-2">
-          {(["groups", "bracket", "rules"] as const).map((t) => (
+          {(["rules", "groups", "bracket"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
