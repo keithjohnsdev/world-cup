@@ -667,38 +667,21 @@ export default function BracketPage() {
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="flex border-b border-brand-700 bg-brand-800 px-4">
-        <button
-          onClick={() => setTab("rules")}
-          className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
-            tab === "rules" ? "border-yellow-300 text-yellow-300" : "border-transparent text-green-400 hover:text-white"
-          }`}
-        >
-          The Rules
-        </button>
-        <button
-          onClick={() => setTab("groups")}
-          className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
-            tab === "groups" ? "border-yellow-300 text-yellow-300" : "border-transparent text-green-400 hover:text-white"
-          }`}
-        >
-          Groups ({groupPickCount}/12)
-        </button>
-        <button
-          onClick={() => setTab("bracket")}
-          className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${
-            tab === "bracket" ? "border-yellow-300 text-yellow-300" : "border-transparent text-green-400 hover:text-white"
-          }`}
-        >
-          Knockout Bracket
-        </button>
-        <a
-          href="/learn"
-          className="py-3 px-4 text-sm font-medium border-b-2 border-transparent text-brand-300 hover:text-white transition-colors"
-        >
-          🌍 The World
-        </a>
+      {/* Tab pills */}
+      <div className="px-4 pt-4 pb-3 flex gap-2 overflow-x-auto">
+        {(["groups", "bracket", "rules"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${
+              tab === t
+                ? "bg-amber-400 text-amber-900 shadow-lg"
+                : "bg-brand-800 text-brand-300 hover:text-white hover:bg-brand-700"
+            }`}
+          >
+            {t === "groups" ? `Groups (${groupPickCount}/12)` : t === "bracket" ? "Knockout Bracket" : "The Rules"}
+          </button>
+        ))}
       </div>
 
       {/* Groups tab */}
