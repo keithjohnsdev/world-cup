@@ -60,7 +60,7 @@ export function NavHeader({ left, center, right, variant = "brand", className = 
             </div>
           )}
           {right && (
-            <div className="flex items-center gap-2 px-4 py-3 border-t border-white/10">
+            <div className="flex flex-col border-t border-white/10 [&_button]:w-full [&_button]:justify-start [&_button]:min-h-[48px] [&_button]:px-5 [&_button]:rounded-none">
               {right}
             </div>
           )}
