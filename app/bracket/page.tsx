@@ -823,7 +823,7 @@ export default function BracketPage() {
                 <div className="h-px w-10 bg-gradient-to-l from-transparent to-yellow-300/60" />
               </div>
               <p className="text-white/75 text-sm mt-3">
-                Drag teams to rank all four finishing positions — top 2 advance, but you still get points for correctly choosing 3rd and 4th place!
+                Drag teams to rank all four finishing positions — <span className="text-green-400 font-bold">top 2</span> advance, but you still get points for correctly choosing <span className="text-yellow-300 font-bold">3rd</span> and <span className="text-yellow-300 font-bold">4th</span> place!
               </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
