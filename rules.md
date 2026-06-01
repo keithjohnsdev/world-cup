@@ -71,6 +71,8 @@ Everyone wins something. Awards are announced after the Final.
 | **The Closer** | Most points scored in the quarterfinals and beyond — peaked at the right time |
 | **Dark Horse Whisperer** | Named the lowest-ranked team to make the deepest run |
 | **Bracket Brainiac** | Highest accuracy percentage in the knockout rounds |
+| <span style="color:#e67e22">**The Opener**</span> | <span style="color:#e67e22">Most points in the Round of 32 — rewards doing the homework nobody else did</span> |
+| <span style="color:#e67e22">**Dead Cert**</span> | <span style="color:#e67e22">Correctly predicted the winner of every group (1st place, all 12) — near impossible</span> |
 
 ### Funny & Consolation Awards
 
@@ -82,6 +84,8 @@ Everyone wins something. Awards are announced after the Final.
 | **Help, I've Gone Cross-Eyed** | Most picks where the team advanced but in the wrong position — so close, so often |
 | **The Trendsetter** | Made the most unique picks that nobody else made — a true contrarian |
 | **Reverse Oracle** | Most incorrect predictions overall — so reliably wrong you're almost useful |
+| <span style="color:#e67e22">**The Broken Clock**</span> | <span style="color:#e67e22">Highest score in a single round but still finished last overall — right twice a day</span> |
+| <span style="color:#e67e22">**Enthusiastic Supporter**</span> | <span style="color:#e67e22">Most group stage correct picks whose teams all crashed out in the Round of 32 — the group stage was their whole personality</span> |
 
 ### Skill Awards
 
@@ -90,6 +94,8 @@ Everyone wins something. Awards are announced after the Final.
 | **Perfect Round** | Got every single pick correct in one round (any round counts) |
 | **Upset Artist** | Most correctly predicted upsets (lower-ranked team beats higher-ranked) |
 | **Crystal Ball** | Most total correct picks by raw count across the whole tournament |
+| <span style="color:#e67e22">**The Surgeon**</span> | <span style="color:#e67e22">Best accuracy in the Round of 16 specifically — the most chaotic, unpredictable round</span> |
+| <span style="color:#e67e22">**Efficient**</span> | <span style="color:#e67e22">Highest points-per-pick ratio — fewest picks needed to score the most</span> |
 
 ### Special Awards
 
@@ -98,6 +104,8 @@ Everyone wins something. Awards are announced after the Final.
 | **Rookie Star** | Best score among players age 10 and under — kids compete against each other |
 | **Comeback Kid** | Biggest point swing — most improved from the bottom half of the standings to the top |
 | **The Commentator** | Most enthusiastic trash-talker on the family leaderboard (voted, not scored) |
+| <span style="color:#e67e22">**The Diplomat**</span> | <span style="color:#e67e22">Voted by everyone — nicest, most gracious loser of the tournament</span> |
+| <span style="color:#e67e22">**Last Standing**</span> | <span style="color:#e67e22">Final player whose champion pick was still alive — even if they eventually lost</span> |
 
 ---
 
