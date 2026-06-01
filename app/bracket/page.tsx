@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { GROUPS, getTeam, type Team } from "@/lib/data";
 import { FlagIcon } from "@/components/FlagIcon";
@@ -470,13 +470,13 @@ function RulesTab() {
               <ScoreRow label="Semifinals" pts="24 pts" />
               <ScoreRow label="Final" pts="48 pts" />
             </div>
-            <p className="text-xs text-green-500 mt-2 px-1">Each round has the same total points available (48 pts). No round matters more than any other — they just feel like they do.</p>
+            <p className="text-xs text-green-500 mt-2 px-1">Each round has the same total points available (48 pts). No round matters more than any other, they just feel like they do.</p>
           </Sub>
           <Sub title="Champion Bonus">
             <div className="rounded-xl border border-green-800 bg-green-900/40 px-4">
               <ScoreRow label="Your champion pick wins the tournament" pts="+10 pts" />
             </div>
-            <p className="text-xs text-green-500 mt-2 px-1">Named during Phase 1. The real reward is built into the bracket — this is just a little extra for calling it before a ball was kicked.</p>
+            <p className="text-xs text-green-500 mt-2 px-1">Named during Phase 1. The real reward is built into the bracket, this is just a little extra for calling it before a ball was kicked.</p>
           </Sub>
           <Sub title="Shootout Mercy Rule">
             <div className="rounded-xl border border-green-800 bg-green-900/40 px-4">
@@ -492,7 +492,7 @@ function RulesTab() {
             <div className="rounded-xl border border-green-800 bg-green-900/40 px-4">
               <AwardRow name="The Champion" description="Most total points overall" />
               <AwardRow name="True Believer" description="Named the actual World Cup winner as their champion pick before the tournament" />
-              <AwardRow name="Group Stage Guru" description="Most points in the group stage — rewards knowing the obscure teams" />
+              <AwardRow name="Group Stage Guru" description="Most points in the group stage" />
               <AwardRow name="The Closer" description="Most points scored in the quarterfinals and beyond — peaked at the right time" />
               <AwardRow name="Dark Horse Whisperer" description="Named the lowest-ranked team to make the deepest run" />
               <AwardRow name="Bracket Brainiac" description="Highest accuracy percentage in the knockout rounds" />
@@ -556,9 +556,10 @@ export default function BracketPage() {
   const [picks, setPicks] = useState<Picks>({});
   const [tab, setTab] = useState<"groups" | "bracket" | "rules">("rules");
   const [userName, setUserName] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [saveMsg, setSaveMsg] = useState("");
   const router = useRouter();
+
+  const picksRef = useRef<Picks>({});
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("wc_token");
@@ -577,49 +578,36 @@ export default function BracketPage() {
       });
   }, [router]);
 
-  const savePick = useCallback(async (stage: string, slot: string, teamId: string) => {
-    const token = localStorage.getItem("wc_token");
-    if (!token) return;
-    await fetch("/api/picks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-session-token": token },
-      body: JSON.stringify({ stage, slot, teamId }),
-    });
-  }, []);
-
   function handlePick(stage: string, slot: string, teamId: string) {
     setPicks((prev) => {
       const key = `${stage}:${slot}`;
+      let next: Picks;
       if (!teamId) {
-        const next = { ...prev };
+        next = { ...prev };
         delete next[key];
-        return next;
+      } else {
+        next = { ...prev, [key]: teamId };
       }
-      return { ...prev, [key]: teamId };
+      picksRef.current = next;
+      return next;
     });
-    if (teamId) savePick(stage, slot, teamId);
-  }
 
-  async function saveAll() {
-    setSaving(true);
-    const token = localStorage.getItem("wc_token");
-    if (!token) return;
-    try {
-      await Promise.all(
-        Object.entries(picks).map(([key, teamId]) => {
-          const [stage, slot] = key.split(":");
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      const token = localStorage.getItem("wc_token");
+      if (!token) return;
+      const snap = picksRef.current;
+      Promise.all(
+        Object.entries(snap).map(([key, tId]) => {
+          const [s, sl] = key.split(":");
           return fetch("/api/picks", {
             method: "POST",
             headers: { "Content-Type": "application/json", "x-session-token": token },
-            body: JSON.stringify({ stage, slot, teamId }),
+            body: JSON.stringify({ stage: s, slot: sl, teamId: tId }),
           });
         })
       );
-      setSaveMsg("All picks saved! ✓");
-      setTimeout(() => setSaveMsg(""), 3000);
-    } finally {
-      setSaving(false);
-    }
+    }, 800);
   }
 
   const r32matches = buildR32Matches(picks);
@@ -645,21 +633,21 @@ export default function BracketPage() {
   return (
     <div className="min-h-screen bg-brand-900">
       <NavHeader
-        left={
-          <div>
-            <span className="text-white font-bold text-lg">🏆 WC 2026</span>
-            {userName && <span className="text-brand-300 text-sm ml-2">— {userName}</span>}
+        center={
+          <div className="text-center select-none">
+            <div className="leading-none">
+              <span className="font-black text-white uppercase tracking-tight text-base">Johnsies </span>
+              <span className="font-black text-amber-400 uppercase tracking-tight text-base">World Cup</span>
+            </div>
+            <div className="text-green-400 text-[9px] font-black uppercase tracking-[0.25em] mt-0.5">
+              2026 · Family Bracket Challenge
+            </div>
           </div>
         }
         right={
           <>
-            {saveMsg && <span className="text-brand-300 text-sm">{saveMsg}</span>}
-            <Button variant="primary" size="sm" onClick={saveAll} loading={saving}>
-              Save All
-            </Button>
-            <Button variant="ghost" size="sm" onClick={signOut}>
-              Sign out
-            </Button>
+            {userName && <span className="text-green-400 text-sm font-medium hidden sm:inline">{userName}</span>}
+            <Button variant="ghost" size="sm" onClick={signOut}>Sign out</Button>
           </>
         }
       />
@@ -715,14 +703,16 @@ export default function BracketPage() {
 
       {/* Groups tab */}
       {tab === "groups" && (
-        <div className="p-4 max-w-5xl mx-auto">
-          <p className="text-green-300 text-sm mb-4 text-center">
-            Drag teams to rank all four finishing positions — top 2 advance to the knockout round.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {GROUPS.map((group) => (
-              <DraggableGroupCard key={group.id} group={group} picks={picks} onPick={handlePick} />
-            ))}
+        <div className="bg-surface-dark min-h-screen">
+          <div className="p-4 max-w-5xl mx-auto">
+            <p className="text-brand-400 text-sm mb-4 text-center">
+              Drag teams to rank all four finishing positions — top 2 advance to the knockout round.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {GROUPS.map((group) => (
+                <DraggableGroupCard key={group.id} group={group} picks={picks} onPick={handlePick} />
+              ))}
+            </div>
           </div>
         </div>
       )}
