@@ -56,7 +56,7 @@ const PHRASES: { teamId: string; text: string }[] = [
   { teamId: "PAN", text: "¡Vamos!" },
 ];
 
-const INTERVAL_MS = 4500;
+const INTERVAL_MS = 3000;
 const RING_MS = 140_000; // ms per full rotation
 const RADIUS = 355;
 const FLAG_W = 52;
