@@ -58,8 +58,8 @@ const PHRASES: { teamId: string; text: string }[] = [
 
 const INTERVAL_MS = 4500;
 const RING_S = 120; // seconds per full rotation
-const RADIUS = 310;
-const SIZE = RADIUS * 2 + 140;
+const RADIUS = 355;
+const SIZE = RADIUS * 2 + 150;
 
 export default function Home() {
   const [name, setName] = useState("");
@@ -218,10 +218,11 @@ export default function Home() {
                     objectFit: "cover",
                     display: "block",
                     opacity: isActive ? 1 : 0.75,
+                    transform: isActive ? "scale(1.55)" : "scale(1)",
                     boxShadow: isActive
-                      ? "0 0 0 2px #fbbf24, 0 4px 12px rgba(251,191,36,0.5)"
+                      ? "0 0 0 2px #fbbf24, 0 6px 18px rgba(251,191,36,0.55)"
                       : "0 1px 4px rgba(0,0,0,0.4)",
-                    transition: "opacity 0.3s, box-shadow 0.3s",
+                    transition: "opacity 0.35s ease, box-shadow 0.35s ease, transform 0.35s cubic-bezier(0.34,1.56,0.64,1)",
                   }}
                 />
               </div>
