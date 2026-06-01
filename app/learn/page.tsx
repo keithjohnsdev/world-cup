@@ -28,7 +28,7 @@ export default function LearnPage() {
   const hoveredInfo = hoveredTeam ? COUNTRY_INFO[hoveredTeam] : null;
 
   return (
-    <div className="min-h-screen bg-surface-deep flex flex-col">
+    <div className="h-screen bg-surface-deep flex flex-col overflow-hidden">
       <NavHeader
         variant="dark"
         left={
@@ -60,17 +60,18 @@ export default function LearnPage() {
         }
       />
 
-      <p className="text-center text-white/40 text-xs py-2">
-        {view === "globe"
-          ? "Rotate the globe · hover a green country · click to explore"
-          : "Hover a green country · click to explore"}
-      </p>
+      <div className="flex-1 relative min-h-0">
+        {/* Hint overlay — floats above the globe, takes no layout space */}
+        <p className="absolute top-2 left-1/2 -translate-x-1/2 z-10 text-white/40 text-xs pointer-events-none whitespace-nowrap">
+          {view === "globe"
+            ? "Rotate the globe · hover a green country · click to explore"
+            : "Hover a green country · click to explore"}
+        </p>
 
-      <div className="flex-1 relative">
         {view === "globe" ? (
           <GlobeView onHover={handleHover} onCountryClick={handleClick} />
         ) : (
-          <div className="h-full min-h-[70vh] flex items-center">
+          <div className="h-full flex items-center">
             <MapView onHover={handleHover} onCountryClick={handleClick} />
           </div>
         )}
