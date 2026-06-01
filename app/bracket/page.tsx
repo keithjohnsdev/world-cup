@@ -337,7 +337,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function Sub({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mb-7">
-      <div className="text-xs font-black uppercase tracking-[0.2em] text-green-400 mb-3">{title}</div>
+      <div className="text-sm font-black uppercase tracking-[0.2em] text-green-400 mb-3">{title}</div>
       {children}
     </div>
   );
@@ -346,8 +346,8 @@ function Sub({ title, children }: { title: string; children: React.ReactNode }) 
 function ScoreRow({ label, pts }: { label: string; pts: string }) {
   return (
     <div className="flex justify-between items-center py-3 border-b border-green-800 last:border-0">
-      <span className="text-green-100 text-sm">{label}</span>
-      <span className="font-black text-yellow-300 tabular-nums ml-4 shrink-0 text-sm">{pts}</span>
+      <span className="text-green-100 text-base">{label}</span>
+      <span className="font-black text-yellow-300 tabular-nums ml-4 shrink-0 text-base">{pts}</span>
     </div>
   );
 }
@@ -355,8 +355,8 @@ function ScoreRow({ label, pts }: { label: string; pts: string }) {
 function AwardRow({ name, description }: { name: string; description: string }) {
   return (
     <div className="py-3 border-b border-green-800 last:border-0">
-      <div className="font-bold text-white text-sm">{name}</div>
-      <div className="text-sm text-green-400 mt-0.5">{description}</div>
+      <div className="font-bold text-white text-base">{name}</div>
+      <div className="text-base text-green-400 mt-0.5">{description}</div>
     </div>
   );
 }
@@ -364,8 +364,8 @@ function AwardRow({ name, description }: { name: string; description: string }) 
 function PowerRow({ name, description }: { name: string; description: string }) {
   return (
     <div className="rounded-xl border border-yellow-400/30 bg-yellow-400/5 px-5 py-4">
-      <div className="text-xs font-black uppercase tracking-[0.15em] text-yellow-300 mb-1">{name}</div>
-      <div className="text-sm text-green-100 leading-relaxed">{description}</div>
+      <div className="text-sm font-black uppercase tracking-[0.15em] text-yellow-300 mb-1">{name}</div>
+      <div className="text-base text-green-100 leading-relaxed">{description}</div>
     </div>
   );
 }
@@ -430,16 +430,16 @@ function RulesTab() {
         <Section title="How It Works">
           <div className="space-y-4">
             <div className="rounded-xl border border-green-800 bg-green-900/40 p-5">
-              <div className="text-xs font-black uppercase tracking-[0.15em] text-yellow-300 mb-2">Phase 1</div>
-              <div className="font-bold text-white mb-1">Group Stage Picks</div>
-              <div className="text-xs font-semibold uppercase tracking-wide text-green-500 mb-3">Deadline: before the first match</div>
-              <p className="text-sm text-green-100 leading-relaxed">For each of the 12 groups, rank all four teams in finishing order (1st–4th). Also name your champion. Picks lock when the tournament begins.</p>
+              <div className="text-sm font-black uppercase tracking-[0.15em] text-yellow-300 mb-2">Phase 1</div>
+              <div className="font-bold text-white text-lg mb-1">Group Stage Picks</div>
+              <div className="text-sm font-semibold uppercase tracking-wide text-green-500 mb-3">Deadline: before the first match</div>
+              <p className="text-base text-green-100 leading-relaxed">For each of the 12 groups, rank all four teams in finishing order (1st–4th). Also name your champion. Picks lock when the tournament begins.</p>
             </div>
             <div className="rounded-xl border border-green-800 bg-green-900/40 p-5">
-              <div className="text-xs font-black uppercase tracking-[0.15em] text-yellow-300 mb-2">Phase 2</div>
-              <div className="font-bold text-white mb-1">Knockout Bracket Picks</div>
-              <div className="text-xs font-semibold uppercase tracking-wide text-green-500 mb-3">Deadline: before the Round of 32</div>
-              <p className="text-sm text-green-100 leading-relaxed">Once the group stage is over, the real bracket is set. Everyone picks the knockout rounds fresh — Round of 32 through the Final — using the teams that actually qualified.</p>
+              <div className="text-sm font-black uppercase tracking-[0.15em] text-yellow-300 mb-2">Phase 2</div>
+              <div className="font-bold text-white text-lg mb-1">Knockout Bracket Picks</div>
+              <div className="text-sm font-semibold uppercase tracking-wide text-green-500 mb-3">Deadline: before the Round of 32</div>
+              <p className="text-base text-green-100 leading-relaxed">Once the group stage is over, the real bracket is set. Everyone picks the knockout rounds fresh — Round of 32 through the Final — using the teams that actually qualified.</p>
             </div>
           </div>
         </Section>
@@ -461,24 +461,24 @@ function RulesTab() {
               <ScoreRow label="Semifinals" pts="24 pts" />
               <ScoreRow label="Final" pts="48 pts" />
             </div>
-            <p className="text-xs text-green-500 mt-2 px-1">Each round has the same total points available (48 pts). No round matters more than any other, they just feel like they do.</p>
+            <p className="text-sm text-green-500 mt-2 px-1">Each round has the same total points available (48 pts). No round matters more than any other, they just feel like they do.</p>
           </Sub>
           <Sub title="Champion Bonus">
             <div className="rounded-xl border border-green-800 bg-green-900/40 px-4">
               <ScoreRow label="Your champion pick wins the tournament" pts="+10 pts" />
             </div>
-            <p className="text-xs text-green-500 mt-2 px-1">Named during Phase 1. The real reward is built into the bracket, this is just a little extra for calling it before a ball was kicked.</p>
+            <p className="text-sm text-green-500 mt-2 px-1">Named during Phase 1. The real reward is built into the bracket, this is just a little extra for calling it before a ball was kicked.</p>
           </Sub>
           <Sub title="Shootout Mercy Rule">
             <div className="rounded-xl border border-green-800 bg-green-900/40 px-4">
               <ScoreRow label="Your pick loses in a penalty shootout" pts="½ pts" />
             </div>
-            <p className="text-xs text-green-500 mt-2 px-1">Getting eliminated in the cruelest way possible shouldn&apos;t also cost you full points.</p>
+            <p className="text-sm text-green-500 mt-2 px-1">Getting eliminated in the cruelest way possible shouldn&apos;t also cost you full points.</p>
           </Sub>
         </Section>
 
         <Section title="Awards">
-          <p className="text-sm text-green-400 mb-4">Everyone wins something. Awards are announced after the Final.</p>
+          <p className="text-base text-green-400 mb-4">Everyone wins something. Awards are announced after the Final.</p>
           <Sub title="Glory">
             <div className="rounded-xl border border-green-800 bg-green-900/40 px-4">
               <AwardRow name="The Champion" description="Most total points overall" />
@@ -518,7 +518,7 @@ function RulesTab() {
         </Section>
 
         <Section title="Kid Powers">
-          <p className="text-sm text-green-400 mb-4">Players age 10 and under get special powers. Each can only be used once. Tell a grown-up before you use one.</p>
+          <p className="text-base text-green-400 mb-4">Players age 10 and under get special powers. Each can only be used once. Tell a grown-up before you use one.</p>
           <div className="space-y-3">
             <PowerRow name="Champion Boost" description="Your champion bonus is worth +20 pts instead of +10 if they win it all." />
             <PowerRow name="Comeback Chip" description="Starting a round in last place? You get 3 free bonus points. Automatic. Can happen more than once." />
@@ -528,7 +528,7 @@ function RulesTab() {
         </Section>
 
         <Section title="General Rules">
-          <div className="rounded-xl border border-green-800 bg-green-900/40 px-4 divide-y divide-green-800 text-sm text-green-100">
+          <div className="rounded-xl border border-green-800 bg-green-900/40 px-4 divide-y divide-green-800 text-base text-green-100">
             <div className="py-3">All picks must be submitted before the relevant deadline or they will not count.</div>
             <div className="py-3">Picks are final once locked, except where a Kid Power specifically allows otherwise.</div>
             <div className="py-3">In case of a tie, the co-champions may agree to share the title — or settle it the fun way: all the kids secretly hold up some fingers behind their backs. Each tied player guesses even or odd. Kids reveal. Whoever guesses right wins.</div>
