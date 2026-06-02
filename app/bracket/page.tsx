@@ -631,7 +631,7 @@ function RulesTab() {
           </Sub>
           <Sub title="Funny &amp; Consolation">
             <div className="rounded-xl border border-green-800 bg-green-900/40 px-4">
-              <AwardRow name="Wooden Spoon" description="Dead last — awarded with full ceremony and a literal wooden spoon" />
+              <AwardRow name="Wooden Spoon" description="Dead last — awarded with full ceremony and a literal wooden spoon" isNew />
               <AwardRow name="Heartbreak Hotel" description="Most picks that lost specifically in penalty shootouts — the universe has a grudge" />
               <AwardRow name="The Human Coin Flip" description="Accuracy closest to exactly 50% — perfectly, uselessly neutral" />
               <AwardRow name="Help, I've Gone Cross-Eyed" description="Most picks where the team advanced but in the wrong position" />
