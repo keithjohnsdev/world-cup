@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { GROUPS, getTeam, type Team } from "@/lib/data";
 import { BRACKET_PAIRS } from "@/lib/bracket";
 import { COUNTRY_INFO } from "@/lib/countries";
+import { TEAM_STATS } from "@/lib/team-stats";
 import { FlagIcon } from "@/components/FlagIcon";
 import { NavHeader } from "@/components/ui/NavHeader";
 import { Button } from "@/components/ui/Button";
@@ -28,14 +29,121 @@ function getVisualIndex(arrayIndex: number, dragIdx: number, insertIdx: number):
 
 const GROUP_HEADER_STYLE = { bg: "linear-gradient(135deg, #1d4270 0%, #163358 100%)", labelColor: "#86efac", letterColor: "#fbbf24", chipBg: "rgba(255,255,255,0.12)", chipText: "rgba(255,255,255,0.7)" };
 
+function TeamModal({ teamId, onClose }: { teamId: string; onClose: () => void }) {
+  const team = getTeam(teamId);
+  const stats = TEAM_STATS[teamId];
+  if (!team || !stats) return null;
+
+  // Split lineup into rows by formation (GK + each formation line)
+  const parts = stats.formation.split("-").map(Number);
+  const rows: string[][] = [[stats.lineup[0]]];
+  let cursor = 1;
+  for (const count of parts) {
+    rows.push(stats.lineup.slice(cursor, cursor + count));
+    cursor += count;
+  }
+
+  const oddsDisplay = stats.winOdds < 0.1 ? "<0.1%" : `${stats.winOdds}%`;
+  const barWidth = Math.min((stats.winOdds / 20) * 100, 100);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.75)" }}
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl"
+        style={{ background: "#0d2137", border: "1px solid rgba(255,255,255,0.12)" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center gap-3 px-5 py-4" style={{ background: "linear-gradient(135deg, #1d4270 0%, #163358 100%)" }}>
+          <FlagIcon cc={team.cc} name={team.name} className="w-12 h-8 rounded shadow" />
+          <div className="flex-1 min-w-0">
+            <div className="text-white font-black text-lg leading-tight truncate">{team.name}</div>
+            <div className="text-green-400 text-xs font-bold">Group {team.group}</div>
+          </div>
+          <div className="text-right shrink-0">
+            <div className="text-yellow-300 font-black text-2xl leading-none">#{stats.fifaRank}</div>
+            <div className="text-white/40 text-[10px] uppercase tracking-wide">FIFA Rank</div>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="px-5 py-4 space-y-4">
+          {/* Coach & Formation */}
+          <div className="flex gap-3">
+            <div className="flex-1 rounded-xl px-3 py-2.5" style={{ background: "rgba(255,255,255,0.06)" }}>
+              <div className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">Coach</div>
+              <div className="text-white font-bold text-sm">{stats.coach}</div>
+            </div>
+            <div className="rounded-xl px-4 py-2.5 text-center shrink-0" style={{ background: "rgba(255,255,255,0.06)" }}>
+              <div className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">Formation</div>
+              <div className="text-yellow-300 font-black text-sm">{stats.formation}</div>
+            </div>
+          </div>
+
+          {/* Win odds */}
+          <div>
+            <div className="flex justify-between text-[10px] uppercase tracking-wider mb-1.5">
+              <span className="text-white/40">Tournament win odds</span>
+              <span className="text-yellow-300 font-bold">{oddsDisplay}</span>
+            </div>
+            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.1)" }}>
+              <div
+                className="h-full rounded-full transition-all"
+                style={{ width: `${barWidth}%`, background: "linear-gradient(90deg, #16a34a, #fbbf24)" }}
+              />
+            </div>
+          </div>
+
+          {/* Lineup */}
+          <div>
+            <div className="text-white/40 text-[10px] uppercase tracking-wider mb-2">Estimated Lineup</div>
+            <div className="space-y-1.5">
+              {rows.map((row, ri) => (
+                <div key={ri} className="flex gap-1.5 justify-center flex-wrap">
+                  {row.map((player, pi) => (
+                    <span
+                      key={pi}
+                      className="text-[11px] font-medium whitespace-nowrap rounded-lg px-2 py-1"
+                      style={{ background: "rgba(255,255,255,0.07)", color: ri === 0 ? "#fbbf24" : "rgba(255,255,255,0.8)" }}
+                    >
+                      {player}
+                    </span>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Close */}
+        <div className="px-5 pb-4">
+          <button
+            onClick={onClose}
+            className="w-full rounded-xl py-2.5 text-sm font-black uppercase tracking-wide transition-colors cursor-pointer"
+            style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)" }}
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DraggableGroupCard({
   group,
   picks,
   onPick,
+  onInfoClick,
 }: {
   group: (typeof GROUPS)[0];
   picks: Picks;
   onPick: (stage: string, slot: string, teamId: string) => void;
+  onInfoClick: (teamId: string) => void;
 }) {
   const [order, setOrder] = useState<Team[]>([...group.teams]);
   const hasInitialized = useRef(false);
@@ -183,6 +291,14 @@ function DraggableGroupCard({
                 <span className={`ml-auto text-xs font-bold tabular-nums ${visualIndex < 2 ? "" : "opacity-40"}`}>
                   {rankLabel[visualIndex]}
                 </span>
+                <button
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => { e.stopPropagation(); onInfoClick(team.id); }}
+                  className="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer text-sm leading-none pl-1.5 shrink-0"
+                  title="Team info"
+                >
+                  ℹ
+                </button>
               </div>
             );
 
@@ -731,6 +847,7 @@ export default function BracketPage() {
   const [worldView, setWorldView] = useState<"globe" | "map">("globe");
   const [hoveredTeam, setHoveredTeam] = useState<string | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [modalTeamId, setModalTeamId] = useState<string | null>(null);
   const router = useRouter();
 
   const picksRef = useRef<Picks>({});
@@ -891,7 +1008,7 @@ export default function BracketPage() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {GROUPS.map((group) => (
-                <DraggableGroupCard key={group.id} group={group} picks={picks} onPick={handlePick} />
+                <DraggableGroupCard key={group.id} group={group} picks={picks} onPick={handlePick} onInfoClick={setModalTeamId} />
               ))}
             </div>
           </div>
@@ -961,6 +1078,8 @@ export default function BracketPage() {
           })()}
         </div>
       )}
+
+      {modalTeamId && <TeamModal teamId={modalTeamId} onClose={() => setModalTeamId(null)} />}
 
       {/* Bracket tab */}
       {tab === "bracket" && (
