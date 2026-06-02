@@ -915,6 +915,7 @@ export default function BracketPage() {
   const [modalTeamId, setModalTeamId] = useState<string | null>(null);
   const [bracketResults, setBracketResults] = useState<{ stage: string; slot: string; team_id: string }[]>([]);
   const [bracketPhase, setBracketPhase] = useState("phase1_open");
+  const [bracketPreview, setBracketPreview] = useState(false);
   const router = useRouter();
 
   const picksRef = useRef<Picks>({});
@@ -944,6 +945,7 @@ export default function BracketPage() {
       .then(data => {
         if (data?.results) setBracketResults(data.results);
         if (data?.phase) setBracketPhase(data.phase);
+        if (data?.preview) setBracketPreview(true);
       })
       .catch(() => {});
   }, [router]);
@@ -1196,6 +1198,7 @@ export default function BracketPage() {
           picks={picks}
           results={bracketResults}
           phase={bracketPhase}
+          preview={bracketPreview}
           onPick={handlePick}
         />
       )}

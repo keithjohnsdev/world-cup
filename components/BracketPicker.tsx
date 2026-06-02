@@ -22,6 +22,7 @@ interface Props {
   picks: Picks;
   results: ResultEntry[];
   phase: string;
+  preview?: boolean;
   onPick: (stage: string, slot: string, teamId: string) => void;
 }
 
@@ -216,7 +217,7 @@ function Divider() {
   );
 }
 
-export function BracketPicker({ picks, results, phase, onPick }: Props) {
+export function BracketPicker({ picks, results, phase, preview, onPick }: Props) {
   const canPick = phase === "phase2_open";
   const { r32, r16, qf, sf, finalMatch } = buildBracket(results, picks);
   const champion = picks["final:m1"];
@@ -251,11 +252,16 @@ export function BracketPicker({ picks, results, phase, onPick }: Props) {
             </h2>
             <div className="h-px w-10 bg-gradient-to-l from-transparent to-yellow-300/60" />
           </div>
-          {canPick ? (
+          {preview && (
+            <div className="inline-flex items-center gap-2 mt-3 rounded-full px-3 py-1 text-xs font-black uppercase tracking-widest" style={{ background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.3)", color: "#fbbf24" }}>
+              ⚙ Preview — mock bracket
+            </div>
+          )}
+          {!preview && (canPick ? (
             <p className="text-white/60 text-sm mt-3">Click a team to pick them as the match winner — they advance to the next round.</p>
           ) : (
             <p className="text-white/40 text-sm mt-3">Bracket picks are locked.</p>
-          )}
+          ))}
         </div>
 
         <RoundSection label="Round of 32" stage="r32" matches={r32} picks={picks} canPick={canPick} onPick={onPick} cols={2} />
