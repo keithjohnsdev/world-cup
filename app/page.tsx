@@ -142,8 +142,7 @@ export default function Home() {
     let fwRafId: number;
 
     function draw(ts: number) {
-      ctx.fillStyle = "rgba(0,0,0,0.18)";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       if (ts - lastSpawn > 1200 + Math.random() * 1000) { spawnRocket(); lastSpawn = ts; }
 
