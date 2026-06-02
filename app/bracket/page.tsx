@@ -713,7 +713,7 @@ function LeaderboardTab() {
                 onClick={() => setSelected({ id: entry.id, name: entry.name })}
                 className={`w-full grid items-center px-4 py-4 border-b border-white/5 last:border-0 text-left cursor-pointer transition-colors hover:bg-white/[0.06] active:bg-white/10 grid-cols-[1.5rem_1fr_4rem_4.5rem_4rem] sm:grid-cols-[2rem_1fr_6.5rem_7rem_6rem] ${i === 0 ? "bg-yellow-300/5 hover:bg-yellow-300/10" : ""}`}
               >
-                <div className={`text-sm font-black text-center tabular-nums ${i === 0 ? "text-yellow-300" : i === 1 ? "text-white/40" : i === 2 ? "text-amber-700/60" : "text-white/20"}`}>{i === 0 ? "🏆" : i === 1 ? "🥈" : i === 2 ? "🥉" : i + 1}</div>
+                <div className={`text-sm font-black text-center tabular-nums ${i === 0 ? "text-yellow-300" : i === 1 ? "text-slate-300" : i === 2 ? "text-amber-600" : "text-white/20"}`}>{i === 0 ? "🏆" : i === 1 ? "🥈" : i === 2 ? "🥉" : i === entries.length - 1 ? "🥄" : i + 1}</div>
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="text-white font-bold text-sm truncate">{entry.name}</span>
                   {entry.is_kid && <span className="text-sm shrink-0">⚡</span>}
