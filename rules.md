@@ -9,11 +9,7 @@ Picking happens in **two phases** so that knockout picks are always based on rea
 ### Phase 1 — Group Stage Picks
 **Deadline: Before the first match of the tournament.**
 
-For each of the 12 groups, pick:
-- Which team finishes **1st**
-- Which team finishes **2nd**
-
-Picks are locked once the tournament begins. No changes (unless you have a Kid Power that allows it).
+For each of the 12 groups, rank all four teams in finishing order (1st–4th). Also name your overall champion pick. Picks are locked once the tournament begins.
 
 ### Phase 2 — Knockout Bracket Picks
 **Deadline: Before the Round of 32 begins.**
@@ -26,33 +22,28 @@ Once the group stage is complete and the real bracket is set, everyone picks the
 
 ### Group Stage
 
-Pick all four finishing positions for each group. Points are awarded as follows:
-
 | Pick | Points |
 |------|--------|
 | Team you picked 1st or 2nd actually advances (any top-2 finish) | **2 pts** |
-| Team also finishes in the exact position you picked (1st or 2nd) | **+1 pt** |
-| Team you picked 3rd finishes exactly 3rd | **1 pt** |
-| Team you picked 4th finishes exactly 4th | **1 pt** |
+| Any pick — team finishes in the exact position you picked (1st–4th) | **+1 pt** |
+| Max per group | **8 pts** |
+| Max group stage total (12 groups) | **96 pts** |
 
-- Max for a perfect 1st or 2nd pick: **3 pts**
-- Max for a perfect 3rd or 4th pick: **1 pt**
-- Max per group: **8 pts**
-- Max group stage total: **96 pts** (8 pts × 12 groups)
+So a perfect 1st or 2nd pick earns 3 pts (2 for advancing + 1 for exact position). A perfect 3rd or 4th pick earns 1 pt (exact position only, no advance bonus).
 
 ### Knockout Rounds
 
-Points double with each round to keep everyone in contention deep into the tournament.
+Each round has the same total points available — no round matters more than any other, they just feel like they do.
 
-| Round | Points per correct pick |
-|-------|------------------------|
-| Round of 32 | **3 pts** |
-| Round of 16 | **6 pts** |
-| Quarterfinals | **12 pts** |
-| Semifinals | **24 pts** |
-| Final | **48 pts** |
+| Round | Points per correct pick | Total available |
+|-------|------------------------|-----------------|
+| Round of 32 | **3 pts** | 48 pts (16 picks) |
+| Round of 16 | **6 pts** | 48 pts (8 picks) |
+| Quarterfinals | **12 pts** | 48 pts (4 picks) |
+| Semifinals | **24 pts** | 48 pts (2 picks) |
+| Final | **48 pts** | 48 pts (1 pick) |
 
-Max knockout total: **3+6+12+24+48 = 93 pts** (if you sweep every round)
+Max knockout total: **240 pts** (48 pts × 5 rounds, if you sweep every pick in every round)
 
 ### Champion Bonus
 
@@ -61,6 +52,20 @@ During Phase 1, everyone names their **champion pick**. If your champion wins th
 ### Shootout Mercy Rule
 
 If a team you picked loses in a **penalty shootout**, you receive **half points** for that pick. Getting eliminated in the cruelest way possible shouldn't also cost you full points.
+
+---
+
+## Kid Powers
+
+Players age 10 and under get special abilities to keep the tournament fun and competitive. Each power can only be used **once** unless noted. Be careful — they're very powerful. Tell a grown-up before you use one.
+
+| Power | How It Works |
+|-------|-------------|
+| **🏆 Champion Charge-Up** | Your champion bonus is worth **+20 pts** instead of +10 if they win it all. Pick your champion wisely. |
+| **🚃 Kaboose Boost** | Starting a round in last place? You get **3 free bonus points**. Automatic. Can happen more than once if you keep finding yourself in last. |
+| **❤️ Heart Pick** | Name your favorite team before the tournament. Every time that team wins any match — even ones you didn't pick — you earn **1 bonus point**. Keeps you rooting even when the bracket goes sideways. |
+| **⭐ Star Power** | During Phase 2 (bracket stage only), designate any one knockout pick as your Star Pick before the match. If correct, worth **double points**. Cannot be used on the Final. One star. Use it well. |
+| **🤝 With Our Powers Combined** | At any point during the bracket stage, if two kids' scores added together is less than the current leader's score, they can combine their scores and play the rest of the tournament as a team. |
 
 ---
 
@@ -74,11 +79,11 @@ Everyone wins something. Awards are announced after the Final.
 |-------|-------------|
 | **The Champion** | Most total points overall |
 | **True Believer** | Named the actual World Cup winner as their champion pick before the tournament |
-| **Group Stage Guru** | Most points in the group stage — rewards knowing the obscure teams |
 | **The Closer** | Most points scored in the quarterfinals and beyond — peaked at the right time |
-| **Dark Horse Whisperer** | Named the lowest-ranked team to make the deepest run |
+| **The Hipster** | Named the lowest-ranked team to make the deepest run |
 | **Bracket Brainiac** | Highest accuracy percentage in the knockout rounds |
-| **Dead Cert** | Correctly predicted the winner of every group (1st place, all 12) — near impossible |
+| **The Pacemaker** | Led the overall standings for more rounds than anyone else — front-runner all tournament |
+| **The Hand of God** | Correctly predicted the winner of every group (1st place, all 12) — near impossible |
 
 ### Funny & Consolation Awards
 
@@ -90,36 +95,15 @@ Everyone wins something. Awards are announced after the Final.
 | **Help, I've Gone Cross-Eyed** | Most picks where the team advanced but in the wrong position — so close, so often |
 | **The Trendsetter** | Made the most unique picks that nobody else made — a true contrarian |
 | **Reverse Oracle** | Most incorrect predictions overall — so reliably wrong you're almost useful |
-
-### Skill Awards
-
-| Award | Description |
-|-------|-------------|
-| **Perfect Round** | Got every single pick correct in one round (any round counts) |
-| **Upset Artist** | Most correctly predicted upsets (lower-ranked team beats higher-ranked) |
-| **Crystal Ball** | Most total correct picks by raw count across the whole tournament |
+| **Early Retirement** | Your pre-tournament champion pick was eliminated in the group stage — sent home before the party started |
 
 ### Special Awards
 
 | Award | Description |
 |-------|-------------|
-| **Rookie Star** | Best score among players age 10 and under — kids compete against each other |
+| **Upset Artist** | Most correctly predicted upsets (lower-ranked team beats higher-ranked) |
 | **Comeback Kid** | Biggest point swing — most improved from the bottom half of the standings to the top |
-| **The Commentator** | Most enthusiastic trash-talker on the family leaderboard (voted, not scored) |
-| **The Hipster** | Whose champion pick was the most obscure team that went the farthest — scored as seed × rounds advanced, so a rank-40 team reaching the semifinals (4 rounds) beats a rank-8 team winning it all (6 rounds) |
-
----
-
-## Kid Powers
-
-Players age 10 and under get special abilities to keep the tournament fun and competitive. Each power can only be used **once** unless noted.
-
-| Power | How It Works |
-|-------|-------------|
-| **Champion Boost** | Your champion bonus is worth **+20 pts** instead of +10 if they win it all. Pick your champion wisely. |
-| **Comeback Chip** | If you enter any round in last place, you automatically receive a **3-point head start** for that round. Can trigger multiple times if you keep finding yourself in last. |
-| **Heart Pick** | Before the tournament, name your favorite team. Every time that team wins any match — whether you picked them or not — you earn **1 bonus point**. Keeps you rooting even when the bracket goes sideways. |
-| **Star Power** | Designate any one knockout pick as your Star Pick before the match. If correct, worth **double points**. |
+| **Close But No Cigar** | Your champion pick made the Final but lost — you saw it coming, you were almost right, and it hurts |
 
 ---
 
