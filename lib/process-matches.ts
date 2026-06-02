@@ -33,7 +33,7 @@ export async function processMatches(
 
     try {
       if (match.round === "group stage") {
-        await handleGroupMatch(sql, match, matches);
+        await handleGroupMatch(sql, match);
       } else if (match.round.includes("3rd") || match.round.includes("third")) {
         // Skip 3rd-place play-off
       } else if (match.winnerName) {
@@ -58,7 +58,6 @@ export async function processMatches(
 async function handleGroupMatch(
   sql: Sql,
   match: CompletedMatch,
-  allMatches: CompletedMatch[],
 ) {
   const homeId = apiNameToTeamId(match.homeTeamName);
   const awayId = apiNameToTeamId(match.awayTeamName);
@@ -77,45 +76,32 @@ async function handleGroupMatch(
     `;
   }
 
-  if (match.matchday !== 3) return;
-
+  // Update standings after every match so scores are live during the group stage.
+  // Uses DO UPDATE so standings are overwritten as the group progresses.
+  // Wrapped in try/catch so a standings API failure doesn't lose the gm row or
+  // prevent the fixture from being marked processed.
   const group = TEAMS.find((t) => t.id === homeId)?.group;
   if (!group) throw new Error(`No group found for team ${homeId}`);
 
-  const existing = await sql`
-    SELECT 1 FROM results WHERE stage = 'group' AND slot = ${group} LIMIT 1
-  ` as unknown[];
-  if (existing.length > 0) return;
+  try {
+    const allStandings = await fetchGroupStandings();
+    const entries = allStandings.get(group);
+    if (!entries || entries.length === 0) return;
 
-  const groupTeamIds = new Set(
-    GROUPS.find((g) => g.id === group)?.teams.map((t) => t.id) ?? [],
-  );
-  const groupMatchday3 = allMatches.filter((m) => {
-    if (m.round !== "group stage" || m.matchday !== 3) return false;
-    const h = apiNameToTeamId(m.homeTeamName);
-    const a = apiNameToTeamId(m.awayTeamName);
-    return (h && groupTeamIds.has(h)) || (a && groupTeamIds.has(a));
-  });
-
-  if (groupMatchday3.length < 2) return;
-
-  const allStandings = await fetchGroupStandings();
-  const entries = allStandings.get(group);
-  if (!entries || entries.some((e) => e.playedGames < 3)) {
-    throw new Error(`Standings not final for group ${group}`);
-  }
-
-  const stageByPosition = ["group", "runner", "third", "fourth"];
-  for (const entry of entries) {
-    const ourId = apiNameToTeamId(entry.teamName);
-    if (!ourId) throw new Error(`Unknown standing team: "${entry.teamName}"`);
-    const stage = stageByPosition[entry.position - 1];
-    if (!stage) continue;
-    await sql`
-      INSERT INTO results (stage, slot, team_id, was_shootout)
-      VALUES (${stage}, ${group}, ${ourId}, false)
-      ON CONFLICT (stage, slot) DO UPDATE SET team_id = EXCLUDED.team_id
-    `;
+    const stageByPosition = ["group", "runner", "third", "fourth"];
+    for (const entry of entries) {
+      const ourId = apiNameToTeamId(entry.teamName);
+      if (!ourId) continue;
+      const stage = stageByPosition[entry.position - 1];
+      if (!stage) continue;
+      await sql`
+        INSERT INTO results (stage, slot, team_id, was_shootout)
+        VALUES (${stage}, ${group}, ${ourId}, false)
+        ON CONFLICT (stage, slot) DO UPDATE SET team_id = EXCLUDED.team_id
+      `;
+    }
+  } catch (e) {
+    console.warn(`[process-matches] standings update skipped for group ${group}:`, e);
   }
 }
 
