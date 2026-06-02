@@ -698,7 +698,7 @@ function LeaderboardTab() {
           <div className="text-center text-white/30 text-sm py-16">Loading…</div>
         ) : (
           <div className="rounded-2xl overflow-hidden border border-white/10">
-            <div className="grid items-center px-4 py-3 bg-white/5 border-b border-white/10" style={{ gridTemplateColumns: "2rem 1fr 5rem 5rem 5rem" }}>
+            <div className="grid items-center px-4 py-3 bg-white/5 border-b border-white/10" style={{ gridTemplateColumns: "2rem minmax(0,1fr) 6.5rem 7rem 6rem" }}>
               <div className="text-xs font-black uppercase tracking-[0.2em] text-white/30 text-center">#</div>
               <div className="text-xs font-black uppercase tracking-[0.2em] text-white/30">Player</div>
               <div className="text-xs font-black uppercase tracking-[0.2em] text-white/30 text-right">Groups</div>
@@ -709,7 +709,7 @@ function LeaderboardTab() {
               <div
                 key={entry.id}
                 className={`grid items-center px-4 py-4 border-b border-white/5 last:border-0 ${i === 0 ? "bg-yellow-300/5" : ""}`}
-                style={{ gridTemplateColumns: "2rem 1fr 5rem 5rem 5rem" }}
+                style={{ gridTemplateColumns: "2rem minmax(0,1fr) 6.5rem 7rem 6rem" }}
               >
                 <div className={`text-sm font-black text-center tabular-nums ${i === 0 ? "text-yellow-300" : i === 1 ? "text-white/40" : i === 2 ? "text-amber-700/60" : "text-white/20"}`}>{i + 1}</div>
                 <div className="flex items-center gap-2 min-w-0">
