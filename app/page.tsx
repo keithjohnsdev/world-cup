@@ -217,10 +217,13 @@ export default function Home() {
   const currentTeam = TEAMS.find((t) => t.id === currentPhrase.teamId);
 
   return (
-    <main
-      className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden"
-      style={{ background: "linear-gradient(160deg, #060d1a 0%, #0d2137 50%, #0a1a0f 100%)" }}
-    >
+    <>
+      <div style={{ position: "fixed", inset: 0, background: "linear-gradient(160deg, #060d1a 0%, #0d2137 50%, #0a1a0f 100%)" }} />
+      <canvas ref={canvasRef} style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 1 }} />
+      <main
+        className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden"
+        style={{ position: "relative", zIndex: 2 }}
+      >
       <style>{`
         @keyframes slot-tick {
           0%   { transform: translateY(110%); opacity: 0; }
@@ -242,13 +245,10 @@ export default function Home() {
         }
       `}</style>
 
-      {/* Fireworks */}
-      <canvas ref={canvasRef} style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0 }} />
-
       {/* Ambient glow */}
       <div
         className="absolute inset-0 pointer-events-none"
-        style={{ background: "radial-gradient(ellipse 70% 60% at 50% 40%, rgba(22,163,74,0.14) 0%, transparent 70%)", zIndex: 1 }}
+        style={{ background: "radial-gradient(ellipse 70% 60% at 50% 40%, rgba(22,163,74,0.14) 0%, transparent 70%)" }}
       />
 
       {/* Outer sizing box */}
@@ -434,6 +434,7 @@ export default function Home() {
           </form>
         </div>
       </div>
-    </main>
+      </main>
+    </>
   );
 }
