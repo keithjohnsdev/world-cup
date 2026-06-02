@@ -689,7 +689,7 @@ function LeaderboardTab() {
 
   useEffect(() => {
     fetchLeaderboard();
-    const id = setInterval(() => fetchLeaderboard(), 60_000);
+    const id = setInterval(() => fetchLeaderboard(), 15 * 60_000);
     return () => clearInterval(id);
   }, [fetchLeaderboard]);
 
