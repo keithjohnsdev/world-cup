@@ -19,6 +19,7 @@ function authorized(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
   if (!secret) return true; // dev: skip auth
   return (
+    req.headers.get("x-cron-secret") === secret ||
     req.headers.get("authorization") === `Bearer ${secret}` ||
     req.nextUrl.searchParams.get("secret") === secret
   );
