@@ -154,7 +154,12 @@ export function GroupPicksModal({ userId, userName, onClose }: Props) {
                   >
                     <span className="text-yellow-300 font-black text-xs uppercase tracking-[0.2em]">Group {group.id}</span>
                     {groupHasResult && (
-                      <span className="text-white/50 text-xs font-bold tabular-nums">{groupPts} / 8 pts</span>
+                      <div className="flex items-center gap-2">
+                        {groupPts === 8 && (
+                          <span className="text-green-400 text-[10px] font-black uppercase tracking-wide">Perfect group!</span>
+                        )}
+                        <span className="text-white/50 text-xs font-bold tabular-nums">{groupPts} / 8 pts</span>
+                      </div>
                     )}
                   </div>
 
