@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSql, initDb } from "@/lib/db";
+import { MOCK_GROUP_RESULTS } from "@/lib/mock-results";
 
 export async function GET(
   _req: Request,
@@ -20,15 +21,19 @@ export async function GET(
         WHERE stage IN ('group','runner','third','fourth')
         ORDER BY slot, stage`,
   ]);
-  const userRows  = rawUsers   as { name: string }[];
-  const pickRows  = rawPicks   as { stage: string; slot: string; team_id: string }[];
+
+  const userRows   = rawUsers   as { name: string }[];
+  const pickRows   = rawPicks   as { stage: string; slot: string; team_id: string }[];
   const resultRows = rawResults as { stage: string; slot: string; team_id: string }[];
 
   if (!userRows.length) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+  // Fall back to mock data when no real results exist yet
+  const results = resultRows.length > 0 ? resultRows : MOCK_GROUP_RESULTS;
+
   return NextResponse.json({
-    name: (userRows[0] as { name: string }).name,
+    name: userRows[0].name,
     picks: pickRows,
-    results: resultRows,
+    results,
   });
 }
