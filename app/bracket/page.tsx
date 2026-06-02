@@ -1042,7 +1042,7 @@ export default function BracketPage() {
                   <p className={`text-sm font-bold mb-2.5 ${allDone ? "text-green-400" : "text-white"}`}>
                     {allDone
                       ? "✓ All 12 groups complete — you're ready for Phase 2!"
-                      : <>{filled} of {total} groups filled in <span className="text-white/50 font-medium">(missing {missingGroups.map(g => `Group ${g.id}`).join(", ")})</span></>}
+                      : <>{filled} of {total} groups filled in <span className="text-white/50 font-medium">(missing {missingGroups.map((g, i) => <span key={g.id}>{i > 0 && ", "}Group <span className="text-yellow-300 font-black">{g.id}</span></span>)})</span></>}
                   </p>
                   <div className="h-1.5 rounded-full overflow-hidden max-w-xs mx-auto" style={{ background: "rgba(255,255,255,0.08)" }}>
                     <div
