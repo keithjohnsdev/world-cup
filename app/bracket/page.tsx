@@ -698,7 +698,7 @@ function LeaderboardTab() {
           <div className="text-center text-white/30 text-sm py-16">Loading…</div>
         ) : (
           <div className="rounded-2xl overflow-hidden border border-white/10">
-            <div className="grid items-center px-4 py-3 bg-white/5 border-b border-white/10 grid-cols-[1.5rem_1fr_3.5rem_4rem_3.5rem] sm:grid-cols-[2rem_1fr_6.5rem_7rem_6rem]">
+            <div className="grid items-center px-4 py-3 bg-white/5 border-b border-white/10 grid-cols-[1.5rem_1fr_4rem_4.5rem_4rem] sm:grid-cols-[2rem_1fr_6.5rem_7rem_6rem]">
               <div className="text-xs font-black uppercase tracking-[0.2em] text-white/30 text-center">#</div>
               <div className="text-xs font-black uppercase tracking-[0.2em] text-white/30">Player</div>
               <div className="text-xs font-black uppercase tracking-[0.2em] text-white/30 text-right">Groups</div>
@@ -708,7 +708,7 @@ function LeaderboardTab() {
             {entries.map((entry, i) => (
               <div
                 key={entry.id}
-                className={`grid items-center px-4 py-4 border-b border-white/5 last:border-0 grid-cols-[1.5rem_1fr_3.5rem_4rem_3.5rem] sm:grid-cols-[2rem_1fr_6.5rem_7rem_6rem] ${i === 0 ? "bg-yellow-300/5" : ""}`}
+                className={`grid items-center px-4 py-4 border-b border-white/5 last:border-0 grid-cols-[1.5rem_1fr_4rem_4.5rem_4rem] sm:grid-cols-[2rem_1fr_6.5rem_7rem_6rem] ${i === 0 ? "bg-yellow-300/5" : ""}`}
               >
                 <div className={`text-sm font-black text-center tabular-nums ${i === 0 ? "text-yellow-300" : i === 1 ? "text-white/40" : i === 2 ? "text-amber-700/60" : "text-white/20"}`}>{i + 1}</div>
                 <div className="flex items-center gap-2 min-w-0">
