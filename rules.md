@@ -42,8 +42,7 @@ Each round has the same total points available — no round matters more than an
 | Quarterfinals | **8 pts** | 32 pts (4 picks) |
 | Semifinals | **16 pts** | 32 pts (2 picks) |
 | Final | **32 pts** | 32 pts (1 pick) |
-
-Max knockout total: **160 pts** (32 pts × 5 rounds, if you sweep every pick in every round)
+| **Max bracket stage total** | | **160 pts** |
 
 ### Champion Bonus
 
