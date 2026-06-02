@@ -1038,10 +1038,12 @@ export default function BracketPage() {
               const total = GROUPS.length;
               const championPicked = !!picks["champion:pick"];
               const allDone = filled === total && championPicked;
-              const missingItems = [
-                ...missingGroups.map((g, i) => <span key={g.id}>{i > 0 && ", "}Group <span className="text-yellow-300 font-black">{g.id}</span></span>),
-                ...(!championPicked ? [<span key="champion">{missingGroups.length > 0 && ", "}<span className="text-yellow-300 font-black">Champion</span></span>] : []),
-              ];
+              const missingItems = missingGroups.length === total
+                ? [<span key="all"><span className="text-yellow-300 font-black">all groups</span>{!championPicked && ", "}</span>, ...(!championPicked ? [<span key="champion"><span className="text-yellow-300 font-black">Champion</span></span>] : [])]
+                : [
+                    ...missingGroups.map((g, i) => <span key={g.id}>{i > 0 && ", "}Group <span className="text-yellow-300 font-black">{g.id}</span></span>),
+                    ...(!championPicked ? [<span key="champion">{missingGroups.length > 0 && ", "}<span className="text-yellow-300 font-black">Champion</span></span>] : []),
+                  ];
               return (
                 <div className="mb-8 text-center">
                   <p className={`text-sm font-bold mb-2.5 ${allDone ? "text-green-400" : "text-white"}`}>
