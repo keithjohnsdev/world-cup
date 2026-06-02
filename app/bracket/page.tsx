@@ -973,7 +973,7 @@ export default function BracketPage() {
             {(["rules", "groups", "bracket", "leaderboard", "world"] as const).map((t) => (
               <button
                 key={t}
-                onClick={e => { (e.currentTarget as HTMLElement).style.color = ""; (e.currentTarget as HTMLElement).style.textShadow = ""; setTab(t); }}
+                onClick={e => { (e.currentTarget as HTMLElement).style.color = ""; (e.currentTarget as HTMLElement).style.textShadow = ""; setTab(t); history.replaceState(null, "", `?tab=${t}`); }}
                 className={`relative flex items-center h-full px-4 text-xs font-black uppercase tracking-[0.15em] whitespace-nowrap transition-all cursor-pointer ${
                   tab === t
                     ? "text-yellow-300"

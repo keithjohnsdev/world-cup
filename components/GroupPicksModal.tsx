@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { GROUPS, getTeam } from "@/lib/data";
 import { FlagIcon } from "@/components/FlagIcon";
 
@@ -52,6 +52,21 @@ export function GroupPicksModal({ userId, userName, onClose }: Props) {
       .finally(() => setLoading(false));
   }, [userId]);
 
+  // Push a history entry when the modal opens so the browser back button closes it.
+  // popstate fires when the user navigates back → triggers onClose.
+  // handleClose goes back in history, which fires popstate, which calls onClose —
+  // so onClose is always called exactly once regardless of how the modal is dismissed.
+  useEffect(() => {
+    history.pushState({ groupPicksModal: true }, "");
+    const handlePop = () => onClose();
+    window.addEventListener("popstate", handlePop);
+    return () => window.removeEventListener("popstate", handlePop);
+  }, [onClose]);
+
+  const handleClose = useCallback(() => {
+    history.back(); // triggers popstate → onClose
+  }, []);
+
   const pickMap = buildMap(picks);
   const resultMap = buildMap(results);
   const hasResults = results.length > 0;
@@ -61,7 +76,7 @@ export function GroupPicksModal({ userId, userName, onClose }: Props) {
 
   return (
     <>
-      <div className="fixed inset-0 z-50 bg-black/75" onClick={onClose} />
+      <div className="fixed inset-0 z-50 bg-black/75 md:block hidden" onClick={handleClose} />
 
       {/* Full-screen on mobile, centered dialog on md+ */}
       <div
@@ -70,22 +85,37 @@ export function GroupPicksModal({ userId, userName, onClose }: Props) {
       >
         {/* Header */}
         <div
-          className="flex items-center gap-4 px-5 py-4 shrink-0"
+          className="flex items-center gap-3 px-4 py-4 shrink-0"
           style={{ background: "linear-gradient(135deg, #1d4270 0%, #163358 100%)" }}
         >
+          {/* Mobile back button */}
+          <button
+            onClick={handleClose}
+            className="md:hidden flex items-center gap-1.5 text-white/60 hover:text-white transition-all shrink-0 -ml-1 pr-1"
+            aria-label="Back"
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 4L6 9l5 5" />
+            </svg>
+            <span className="text-xs font-black uppercase tracking-wider">Back</span>
+          </button>
+
           <div className="flex-1 min-w-0">
             <div className="text-white font-black text-lg leading-tight truncate">{userName}</div>
             <div className="text-green-400 text-xs font-bold uppercase tracking-wider mt-0.5">Group Stage Picks</div>
           </div>
+
           {hasResults && (
             <div className="text-right shrink-0">
               <div className="text-yellow-300 font-black text-2xl leading-none">{totalPoints}</div>
               <div className="text-white/40 text-[10px] uppercase tracking-wide">of 96 pts</div>
             </div>
           )}
+
+          {/* Desktop close button */}
           <button
-            onClick={onClose}
-            className="w-8 h-8 shrink-0 flex items-center justify-center rounded-full text-white/40 hover:text-white hover:bg-white/10 transition-all text-base"
+            onClick={handleClose}
+            className="hidden md:flex w-8 h-8 shrink-0 items-center justify-center rounded-full text-white/40 hover:text-white hover:bg-white/10 transition-all text-base"
             aria-label="Close"
           >
             ✕
@@ -122,35 +152,28 @@ export function GroupPicksModal({ userId, userName, onClose }: Props) {
                     const team = pickedId ? getTeam(pickedId) : null;
                     const pts = scorePosition(pickedId, posIdx, actual);
 
-                    // Where did the picked team actually finish?
                     const actualIdx = pickedId ? actual.indexOf(pickedId) : -1;
                     const actualLabel = actualIdx >= 0 ? POS_LABEL[STAGES[actualIdx]] : null;
 
-                    // Row coloring
                     let rowBg = "";
                     let ptsCls = "text-white/20";
                     if (groupHasResult && pickedId) {
-                      if (pts >= 3)      { rowBg = "rgba(22,163,74,0.16)";   ptsCls = "text-green-400"; }
-                      else if (pts === 2) { rowBg = "rgba(234,179,8,0.13)";   ptsCls = "text-yellow-300"; }
-                      else if (pts === 1) { rowBg = "rgba(96,165,250,0.12)";  ptsCls = "text-blue-400"; }
-                      else               { rowBg = "rgba(239,68,68,0.11)";   ptsCls = "text-red-400"; }
+                      if (pts >= 3)       { rowBg = "rgba(22,163,74,0.16)";  ptsCls = "text-green-400"; }
+                      else if (pts === 2) { rowBg = "rgba(234,179,8,0.13)";  ptsCls = "text-yellow-300"; }
+                      else if (pts === 1) { rowBg = "rgba(96,165,250,0.12)"; ptsCls = "text-blue-400"; }
+                      else               { rowBg = "rgba(239,68,68,0.11)";  ptsCls = "text-red-400"; }
                     }
 
                     return (
                       <div
                         key={stage}
                         className="flex items-center gap-3 px-4 py-2.5"
-                        style={{
-                          background: rowBg || undefined,
-                          borderTop: "1px solid rgba(255,255,255,0.05)",
-                        }}
+                        style={{ background: rowBg || undefined, borderTop: "1px solid rgba(255,255,255,0.05)" }}
                       >
-                        {/* Position label */}
                         <div className="w-7 shrink-0 text-center text-[11px] font-black text-white/30 tabular-nums">
                           {POS_LABEL[stage]}
                         </div>
 
-                        {/* Flag + team name + actual finish */}
                         {team ? (
                           <>
                             <FlagIcon cc={team.cc} name={team.name} className="w-8 h-[22px] rounded shrink-0" />
@@ -167,7 +190,6 @@ export function GroupPicksModal({ userId, userName, onClose }: Props) {
                           <div className="flex-1 text-white/20 text-sm italic">No pick</div>
                         )}
 
-                        {/* Points earned */}
                         {groupHasResult && pickedId && (
                           <div className={`text-sm font-black shrink-0 tabular-nums ${ptsCls}`}>
                             +{pts}
