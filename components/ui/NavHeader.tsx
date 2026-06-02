@@ -51,6 +51,11 @@ export function NavHeader({ left, center, right, variant = "brand", className = 
         </div>
       </div>
 
+      {/* Backdrop — closes menu when tapping outside */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-20 md:hidden" onClick={() => setMobileOpen(false)} />
+      )}
+
       {/* Mobile menu */}
       {mobileOpen && (
         <div className="md:hidden flex flex-col border-t border-white/10" onClick={() => setMobileOpen(false)}>
