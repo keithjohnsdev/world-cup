@@ -276,7 +276,7 @@ export default function Home() {
               World Cup
             </h2>
             <p
-              className="font-black leading-none tracking-widest"
+              className="font-black leading-none tracking-wide"
               style={{
                 fontSize: "clamp(2rem, 8vw, 2.9rem)",
                 marginTop: "0.15em",
