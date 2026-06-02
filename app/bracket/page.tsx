@@ -474,10 +474,10 @@ function ScoreRow({ label, pts }: { label: string; pts: string }) {
   );
 }
 
-function AwardRow({ name, description, isNew }: { name: string; description: string; isNew?: boolean }) {
+function AwardRow({ name, description, isNew, highlightName }: { name: string; description: string; isNew?: boolean; highlightName?: boolean }) {
   return (
     <div className="py-3 border-b border-green-800 last:border-0">
-      <div className={`font-bold text-base ${isNew ? "text-yellow-300" : "text-white"}`}>{name}</div>
+      <div className={`font-bold text-base ${isNew || highlightName ? "text-yellow-300" : "text-white"}`}>{name}</div>
       <div className={`text-base mt-0.5 ${isNew ? "text-yellow-500/80" : "text-green-400"}`}>{description}</div>
     </div>
   );
@@ -632,7 +632,7 @@ function RulesTab() {
           </Sub>
           <Sub title="Funny &amp; Consolation">
             <div className="rounded-xl border border-green-800 bg-green-900/40 px-4">
-              <AwardRow name="Wooden Spoon" description="Dead last — awarded with full ceremony and a literal wooden spoon" isNew />
+              <AwardRow name="Wooden Spoon" description="Dead last — awarded with full ceremony and a literal wooden spoon" highlightName />
               <AwardRow name="Heartbreak Hotel" description="Most picks that lost specifically in penalty shootouts — the universe has a grudge" />
               <AwardRow name="The Human Coin Flip" description="Accuracy closest to exactly 50% — perfectly, uselessly neutral" />
               <AwardRow name="Help, I've Gone Cross-Eyed" description="Most picks where the team advanced but in the wrong position" />
