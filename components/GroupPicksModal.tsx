@@ -115,10 +115,10 @@ export function GroupPicksModal({ userId, userName, onClose }: Props) {
           {hasResults && (
             <div className="text-right shrink-0">
               <div className="flex items-baseline gap-1.5 justify-end">
-                <div className="text-yellow-300 font-black text-2xl leading-none">{totalPoints}</div>
                 {heartPoints > 0 && (
-                  <div className="text-red-400 font-black text-sm leading-none">+{heartPoints} ❤️</div>
+                  <div className="text-red-400 font-black text-sm leading-none">({heartPoints} ❤️)</div>
                 )}
+                <div className="text-yellow-300 font-black text-2xl leading-none">{totalPoints}</div>
               </div>
               <div className="text-white/40 text-[10px] uppercase tracking-wide">of 96 pts</div>
             </div>
