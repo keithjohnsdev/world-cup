@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSql, initDb } from "@/lib/db";
 import { scoreUser, type UserRow, type PickRow, type ResultRow } from "@/lib/scoring";
-import { MOCK_GROUP_RESULTS } from "@/lib/mock-results";
 
 export async function GET(req: NextRequest) {
   await initDb();
@@ -12,14 +11,16 @@ export async function GET(req: NextRequest) {
   const auth = await sql`SELECT id FROM users WHERE session_token = ${token}` as { id: number }[];
   if (!auth.length) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const [rawUsers, rawPicks, rawResults] = await Promise.all([
+  const [rawUsers, rawPicks, rawResults, phaseRows] = await Promise.all([
     sql`SELECT id, name, is_kid, chargeup_active, heart_pick_team_id FROM users`,
     sql`SELECT user_id, stage, slot, team_id, is_star_power FROM picks`,
     sql`SELECT stage, slot, team_id, was_shootout FROM results`,
+    sql`SELECT value FROM tournament_settings WHERE key = 'phase' LIMIT 1`,
   ]);
 
-  const users   = rawUsers  as UserRow[];
-  const results = (rawResults as ResultRow[]).length > 0 ? rawResults as ResultRow[] : MOCK_GROUP_RESULTS;
+  const users   = rawUsers as UserRow[];
+  const results = rawResults as ResultRow[];
+  const phase   = (phaseRows as { value: string }[])[0]?.value ?? "phase1_open";
 
   // Group picks by user_id
   const picksByUser = new Map<number, PickRow[]>();
@@ -43,5 +44,5 @@ export async function GET(req: NextRequest) {
     })
     .sort((a, b) => b.total_score - a.total_score || a.name.localeCompare(b.name));
 
-  return NextResponse.json(entries);
+  return NextResponse.json({ entries, phase });
 }

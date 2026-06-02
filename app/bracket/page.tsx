@@ -671,10 +671,13 @@ function RulesTab() {
 
 function LeaderboardTab() {
   const [entries, setEntries] = useState<{ id: number; name: string; is_kid: boolean; group_score: number; bracket_score: number; total_score: number }[]>([]);
+  const [phase, setPhase] = useState<string>("phase1_open");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lastFetched, setLastFetched] = useState<Date | null>(null);
   const [selected, setSelected] = useState<{ id: number; name: string } | null>(null);
+
+  const picksVisible = phase !== "phase1_open";
 
   const fetchLeaderboard = useCallback((isManual = false) => {
     const token = localStorage.getItem("wc_token");
@@ -682,7 +685,10 @@ function LeaderboardTab() {
     if (isManual) setRefreshing(true);
     fetch("/api/leaderboard", { headers: { "x-session-token": token } })
       .then(r => r.json())
-      .then(data => { if (Array.isArray(data)) setEntries(data); setLastFetched(new Date()); })
+      .then(data => {
+        if (data?.entries) { setEntries(data.entries); setPhase(data.phase ?? "phase1_open"); }
+        setLastFetched(new Date());
+      })
       .catch(() => {})
       .finally(() => { setLoading(false); setRefreshing(false); });
   }, []);
@@ -740,8 +746,8 @@ function LeaderboardTab() {
             {entries.map((entry, i) => (
               <button
                 key={entry.id}
-                onClick={() => setSelected({ id: entry.id, name: entry.name })}
-                className={`w-full grid items-center px-4 py-4 border-b border-white/5 last:border-0 text-left cursor-pointer transition-colors hover:bg-white/[0.06] active:bg-white/10 grid-cols-[1.5rem_1fr_4rem_4.5rem_4rem] sm:grid-cols-[2rem_1fr_6.5rem_7rem_6rem] ${i === 0 ? "bg-yellow-300/5 hover:bg-yellow-300/10" : ""}`}
+                onClick={picksVisible ? () => setSelected({ id: entry.id, name: entry.name }) : undefined}
+                className={`w-full grid items-center px-4 py-4 border-b border-white/5 last:border-0 text-left transition-colors grid-cols-[1.5rem_1fr_4rem_4.5rem_4rem] sm:grid-cols-[2rem_1fr_6.5rem_7rem_6rem] ${picksVisible ? "cursor-pointer hover:bg-white/[0.06] active:bg-white/10" : "cursor-default"} ${i === 0 ? "bg-yellow-300/5 hover:bg-yellow-300/10" : ""}`}
               >
                 <div className={`text-sm font-black text-center tabular-nums ${i === 0 ? "text-yellow-300" : i === 1 ? "text-slate-300" : i === 2 ? "text-amber-600" : "text-white/20"}`}>{i === 0 ? "🏆" : i === 1 ? "🥈" : i === 2 ? "🥉" : i === entries.length - 1 ? <img src="/ladle.png" alt="Wooden Spoon" className="w-5 h-5 object-contain mx-auto" /> : i + 1}</div>
                 <div className="flex items-center gap-2 min-w-0">
@@ -754,6 +760,9 @@ function LeaderboardTab() {
               </button>
             ))}
           </div>
+        )}
+        {!loading && !picksVisible && entries.length > 0 && (
+          <p className="text-white/25 text-xs text-center mt-4">Picks are hidden until the group stage begins.</p>
         )}
       </div>
 
