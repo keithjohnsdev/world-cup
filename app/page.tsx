@@ -74,6 +74,7 @@ export default function Home() {
   // One ref per flag — RAF writes translate() directly, no React re-renders
   const flagRefs = useRef<(HTMLDivElement | null)[]>([]);
   const hoveredRef = useRef<string | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     let rafId: number;
@@ -101,6 +102,75 @@ export default function Home() {
 
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
+  }, []);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d")!;
+
+    const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
+    resize();
+    window.addEventListener("resize", resize);
+
+    const COLORS = ["#fbbf24","#fde047","#f97316","#ef4444","#f87171","#60a5fa","#93c5fd","#4ade80","#e879f9","#ffffff","#fef3c7"];
+
+    type Particle = { x: number; y: number; vx: number; vy: number; alpha: number; decay: number; color: string; size: number };
+    type Rocket   = { x: number; y: number; vx: number; vy: number; color: string; targetY: number };
+    type Burst    = { particles: Particle[] };
+
+    const rockets: Rocket[] = [];
+    const bursts: Burst[] = [];
+
+    function spawnRocket() {
+      const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+      rockets.push({ x: Math.random() * canvas.width, y: canvas.height, vx: (Math.random() - 0.5) * 2, vy: -(Math.random() * 6 + 8), color, targetY: canvas.height * (0.15 + Math.random() * 0.45) });
+    }
+
+    function explode(x: number, y: number, color: string) {
+      const count = 55 + Math.floor(Math.random() * 25);
+      const particles: Particle[] = [];
+      for (let i = 0; i < count; i++) {
+        const angle = (i / count) * Math.PI * 2;
+        const speed = Math.random() * 4 + 1;
+        particles.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, alpha: 1, decay: Math.random() * 0.015 + 0.008, color, size: Math.random() * 2.2 + 0.8 });
+      }
+      bursts.push({ particles });
+    }
+
+    let lastSpawn = 0;
+    let fwRafId: number;
+
+    function draw(ts: number) {
+      ctx.fillStyle = "rgba(0,0,0,0.18)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      if (ts - lastSpawn > 1200 + Math.random() * 1000) { spawnRocket(); lastSpawn = ts; }
+
+      for (let i = rockets.length - 1; i >= 0; i--) {
+        const r = rockets[i];
+        r.x += r.vx; r.y += r.vy; r.vy += 0.15;
+        ctx.beginPath(); ctx.arc(r.x, r.y, 2, 0, Math.PI * 2); ctx.fillStyle = r.color; ctx.fill();
+        if (r.y <= r.targetY || r.vy >= 0) { explode(r.x, r.y, r.color); rockets.splice(i, 1); }
+      }
+
+      for (let i = bursts.length - 1; i >= 0; i--) {
+        const burst = bursts[i];
+        for (let j = burst.particles.length - 1; j >= 0; j--) {
+          const p = burst.particles[j];
+          p.x += p.vx; p.y += p.vy; p.vy += 0.07; p.vx *= 0.98; p.alpha -= p.decay;
+          if (p.alpha <= 0) { burst.particles.splice(j, 1); continue; }
+          ctx.globalAlpha = p.alpha;
+          ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill();
+        }
+        if (burst.particles.length === 0) bursts.splice(i, 1);
+      }
+      ctx.globalAlpha = 1;
+      fwRafId = requestAnimationFrame(draw);
+    }
+
+    fwRafId = requestAnimationFrame(draw);
+    return () => { cancelAnimationFrame(fwRafId); window.removeEventListener("resize", resize); };
   }, []);
 
   useEffect(() => {
@@ -173,14 +243,17 @@ export default function Home() {
         }
       `}</style>
 
+      {/* Fireworks */}
+      <canvas ref={canvasRef} style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0 }} />
+
       {/* Ambient glow */}
       <div
         className="absolute inset-0 pointer-events-none"
-        style={{ background: "radial-gradient(ellipse 70% 60% at 50% 40%, rgba(22,163,74,0.14) 0%, transparent 70%)" }}
+        style={{ background: "radial-gradient(ellipse 70% 60% at 50% 40%, rgba(22,163,74,0.14) 0%, transparent 70%)", zIndex: 1 }}
       />
 
       {/* Outer sizing box */}
-      <div style={{ position: "relative", width: SIZE, height: SIZE, flexShrink: 0 }}>
+      <div style={{ position: "relative", width: SIZE, height: SIZE, flexShrink: 0, zIndex: 2 }}>
 
         {/* Flags — RAF moves each one independently, no CSS rotation */}
         {TEAMS.map((team, i) => {
