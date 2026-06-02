@@ -588,6 +588,7 @@ function RulesTab() {
               <ScoreRow label="Quarterfinals" pts="8 pts" />
               <ScoreRow label="Semifinals" pts="16 pts" />
               <ScoreRow label="Final" pts="32 pts" />
+              <ScoreRow label="Max bracket stage total" pts="160 pts" />
             </div>
             <p className="text-sm text-green-500 mt-2 px-1">Each round has the same total points available (32 pts). No round matters more than any other, they just feel like they do.</p>
           </Sub>
