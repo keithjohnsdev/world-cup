@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getSql, initDb } from "@/lib/db";
-import { MOCK_GROUP_RESULTS } from "@/lib/mock-results";
 
 export async function GET(
   _req: Request,
@@ -28,12 +27,9 @@ export async function GET(
 
   if (!userRows.length) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  // Fall back to mock data when no real results exist yet
-  const results = resultRows.length > 0 ? resultRows : MOCK_GROUP_RESULTS;
-
   return NextResponse.json({
     name: userRows[0].name,
     picks: pickRows,
-    results,
+    results: resultRows,
   });
 }

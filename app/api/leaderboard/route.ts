@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSql, initDb } from "@/lib/db";
 import { scoreUser, type UserRow, type PickRow, type ResultRow } from "@/lib/scoring";
-import { MOCK_GROUP_RESULTS } from "@/lib/mock-results";
 
 export async function GET(req: NextRequest) {
   await initDb();
@@ -18,10 +17,8 @@ export async function GET(req: NextRequest) {
     sql`SELECT stage, slot, team_id, was_shootout FROM results`,
   ]);
 
-  const users   = rawUsers   as UserRow[];
-  const results = (rawResults as ResultRow[]).length > 0
-    ? rawResults as ResultRow[]
-    : MOCK_GROUP_RESULTS;
+  const users   = rawUsers  as UserRow[];
+  const results = rawResults as ResultRow[];
 
   // Group picks by user_id
   const picksByUser = new Map<number, PickRow[]>();
