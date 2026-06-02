@@ -1036,13 +1036,18 @@ export default function BracketPage() {
               const missingGroups = GROUPS.filter(g => !filledGroups.includes(g));
               const filled = filledGroups.length;
               const total = GROUPS.length;
-              const allDone = filled === total;
+              const championPicked = !!picks["champion:pick"];
+              const allDone = filled === total && championPicked;
+              const missingItems = [
+                ...missingGroups.map((g, i) => <span key={g.id}>{i > 0 && ", "}Group <span className="text-yellow-300 font-black">{g.id}</span></span>),
+                ...(!championPicked ? [<span key="champion">{missingGroups.length > 0 && ", "}<span className="text-yellow-300 font-black">Champion</span></span>] : []),
+              ];
               return (
                 <div className="mb-8 text-center">
                   <p className={`text-sm font-bold mb-2.5 ${allDone ? "text-green-400" : "text-white"}`}>
                     {allDone
-                      ? "✓ All 12 groups complete — you're ready for Phase 2!"
-                      : <>{filled} of {total} groups filled in <span className="text-white/50 font-medium">(missing {missingGroups.map((g, i) => <span key={g.id}>{i > 0 && ", "}Group <span className="text-yellow-300 font-black">{g.id}</span></span>)})</span></>}
+                      ? "✓ All 12 groups complete and champion picked — you're ready for Phase 2!"
+                      : <>{filled} of {total} groups filled in <span className="text-white/50 font-medium">(missing {missingItems})</span></>}
                   </p>
                   <div className="h-1.5 rounded-full overflow-hidden max-w-xs mx-auto" style={{ background: "rgba(255,255,255,0.08)" }}>
                     <div
