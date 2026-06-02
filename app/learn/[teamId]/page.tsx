@@ -56,12 +56,12 @@ export default async function CountryPage({
         </div>
 
         <section>
-          <h2 className="text-brand-400 text-xs font-bold uppercase tracking-widest mb-3">⚽ Soccer History</h2>
+          <h2 className="text-brand-400 text-sm font-bold uppercase tracking-widest mb-3">⚽ Soccer History</h2>
           <p className="text-white/80 leading-relaxed">{info.soccerHistory}</p>
         </section>
 
         <section>
-          <h2 className="text-brand-400 text-xs font-bold uppercase tracking-widest mb-3">🎭 Culture & People</h2>
+          <h2 className="text-brand-400 text-sm font-bold uppercase tracking-widest mb-3">🎭 Culture & People</h2>
           <ul className="space-y-2">
             {info.culture.map((item, i) => (
               <li key={i} className="flex gap-3 text-white/80">
@@ -73,7 +73,7 @@ export default async function CountryPage({
         </section>
 
         <section>
-          <h2 className="text-brand-400 text-xs font-bold uppercase tracking-widest mb-3">🍽 Must-Try Food</h2>
+          <h2 className="text-brand-400 text-sm font-bold uppercase tracking-widest mb-3">🍽 Must-Try Food</h2>
           <div className="flex flex-wrap gap-2">
             {info.cuisine.map((dish, i) => (
               <span key={i} className="bg-white/10 border border-white/20 text-white px-3 py-1.5 rounded-full text-sm">
@@ -84,7 +84,7 @@ export default async function CountryPage({
         </section>
 
         <Card variant="dark" className="px-5 py-4 border-brand-500/30 bg-brand-900/30">
-          <h2 className="text-brand-400 text-xs font-bold uppercase tracking-widest mb-2">💡 Did You Know?</h2>
+          <h2 className="text-brand-400 text-sm font-bold uppercase tracking-widest mb-2">💡 Did You Know?</h2>
           <p className="text-white/80 leading-relaxed">{info.funFact}</p>
         </Card>
 

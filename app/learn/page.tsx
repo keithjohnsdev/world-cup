@@ -63,7 +63,7 @@ export default function LearnPage() {
               <span className="font-black text-white uppercase tracking-tight text-sm">Johnsies </span>
               <span className="font-black text-amber-400 uppercase tracking-tight text-sm">World Cup</span>
             </div>
-            <div className="text-green-600 text-[8px] font-black uppercase tracking-[0.2em] mt-0.5">2026</div>
+            <div className="text-green-600 text-[10px] font-black uppercase tracking-[0.2em] mt-0.5">2026</div>
           </div>
         }
         center={

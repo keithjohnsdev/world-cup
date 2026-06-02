@@ -355,16 +355,16 @@ export default function Home() {
         }}>
           <div className="text-center">
             <img src="/world_cup_trophy.png" alt="" className="mx-auto mb-2" style={{ height: 52 }} />
-            <h1 className="font-black text-white uppercase leading-none tracking-tight" style={{ fontSize: "clamp(1.8rem, 7vw, 2.6rem)" }}>
+            <h1 className="font-black text-white uppercase leading-none tracking-tight" style={{ fontSize: "clamp(2.2rem, 7vw, 2.6rem)" }}>
               Johnsies
             </h1>
-            <h2 className="font-black text-yellow-300 uppercase leading-none tracking-tight" style={{ fontSize: "clamp(1.4rem, 5.5vw, 2rem)" }}>
+            <h2 className="font-black text-yellow-300 uppercase leading-none tracking-tight" style={{ fontSize: "clamp(1.75rem, 5.5vw, 2rem)" }}>
               World Cup
             </h2>
             <p
               className="font-black leading-none tracking-wide"
               style={{
-                fontSize: "clamp(2rem, 8vw, 2.9rem)",
+                fontSize: "clamp(2.4rem, 8vw, 2.9rem)",
                 marginTop: "0.15em",
                 background: "linear-gradient(90deg, #92400e 0%, #d97706 20%, #fde047 45%, #fef3c7 55%, #fde047 65%, #d97706 82%, #92400e 100%)",
                 WebkitBackgroundClip: "text",

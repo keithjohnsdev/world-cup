@@ -66,7 +66,7 @@ function TeamModal({ teamId, onClose }: { teamId: string; onClose: () => void })
           </div>
           <div className="text-right shrink-0">
             <div className="text-yellow-300 font-black text-2xl leading-none">#{stats.fifaRank}</div>
-            <div className="text-white/40 text-[10px] uppercase tracking-wide">FIFA Rank</div>
+            <div className="text-white/40 text-xs uppercase tracking-wide">FIFA Rank</div>
           </div>
         </div>
 
@@ -75,11 +75,11 @@ function TeamModal({ teamId, onClose }: { teamId: string; onClose: () => void })
           {/* Coach & Formation */}
           <div className="flex gap-3">
             <div className="flex-1 rounded-xl px-3 py-2.5" style={{ background: "rgba(255,255,255,0.06)" }}>
-              <div className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">Coach</div>
+              <div className="text-white/40 text-xs uppercase tracking-wider mb-0.5">Coach</div>
               <div className="text-white font-bold text-sm">{stats.coach}</div>
             </div>
             <div className="rounded-xl px-4 py-2.5 text-center shrink-0" style={{ background: "rgba(255,255,255,0.06)" }}>
-              <div className="text-white/40 text-[10px] uppercase tracking-wider mb-0.5">Formation</div>
+              <div className="text-white/40 text-xs uppercase tracking-wider mb-0.5">Formation</div>
               <div className="text-yellow-300 font-black text-sm">{stats.formation}</div>
             </div>
           </div>
@@ -87,7 +87,7 @@ function TeamModal({ teamId, onClose }: { teamId: string; onClose: () => void })
           {/* Odds bars */}
           <div className="space-y-2.5">
             <div>
-              <div className="flex justify-between text-[10px] uppercase tracking-wider mb-1.5">
+              <div className="flex justify-between text-xs uppercase tracking-wider mb-1.5">
                 <span className="text-white/40">Chance to advance from group</span>
                 <span className="text-green-400 font-bold">{stats.groupAdvanceOdds}%</span>
               </div>
@@ -99,7 +99,7 @@ function TeamModal({ teamId, onClose }: { teamId: string; onClose: () => void })
               </div>
             </div>
             <div>
-              <div className="flex justify-between text-[10px] uppercase tracking-wider mb-1.5">
+              <div className="flex justify-between text-xs uppercase tracking-wider mb-1.5">
                 <span className="text-white/40">Tournament win odds</span>
                 <span className="text-yellow-300 font-bold">{oddsDisplay}</span>
               </div>
@@ -114,14 +114,14 @@ function TeamModal({ teamId, onClose }: { teamId: string; onClose: () => void })
 
           {/* Lineup */}
           <div>
-            <div className="text-white/40 text-[10px] uppercase tracking-wider mb-2">Estimated Lineup</div>
+            <div className="text-white/40 text-xs uppercase tracking-wider mb-2">Estimated Lineup</div>
             <div className="space-y-1.5">
               {rows.map((row, ri) => (
                 <div key={ri} className="flex gap-1.5 justify-center flex-wrap">
                   {row.map((player, pi) => (
                     <span
                       key={pi}
-                      className="text-[11px] font-medium whitespace-nowrap rounded-lg px-2 py-1"
+                      className="text-xs font-medium whitespace-nowrap rounded-lg px-2 py-1"
                       style={{ background: "rgba(255,255,255,0.07)", color: ri === 0 ? "#fbbf24" : "rgba(255,255,255,0.8)" }}
                     >
                       {player}
@@ -253,7 +253,7 @@ function DraggableGroupCard({
       {/* Card header */}
       <div className="px-4 py-3 flex items-center justify-between" style={{ background: hs.bg }}>
         <div className="flex items-baseline gap-1.5">
-          <span className="text-[10px] font-bold uppercase tracking-[0.25em]" style={{ color: hs.labelColor }}>Group</span>
+          <span className="text-xs font-bold uppercase tracking-[0.25em]" style={{ color: hs.labelColor }}>Group</span>
           <span className="font-black text-3xl leading-none" style={{ color: hs.letterColor }}>{group.id}</span>
         </div>
         <div className="flex items-center gap-1.5">
@@ -261,7 +261,7 @@ function DraggableGroupCard({
             t ? (
               <div key={i} className="flex items-center gap-1 rounded-lg px-1.5 py-0.5" style={{ background: hs.chipBg }}>
                 <FlagIcon cc={t.cc} name={t.name} className="w-5 h-3.5" />
-                <span className="text-[10px] font-bold" style={{ color: hs.chipText }}>{i === 0 ? "1st" : "2nd"}</span>
+                <span className="text-xs font-bold" style={{ color: hs.chipText }}>{i === 0 ? "1st" : "2nd"}</span>
               </div>
             ) : (
               <div key={i} className="w-14 h-6 rounded-lg" style={{ background: hs.chipBg }} />
@@ -698,11 +698,11 @@ function LeaderboardTab() {
         ) : (
           <div className="rounded-2xl overflow-hidden border border-white/10">
             <div className="grid items-center px-4 py-3 bg-white/5 border-b border-white/10" style={{ gridTemplateColumns: "2rem 1fr 5rem 5rem 5rem" }}>
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 text-center">#</div>
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30">Player</div>
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 text-right">Groups</div>
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 text-right">Bracket</div>
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-300/50 text-right">Total</div>
+              <div className="text-xs font-black uppercase tracking-[0.2em] text-white/30 text-center">#</div>
+              <div className="text-xs font-black uppercase tracking-[0.2em] text-white/30">Player</div>
+              <div className="text-xs font-black uppercase tracking-[0.2em] text-white/30 text-right">Groups</div>
+              <div className="text-xs font-black uppercase tracking-[0.2em] text-white/30 text-right">Bracket</div>
+              <div className="text-xs font-black uppercase tracking-[0.2em] text-yellow-300/50 text-right">Total</div>
             </div>
             {entries.map((entry, i) => (
               <div
@@ -787,7 +787,7 @@ function KidPowerSection({ picks, onPick }: { picks: Picks; onPick: (stage: stri
                     <FlagIcon cc={team.cc} name={team.name} className="w-10 h-7 rounded-sm" />
                     {isSelected && <span className="text-xl leading-none">❤️</span>}
                   </div>
-                  <span className={`text-[11px] font-bold text-center leading-tight truncate w-full ${isSelected ? "text-red-400" : "text-white/50"}`}>
+                  <span className={`text-xs font-bold text-center leading-tight truncate w-full ${isSelected ? "text-red-400" : "text-white/50"}`}>
                     {team.name}
                   </span>
                 </button>
@@ -843,7 +843,7 @@ function ChampionPicker({ picks, onPick }: { picks: Picks; onPick: (stage: strin
                 <FlagIcon cc={team.cc} name={team.name} className="w-10 h-7 rounded-sm" />
                 {isSelected && <span className="text-xl leading-none">🏆</span>}
               </div>
-              <span className={`text-[11px] font-bold text-center leading-tight truncate w-full ${isSelected ? "text-yellow-300" : "text-white/50"}`}>
+              <span className={`text-xs font-bold text-center leading-tight truncate w-full ${isSelected ? "text-yellow-300" : "text-white/50"}`}>
                 {team.name}
               </span>
             </button>
@@ -990,7 +990,7 @@ export default function BracketPage() {
         <div className="py-3 px-4 flex items-center justify-center gap-4" style={{ background: "linear-gradient(90deg, #92400e, #d97706, #fbbf24, #d97706, #92400e)" }}>
           <span className="text-2xl">🏆</span>
           <div className="text-center">
-            <div className="text-amber-900 text-[10px] font-black uppercase tracking-[0.25em] opacity-70">Your Champion</div>
+            <div className="text-amber-900 text-xs font-black uppercase tracking-[0.25em] opacity-70">Your Champion</div>
             <div className="flex items-center gap-2 justify-center mt-0.5">
               <FlagIcon cc={championTeam!.cc} name={championTeam!.name} className="w-8 h-6 rounded shadow" />
               <span className="font-black text-amber-900 text-lg leading-tight">{championTeam!.name}</span>
