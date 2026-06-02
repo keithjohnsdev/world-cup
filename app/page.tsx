@@ -184,52 +184,65 @@ export default function Home() {
 
         {/* Flags — RAF moves each one independently, no CSS rotation */}
         {TEAMS.map((team, i) => {
-            const isActive = team.id === currentPhrase.teamId;
+            const isHovered = team.id === hoveredTeamId;
+            const isRotatingActive = team.id === currentPhrase.teamId;
+            const isActive = isHovered || isRotatingActive;
+            const teamPhrase = PHRASES.find(p => p.teamId === team.id);
+
+            const bubbleStyle: React.CSSProperties = {
+              position: "absolute",
+              bottom: "calc(100% + 10px)",
+              left: "50%",
+              background: "white",
+              color: "#111",
+              fontSize: 11,
+              fontWeight: 800,
+              letterSpacing: "0.03em",
+              padding: "3px 8px",
+              borderRadius: 6,
+              whiteSpace: "nowrap",
+              pointerEvents: "none",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+            };
+            const caretStyle: React.CSSProperties = {
+              position: "absolute",
+              top: "100%",
+              left: "50%",
+              transform: "translateX(-50%)",
+              width: 0,
+              height: 0,
+              borderLeft: "5px solid transparent",
+              borderRight: "5px solid transparent",
+              borderTop: "5px solid white",
+            };
 
             return (
               <div
                 key={team.id}
                 ref={(el) => { flagRefs.current[i] = el; }}
+                onMouseEnter={() => { hoveredRef.current = team.id; setHoveredTeamId(team.id); }}
+                onMouseLeave={() => { hoveredRef.current = null; setHoveredTeamId(null); }}
                 style={{
                   position: "absolute",
                   width: FLAG_W,
                   height: FLAG_H,
                   zIndex: isActive ? 2 : 1,
+                  cursor: teamPhrase ? "pointer" : "default",
                 }}
               >
-                {/* Speech bubble */}
-                {isActive && (
-                  <div
-                    key={phraseIdx}
-                    style={{
-                      position: "absolute",
-                      bottom: "calc(100% + 10px)",
-                      left: "50%",
-                      animation: `bubble-pop ${INTERVAL_MS}ms ease both`,
-                      background: "white",
-                      color: "#111",
-                      fontSize: 11,
-                      fontWeight: 800,
-                      letterSpacing: "0.03em",
-                      padding: "3px 8px",
-                      borderRadius: 6,
-                      whiteSpace: "nowrap",
-                      pointerEvents: "none",
-                      boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
-                    }}
-                  >
+                {/* Hover bubble — pops in and stays visible while hovered */}
+                {isHovered && teamPhrase && (
+                  <div key={`hover-${team.id}`} style={{ ...bubbleStyle, animation: "hover-bubble-pop 300ms cubic-bezier(0.34,1.56,0.64,1) both" }}>
+                    {teamPhrase.text}
+                    <span style={caretStyle} />
+                  </div>
+                )}
+
+                {/* Rotating-active bubble — suppressed while anything is hovered */}
+                {isRotatingActive && !hoveredTeamId && (
+                  <div key={phraseIdx} style={{ ...bubbleStyle, animation: `bubble-pop ${INTERVAL_MS}ms ease both` }}>
                     {currentPhrase.text}
-                    <span style={{
-                      position: "absolute",
-                      top: "100%",
-                      left: "50%",
-                      transform: "translateX(-50%)",
-                      width: 0,
-                      height: 0,
-                      borderLeft: "5px solid transparent",
-                      borderRight: "5px solid transparent",
-                      borderTop: "5px solid white",
-                    }} />
+                    <span style={caretStyle} />
                   </div>
                 )}
 
