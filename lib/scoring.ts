@@ -6,11 +6,11 @@ import { GROUPS } from "@/lib/data";
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const KNOCKOUT_PTS: Record<string, number> = {
-  r32:   3,
-  r16:   6,
-  qf:    12,
-  sf:    24,
-  final: 48,
+  r32:   2,
+  r16:   4,
+  qf:    8,
+  sf:    16,
+  final: 32,
 };
 
 const CHAMPION_BONUS_BASE = 10;

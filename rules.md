@@ -37,13 +37,13 @@ Each round has the same total points available — no round matters more than an
 
 | Round | Points per correct pick | Total available |
 |-------|------------------------|-----------------|
-| Round of 32 | **3 pts** | 48 pts (16 picks) |
-| Round of 16 | **6 pts** | 48 pts (8 picks) |
-| Quarterfinals | **12 pts** | 48 pts (4 picks) |
-| Semifinals | **24 pts** | 48 pts (2 picks) |
-| Final | **48 pts** | 48 pts (1 pick) |
+| Round of 32 | **2 pts** | 32 pts (16 picks) |
+| Round of 16 | **4 pts** | 32 pts (8 picks) |
+| Quarterfinals | **8 pts** | 32 pts (4 picks) |
+| Semifinals | **16 pts** | 32 pts (2 picks) |
+| Final | **32 pts** | 32 pts (1 pick) |
 
-Max knockout total: **240 pts** (48 pts × 5 rounds, if you sweep every pick in every round)
+Max knockout total: **160 pts** (32 pts × 5 rounds, if you sweep every pick in every round)
 
 ### Champion Bonus
 

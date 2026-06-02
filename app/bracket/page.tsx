@@ -583,13 +583,13 @@ function RulesTab() {
           </Sub>
           <Sub title="Knockout Rounds">
             <div className="rounded-xl border border-green-800 bg-green-900/40 px-4">
-              <ScoreRow label="Round of 32" pts="3 pts" />
-              <ScoreRow label="Round of 16" pts="6 pts" />
-              <ScoreRow label="Quarterfinals" pts="12 pts" />
-              <ScoreRow label="Semifinals" pts="24 pts" />
-              <ScoreRow label="Final" pts="48 pts" />
+              <ScoreRow label="Round of 32" pts="2 pts" />
+              <ScoreRow label="Round of 16" pts="4 pts" />
+              <ScoreRow label="Quarterfinals" pts="8 pts" />
+              <ScoreRow label="Semifinals" pts="16 pts" />
+              <ScoreRow label="Final" pts="32 pts" />
             </div>
-            <p className="text-sm text-green-500 mt-2 px-1">Each round has the same total points available (48 pts). No round matters more than any other, they just feel like they do.</p>
+            <p className="text-sm text-green-500 mt-2 px-1">Each round has the same total points available (32 pts). No round matters more than any other, they just feel like they do.</p>
           </Sub>
           <Sub title="Champion Bonus">
             <div className="rounded-xl border border-green-800 bg-green-900/40 px-4">
