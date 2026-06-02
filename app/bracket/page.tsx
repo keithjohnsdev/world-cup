@@ -84,17 +84,31 @@ function TeamModal({ teamId, onClose }: { teamId: string; onClose: () => void })
             </div>
           </div>
 
-          {/* Win odds */}
-          <div>
-            <div className="flex justify-between text-[10px] uppercase tracking-wider mb-1.5">
-              <span className="text-white/40">Tournament win odds</span>
-              <span className="text-yellow-300 font-bold">{oddsDisplay}</span>
+          {/* Odds bars */}
+          <div className="space-y-2.5">
+            <div>
+              <div className="flex justify-between text-[10px] uppercase tracking-wider mb-1.5">
+                <span className="text-white/40">Chance to advance from group</span>
+                <span className="text-green-400 font-bold">{stats.groupAdvanceOdds}%</span>
+              </div>
+              <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.1)" }}>
+                <div
+                  className="h-full rounded-full"
+                  style={{ width: `${stats.groupAdvanceOdds}%`, background: "linear-gradient(90deg, #166534, #16a34a)" }}
+                />
+              </div>
             </div>
-            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.1)" }}>
-              <div
-                className="h-full rounded-full transition-all"
-                style={{ width: `${barWidth}%`, background: "linear-gradient(90deg, #16a34a, #fbbf24)" }}
-              />
+            <div>
+              <div className="flex justify-between text-[10px] uppercase tracking-wider mb-1.5">
+                <span className="text-white/40">Tournament win odds</span>
+                <span className="text-yellow-300 font-bold">{oddsDisplay}</span>
+              </div>
+              <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.1)" }}>
+                <div
+                  className="h-full rounded-full"
+                  style={{ width: `${barWidth}%`, background: "linear-gradient(90deg, #16a34a, #fbbf24)" }}
+                />
+              </div>
             </div>
           </div>
 
