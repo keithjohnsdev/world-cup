@@ -1058,7 +1058,7 @@ export default function BracketPage() {
                 </div>
               );
             })()}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-3 sm:px-0">
               {GROUPS.map((group) => (
                 <DraggableGroupCard key={group.id} group={group} picks={picks} onPick={handlePick} onInfoClick={setModalTeamId} />
               ))}
