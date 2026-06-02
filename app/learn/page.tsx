@@ -113,8 +113,8 @@ export default function LearnPage() {
         {/* Hint */}
         <p className="absolute top-12 left-1/2 -translate-x-1/2 z-10 text-white/40 text-xs pointer-events-none whitespace-nowrap">
           {view === "globe"
-            ? "Rotate the globe · hover a green country · click to explore"
-            : "Hover a green country · click to explore"}
+            ? "Rotate the globe · hover a country · click to explore"
+            : "Hover a country · click to explore"}
         </p>
 
         {view === "globe" ? (
