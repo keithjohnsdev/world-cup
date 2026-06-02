@@ -105,8 +105,9 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    const canvasEl = canvasRef.current;
+    if (!canvasEl) return;
+    const canvas: HTMLCanvasElement = canvasEl;
     const ctx = canvas.getContext("2d")!;
 
     const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
