@@ -949,13 +949,11 @@ export default function BracketPage() {
         className="border-b border-white/10"
         style={{ background: "linear-gradient(160deg, #060d1a 0%, #0d2137 50%, #0a1a0f 100%)" }}
         left={
-          <div className="select-none">
-            <div className="leading-none">
-              <span className="font-black text-white uppercase tracking-tight text-sm">Johnsies </span>
-              <span className="font-black text-amber-400 uppercase tracking-tight text-sm">World Cup</span>
-            </div>
-            <div className="text-green-600 text-[8px] font-black uppercase tracking-[0.2em] mt-0.5">
-              2026
+          <div className="flex items-center gap-2 select-none">
+            <img src="/world_cup_trophy.png" alt="" style={{ height: 36 }} />
+            <div>
+              <div className="font-black text-white uppercase tracking-tight text-sm leading-tight">Johnsies</div>
+              <div className="font-black text-amber-400 uppercase tracking-tight text-sm leading-tight">World Cup</div>
             </div>
           </div>
         }

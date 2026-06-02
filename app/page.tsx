@@ -261,7 +261,7 @@ export default function Home() {
           gap: 28,
         }}>
           <div className="text-center">
-            <p className="text-green-500 text-[9px] font-black uppercase tracking-[0.4em] mb-2">Est. 2026</p>
+            <img src="/world_cup_trophy.png" alt="" className="mx-auto mb-2" style={{ height: 52 }} />
             <h1 className="font-black text-white uppercase leading-none tracking-tight" style={{ fontSize: "clamp(1.8rem, 7vw, 2.6rem)" }}>
               Johnsies
             </h1>
