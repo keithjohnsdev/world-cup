@@ -1037,9 +1037,7 @@ export default function BracketPage() {
               const filled = filledGroups.length;
               const total = GROUPS.length;
               const championPicked = !!picks["champion:pick"];
-              const isKid = picks["meta:isKid"] === "true";
-              const heartPicked = !isKid || !!picks["heart:pick"];
-              const allDone = filled === total && championPicked && heartPicked;
+              const allDone = filled === total && championPicked;
               const missingCount = missingGroups.length;
               const missingItems = [
                 ...(missingCount === total
@@ -1047,7 +1045,6 @@ export default function BracketPage() {
                   : missingGroups.map((g, i) => <span key={g.id}>{i > 0 && ", "}Group <span className="text-yellow-300 font-black">{g.id}</span></span>)
                 ),
                 ...(!championPicked ? [<span key="champion">{missingCount > 0 && ", "}<span className="text-yellow-300 font-black">Champion</span></span>] : []),
-                ...(!heartPicked ? [<span key="heart">{(missingCount > 0 || !championPicked) && ", "}<span className="text-red-400 font-black">Heart Team</span></span>] : []),
               ];
               return (
                 <div className="mb-8 text-center">
