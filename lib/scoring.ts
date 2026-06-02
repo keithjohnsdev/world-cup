@@ -173,10 +173,15 @@ function scoreChampionBonus(
 // +1 pt for every match (any round) that the heart-pick team won.
 // "Won" means their team_id appears in results as the winner of that match.
 
+// Stages that represent final standings positions, not individual match wins
+const STANDING_STAGES = new Set(["group", "runner", "third", "fourth"]);
+
 function scoreHeartPick(user: UserRow, results: Map<string, ResultRow>): number {
   if (!user.is_kid || !user.heart_pick_team_id) return 0;
   let pts = 0;
-  for (const result of results.values()) {
+  for (const [key, result] of results) {
+    const stage = key.split(":")[0];
+    if (STANDING_STAGES.has(stage)) continue; // not a match win
     if (result.team_id === user.heart_pick_team_id) pts += HEART_PICK_WIN_PTS;
   }
   return pts;

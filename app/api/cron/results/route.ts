@@ -78,7 +78,7 @@ async function handler(req: NextRequest) {
         await handleGroupMatch(sql, match, matches);
       } else if (match.round.includes("3rd") || match.round.includes("third")) {
         // Skip 3rd-place play-off — not part of our bracket
-      } else {
+      } else if (match.winnerName) {
         await handleKnockoutMatch(sql, match);
       }
 
@@ -105,16 +105,28 @@ export const GET  = handler;
 async function handleGroupMatch(
   sql: ReturnType<typeof getSql>,
   match: CompletedMatch,
-  todayMatches: CompletedMatch[],
+  allTodayMatches: CompletedMatch[],
 ) {
-  // Only finalise standings on the last group matchday (3)
-  if (match.matchday !== 3) return;
-
   const homeId = apiNameToTeamId(match.homeTeamName);
   const awayId = apiNameToTeamId(match.awayTeamName);
   if (!homeId || !awayId) {
     throw new Error(`Unknown teams: "${match.homeTeamName}" / "${match.awayTeamName}"`);
   }
+
+  // Store individual match result for every match with a winner (draws give no points).
+  // Used for heart pick scoring — kids earn +1 per win by their favourite team.
+  if (match.winnerName) {
+    const winnerId = apiNameToTeamId(match.winnerName);
+    if (!winnerId) throw new Error(`Unknown winner: "${match.winnerName}"`);
+    await sql`
+      INSERT INTO results (stage, slot, team_id, was_shootout)
+      VALUES ('gm', ${String(match.id)}, ${winnerId}, false)
+      ON CONFLICT (stage, slot) DO UPDATE SET team_id = EXCLUDED.team_id
+    `;
+  }
+
+  // Final standings only make sense after matchday 3
+  if (match.matchday !== 3) return;
 
   const group = TEAMS.find((t) => t.id === homeId)?.group;
   if (!group) throw new Error(`No group found for team ${homeId}`);
@@ -125,11 +137,11 @@ async function handleGroupMatch(
   ` as unknown[];
   if (existing.length > 0) return;
 
-  // Wait until both matchday-3 matches for this group are in today's completed list
+  // Wait until both matchday-3 matches for this group are finished (wins or draws)
   const groupTeamIds = new Set(
     GROUPS.find((g) => g.id === group)?.teams.map((t) => t.id) ?? [],
   );
-  const groupMatchday3 = todayMatches.filter((m) => {
+  const groupMatchday3 = allTodayMatches.filter((m) => {
     if (m.round !== "group stage" || m.matchday !== 3) return false;
     const h = apiNameToTeamId(m.homeTeamName);
     const a = apiNameToTeamId(m.awayTeamName);

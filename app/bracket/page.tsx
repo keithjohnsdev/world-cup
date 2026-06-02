@@ -672,16 +672,33 @@ function RulesTab() {
 function LeaderboardTab() {
   const [entries, setEntries] = useState<{ id: number; name: string; is_kid: boolean; group_score: number; bracket_score: number; total_score: number }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastFetched, setLastFetched] = useState<Date | null>(null);
   const [selected, setSelected] = useState<{ id: number; name: string } | null>(null);
 
-  useEffect(() => {
+  const fetchLeaderboard = useCallback((isManual = false) => {
     const token = localStorage.getItem("wc_token");
     if (!token) return;
+    if (isManual) setRefreshing(true);
     fetch("/api/leaderboard", { headers: { "x-session-token": token } })
       .then(r => r.json())
-      .then(data => { if (Array.isArray(data)) setEntries(data); setLoading(false); })
-      .catch(() => setLoading(false));
+      .then(data => { if (Array.isArray(data)) setEntries(data); setLastFetched(new Date()); })
+      .catch(() => {})
+      .finally(() => { setLoading(false); setRefreshing(false); });
   }, []);
+
+  useEffect(() => {
+    fetchLeaderboard();
+    const id = setInterval(() => fetchLeaderboard(), 60_000);
+    return () => clearInterval(id);
+  }, [fetchLeaderboard]);
+
+  function timeAgo(d: Date) {
+    const secs = Math.floor((Date.now() - d.getTime()) / 1000);
+    if (secs < 10) return "just now";
+    if (secs < 60) return `${secs}s ago`;
+    return `${Math.floor(secs / 60)}m ago`;
+  }
 
   return (
     <div className="min-h-screen" style={{ background: "linear-gradient(160deg, #060d1a 0%, #0d2137 60%, #071628 100%)" }}>
@@ -693,7 +710,20 @@ function LeaderboardTab() {
             <h2 className="font-black uppercase leading-none text-yellow-300" style={{ fontSize: "clamp(2.2rem, 7vw, 3rem)", letterSpacing: "-0.02em" }}>Leaderboard</h2>
             <div className="h-px w-10 bg-gradient-to-l from-transparent to-yellow-300/60" />
           </div>
-          <p className="text-white/75 text-sm mt-3">Scores update once the tournament begins.</p>
+          <div className="flex items-center justify-center gap-2 mt-3">
+            <p className="text-white/50 text-xs">{lastFetched ? `Updated ${timeAgo(lastFetched)}` : "Scores update once the tournament begins."}</p>
+            <button
+              onClick={() => fetchLeaderboard(true)}
+              disabled={refreshing}
+              className="text-white/30 hover:text-white/70 transition-colors disabled:opacity-30"
+              aria-label="Refresh"
+            >
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={refreshing ? "animate-spin" : ""}>
+                <path d="M13.5 8A5.5 5.5 0 1 1 10 3.07"/>
+                <path d="M10 1v3h3"/>
+              </svg>
+            </button>
+          </div>
         </div>
 
         {loading ? (

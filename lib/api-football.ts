@@ -17,7 +17,7 @@ export interface CompletedMatch {
   matchday: number | null;
   homeTeamName: string;
   awayTeamName: string;
-  winnerName: string;
+  winnerName: string;  // empty string for draws
   wasShootout: boolean;
 }
 
@@ -28,8 +28,6 @@ export interface StandingEntry {
 }
 
 // ─── Round name normalisation ─────────────────────────────────────────────────
-// Converts football-data.org stage strings to the lowercase phrases that
-// findKnockoutSlot() checks with .includes().
 
 function normaliseRound(stage: string): string {
   const map: Record<string, string> = {
@@ -46,7 +44,7 @@ function normaliseRound(stage: string): string {
 // ─── Requests ─────────────────────────────────────────────────────────────────
 
 // Fetch all FINISHED World Cup matches on a given date (YYYY-MM-DD).
-// Uses status=FINISHED filter so we only get results that are truly over.
+// Draws are included — callers decide whether to use winnerName.
 export async function fetchCompletedMatchesForDate(date: string): Promise<CompletedMatch[]> {
   const res = await fetch(
     `${BASE}/competitions/${WC}/matches?status=FINISHED&dateFrom=${date}&dateTo=${date}`,
@@ -71,7 +69,7 @@ export async function fetchCompletedMatchesForDate(date: string): Promise<Comple
       winnerName,
       wasShootout:  m.score?.duration === "PENALTY_SHOOTOUT",
     } satisfies CompletedMatch;
-  }).filter((m: CompletedMatch) => m.winnerName !== ""); // drop draws (group stage)
+  });
 }
 
 // Fetch group standings — returns map of group letter ("A"…"L") → entries sorted by position.
@@ -85,7 +83,6 @@ export async function fetchGroupStandings(): Promise<Map<string, StandingEntry[]
 
   const out = new Map<string, StandingEntry[]>();
   for (const group of (json.standings ?? [])) {
-    // group.group is "GROUP_A", "GROUP_B", etc.
     const letter = (group.group as string)?.replace(/^GROUP_/i, "").trim();
     if (!letter) continue;
     out.set(letter, (group.table ?? []).map((row: any) => ({
