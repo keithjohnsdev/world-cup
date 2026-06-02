@@ -1029,6 +1029,26 @@ export default function BracketPage() {
                 Drag teams to rank all four finishing positions — <span className="text-green-400 font-bold">top 2</span> advance, but you still get points for correctly choosing <span className="text-yellow-300 font-bold">3rd</span> and <span className="text-yellow-300 font-bold">4th</span> place!
               </p>
             </div>
+            {(() => {
+              const filled = GROUPS.filter(g =>
+                picks[`group:${g.id}`] && picks[`runner:${g.id}`] && picks[`third:${g.id}`] && picks[`fourth:${g.id}`]
+              ).length;
+              const total = GROUPS.length;
+              const allDone = filled === total;
+              return (
+                <div className="mb-8 text-center">
+                  <p className={`text-sm font-bold mb-2.5 ${allDone ? "text-green-400" : "text-white/50"}`}>
+                    {allDone ? "✓ All 12 groups complete — you're ready for Phase 2!" : `${filled} of ${total} groups filled in`}
+                  </p>
+                  <div className="h-1.5 rounded-full overflow-hidden max-w-xs mx-auto" style={{ background: "rgba(255,255,255,0.08)" }}>
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{ width: `${(filled / total) * 100}%`, background: allDone ? "#4ade80" : "#fbbf24" }}
+                    />
+                  </div>
+                </div>
+              );
+            })()}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {GROUPS.map((group) => (
                 <DraggableGroupCard key={group.id} group={group} picks={picks} onPick={handlePick} onInfoClick={setModalTeamId} />
