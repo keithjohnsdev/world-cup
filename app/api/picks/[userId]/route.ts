@@ -28,7 +28,6 @@ export async function GET(
 
   if (!userRows.length) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  // Fall back to mock data when no real results exist yet
   const results = resultRows.length > 0 ? resultRows : MOCK_GROUP_RESULTS;
 
   return NextResponse.json({
