@@ -1,0 +1,187 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { GROUPS, getTeam } from "@/lib/data";
+import { FlagIcon } from "@/components/FlagIcon";
+
+const STAGES = ["group", "runner", "third", "fourth"] as const;
+type Stage = typeof STAGES[number];
+
+const POS_LABEL: Record<Stage, string> = {
+  group: "1st",
+  runner: "2nd",
+  third: "3rd",
+  fourth: "4th",
+};
+
+interface Entry { stage: string; slot: string; team_id: string; }
+
+function scorePosition(pickedId: string | null, posIdx: number, actual: (string | null)[]): number {
+  if (!pickedId || !actual.some(Boolean)) return 0;
+  const exact = actual[posIdx] === pickedId ? 1 : 0;
+  const advance = posIdx < 2 && (actual[0] === pickedId || actual[1] === pickedId) ? 2 : 0;
+  return exact + advance;
+}
+
+function buildMap(entries: Entry[]): Record<string, (string | null)[]> {
+  const map: Record<string, (string | null)[]> = {};
+  for (const g of GROUPS) map[g.id] = [null, null, null, null];
+  for (const { stage, slot, team_id } of entries) {
+    const idx = STAGES.indexOf(stage as Stage);
+    if (idx >= 0 && map[slot]) map[slot][idx] = team_id;
+  }
+  return map;
+}
+
+interface Props {
+  userId: number;
+  userName: string;
+  onClose: () => void;
+}
+
+export function GroupPicksModal({ userId, userName, onClose }: Props) {
+  const [picks, setPicks] = useState<Entry[]>([]);
+  const [results, setResults] = useState<Entry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`/api/picks/${userId}`)
+      .then(r => r.json())
+      .then(d => { setPicks(d.picks ?? []); setResults(d.results ?? []); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [userId]);
+
+  const pickMap = buildMap(picks);
+  const resultMap = buildMap(results);
+  const hasResults = results.length > 0;
+
+  const totalPoints = GROUPS.reduce((sum, g) =>
+    sum + STAGES.reduce((s, _, i) => s + scorePosition(pickMap[g.id]?.[i] ?? null, i, resultMap[g.id] ?? []), 0), 0);
+
+  return (
+    <>
+      <div className="fixed inset-0 z-50 bg-black/75" onClick={onClose} />
+
+      {/* Full-screen on mobile, centered dialog on md+ */}
+      <div
+        className="fixed inset-0 z-50 flex flex-col md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-2xl md:max-h-[88vh] md:rounded-2xl overflow-hidden shadow-2xl"
+        style={{ background: "#0d2137", border: "1px solid rgba(255,255,255,0.12)" }}
+      >
+        {/* Header */}
+        <div
+          className="flex items-center gap-4 px-5 py-4 shrink-0"
+          style={{ background: "linear-gradient(135deg, #1d4270 0%, #163358 100%)" }}
+        >
+          <div className="flex-1 min-w-0">
+            <div className="text-white font-black text-lg leading-tight truncate">{userName}</div>
+            <div className="text-green-400 text-xs font-bold uppercase tracking-wider mt-0.5">Group Stage Picks</div>
+          </div>
+          {hasResults && (
+            <div className="text-right shrink-0">
+              <div className="text-yellow-300 font-black text-2xl leading-none">{totalPoints}</div>
+              <div className="text-white/40 text-[10px] uppercase tracking-wide">of 96 pts</div>
+            </div>
+          )}
+          <button
+            onClick={onClose}
+            className="w-8 h-8 shrink-0 flex items-center justify-center rounded-full text-white/40 hover:text-white hover:bg-white/10 transition-all text-base"
+            aria-label="Close"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {loading ? (
+            <div className="text-white/30 text-sm text-center py-20">Loading…</div>
+          ) : (
+            GROUPS.map(group => {
+              const predicted = pickMap[group.id] ?? [];
+              const actual = resultMap[group.id] ?? [];
+              const groupHasResult = actual.some(Boolean);
+              const groupPts = STAGES.reduce((s, _, i) => s + scorePosition(predicted[i] ?? null, i, actual), 0);
+
+              return (
+                <div key={group.id} className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.09)" }}>
+                  {/* Group header */}
+                  <div
+                    className="flex items-center justify-between px-4 py-2"
+                    style={{ background: "linear-gradient(135deg, #1d4270 0%, #163358 100%)" }}
+                  >
+                    <span className="text-yellow-300 font-black text-xs uppercase tracking-[0.2em]">Group {group.id}</span>
+                    {groupHasResult && (
+                      <span className="text-white/50 text-xs font-bold tabular-nums">{groupPts} / 8 pts</span>
+                    )}
+                  </div>
+
+                  {/* 4 position rows */}
+                  {STAGES.map((stage, posIdx) => {
+                    const pickedId = predicted[posIdx] ?? null;
+                    const team = pickedId ? getTeam(pickedId) : null;
+                    const pts = scorePosition(pickedId, posIdx, actual);
+
+                    // Where did the picked team actually finish?
+                    const actualIdx = pickedId ? actual.indexOf(pickedId) : -1;
+                    const actualLabel = actualIdx >= 0 ? POS_LABEL[STAGES[actualIdx]] : null;
+
+                    // Row coloring
+                    let rowBg = "";
+                    let ptsCls = "text-white/20";
+                    if (groupHasResult && pickedId) {
+                      if (pts >= 3)      { rowBg = "rgba(234,179,8,0.13)";   ptsCls = "text-yellow-300"; }
+                      else if (pts === 2) { rowBg = "rgba(22,163,74,0.16)";   ptsCls = "text-green-400"; }
+                      else if (pts === 1) { rowBg = "rgba(96,165,250,0.12)";  ptsCls = "text-blue-400"; }
+                      else               { rowBg = "rgba(239,68,68,0.11)";   ptsCls = "text-red-400"; }
+                    }
+
+                    return (
+                      <div
+                        key={stage}
+                        className="flex items-center gap-3 px-4 py-2.5"
+                        style={{
+                          background: rowBg || undefined,
+                          borderTop: "1px solid rgba(255,255,255,0.05)",
+                        }}
+                      >
+                        {/* Position label */}
+                        <div className="w-7 shrink-0 text-center text-[11px] font-black text-white/30 tabular-nums">
+                          {POS_LABEL[stage]}
+                        </div>
+
+                        {/* Flag + team name + actual finish */}
+                        {team ? (
+                          <>
+                            <FlagIcon cc={team.cc} name={team.name} className="w-8 h-[22px] rounded shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-white text-sm font-semibold leading-tight truncate">{team.name}</div>
+                              {groupHasResult && (
+                                <div className="text-white/35 text-[10px] leading-none mt-0.5">
+                                  {actualLabel ? `finished ${actualLabel}` : "result pending"}
+                                </div>
+                              )}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="flex-1 text-white/20 text-sm italic">No pick</div>
+                        )}
+
+                        {/* Points earned */}
+                        {groupHasResult && pickedId && (
+                          <div className={`text-sm font-black shrink-0 tabular-nums ${ptsCls}`}>
+                            +{pts}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </>
+  );
+}

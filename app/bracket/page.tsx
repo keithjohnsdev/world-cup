@@ -11,6 +11,7 @@ import { FlagIcon } from "@/components/FlagIcon";
 import { NavHeader } from "@/components/ui/NavHeader";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { GroupPicksModal } from "@/components/GroupPicksModal";
 
 const GlobeView = dynamic(() => import("@/components/GlobeView"), { ssr: false });
 const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
@@ -671,6 +672,7 @@ function RulesTab() {
 function LeaderboardTab() {
   const [entries, setEntries] = useState<{ id: number; name: string; is_kid: boolean; group_score: number; bracket_score: number; total_score: number }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<{ id: number; name: string } | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("wc_token");
@@ -706,9 +708,10 @@ function LeaderboardTab() {
               <div className="text-xs font-black uppercase tracking-[0.2em] text-yellow-300/50 text-right">Total</div>
             </div>
             {entries.map((entry, i) => (
-              <div
+              <button
                 key={entry.id}
-                className={`grid items-center px-4 py-4 border-b border-white/5 last:border-0 grid-cols-[1.5rem_1fr_4rem_4.5rem_4rem] sm:grid-cols-[2rem_1fr_6.5rem_7rem_6rem] ${i === 0 ? "bg-yellow-300/5" : ""}`}
+                onClick={() => setSelected({ id: entry.id, name: entry.name })}
+                className={`w-full grid items-center px-4 py-4 border-b border-white/5 last:border-0 text-left cursor-pointer transition-colors hover:bg-white/[0.06] active:bg-white/10 grid-cols-[1.5rem_1fr_4rem_4.5rem_4rem] sm:grid-cols-[2rem_1fr_6.5rem_7rem_6rem] ${i === 0 ? "bg-yellow-300/5 hover:bg-yellow-300/10" : ""}`}
               >
                 <div className={`text-sm font-black text-center tabular-nums ${i === 0 ? "text-yellow-300" : i === 1 ? "text-white/40" : i === 2 ? "text-amber-700/60" : "text-white/20"}`}>{i + 1}</div>
                 <div className="flex items-center gap-2 min-w-0">
@@ -718,11 +721,19 @@ function LeaderboardTab() {
                 <div className="text-white/40 text-sm tabular-nums text-right">{entry.group_score}</div>
                 <div className="text-white/40 text-sm tabular-nums text-right">{entry.bracket_score}</div>
                 <div className="text-yellow-300 font-black text-sm tabular-nums text-right">{entry.total_score}</div>
-              </div>
+              </button>
             ))}
           </div>
         )}
       </div>
+
+      {selected && (
+        <GroupPicksModal
+          userId={selected.id}
+          userName={selected.name}
+          onClose={() => setSelected(null)}
+        />
+      )}
     </div>
   );
 }
