@@ -58,7 +58,7 @@ export function NavHeader({ left, center, right, variant = "brand", className = 
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="md:hidden flex flex-col border-t border-white/10" onClick={() => setMobileOpen(false)}>
+        <div className="relative z-30 md:hidden flex flex-col border-t border-white/10" onClick={() => setMobileOpen(false)}>
           {center && (
             <div className="[&>div]:flex-col [&>div]:h-auto [&>div>*]:w-full [&>div>*]:min-h-[48px] [&>div>*]:border-b [&>div>*]:border-white/10 [&>div>*]:justify-start [&>div>*]:px-5">
               {center}
