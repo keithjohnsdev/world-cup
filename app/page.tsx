@@ -268,6 +268,20 @@ export default function Home() {
             <h2 className="font-black text-yellow-300 uppercase leading-none tracking-tight" style={{ fontSize: "clamp(1.4rem, 5.5vw, 2rem)" }}>
               World Cup
             </h2>
+            <p
+              className="font-black leading-none tracking-widest"
+              style={{
+                fontSize: "clamp(2rem, 8vw, 2.9rem)",
+                marginTop: "0.15em",
+                background: "linear-gradient(180deg, #fff9c2 0%, #fde047 18%, #fbbf24 42%, #f59e0b 62%, #b45309 82%, #fde68a 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+                filter: "drop-shadow(0 0 8px rgba(251,191,36,0.95)) drop-shadow(0 0 20px rgba(251,191,36,0.65)) drop-shadow(0 0 40px rgba(251,191,36,0.35))",
+              }}
+            >
+              2026
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="w-full space-y-3">
