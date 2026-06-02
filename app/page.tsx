@@ -68,10 +68,12 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [phraseIdx, setPhraseIdx] = useState(0);
+  const [hoveredTeamId, setHoveredTeamId] = useState<string | null>(null);
   const router = useRouter();
 
   // One ref per flag — RAF writes translate() directly, no React re-renders
   const flagRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const hoveredRef = useRef<string | null>(null);
 
   useEffect(() => {
     let rafId: number;
@@ -79,7 +81,7 @@ export default function Home() {
     let angle = 0; // degrees
 
     function tick(ts: number) {
-      if (prev !== undefined) angle = (angle + ((ts - prev) / RING_MS) * 360) % 360;
+      if (prev !== undefined && !hoveredRef.current) angle = (angle + ((ts - prev) / RING_MS) * 360) % 360;
       prev = ts;
 
       const cx = SIZE / 2;
@@ -163,6 +165,11 @@ export default function Home() {
           16%  { transform: translateX(-50%) scale(1);   opacity: 1; }
           84%  { transform: translateX(-50%) scale(1);   opacity: 1; }
           100% { transform: translateX(-50%) scale(0.8); opacity: 0; }
+        }
+        @keyframes hover-bubble-pop {
+          0%   { transform: translateX(-50%) scale(0.5); opacity: 0; }
+          60%  { transform: translateX(-50%) scale(1.08); opacity: 1; }
+          100% { transform: translateX(-50%) scale(1);   opacity: 1; }
         }
       `}</style>
 
@@ -273,11 +280,11 @@ export default function Home() {
               style={{
                 fontSize: "clamp(2rem, 8vw, 2.9rem)",
                 marginTop: "0.15em",
-                background: "linear-gradient(180deg, #fff9c2 0%, #fde047 18%, #fbbf24 42%, #f59e0b 62%, #b45309 82%, #fde68a 100%)",
+                background: "linear-gradient(90deg, #92400e 0%, #d97706 20%, #fde047 45%, #fef3c7 55%, #fde047 65%, #d97706 82%, #92400e 100%)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
-                filter: "drop-shadow(0 0 8px rgba(251,191,36,0.95)) drop-shadow(0 0 20px rgba(251,191,36,0.65)) drop-shadow(0 0 40px rgba(251,191,36,0.35))",
+                filter: "drop-shadow(0 0 6px rgba(251,191,36,0.6)) drop-shadow(0 0 16px rgba(251,191,36,0.25))",
               }}
             >
               2026
