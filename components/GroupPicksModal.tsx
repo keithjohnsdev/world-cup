@@ -42,12 +42,19 @@ interface Props {
 export function GroupPicksModal({ userId, userName, onClose }: Props) {
   const [picks, setPicks] = useState<Entry[]>([]);
   const [results, setResults] = useState<Entry[]>([]);
+  const [heartPickTeamId, setHeartPickTeamId] = useState<string | null>(null);
+  const [heartPoints, setHeartPoints] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch(`/api/picks/${userId}`)
       .then(r => r.json())
-      .then(d => { setPicks(d.picks ?? []); setResults(d.results ?? []); })
+      .then(d => {
+        setPicks(d.picks ?? []);
+        setResults(d.results ?? []);
+        setHeartPickTeamId(d.heartPickTeamId ?? null);
+        setHeartPoints(d.heartPoints ?? 0);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [userId]);
@@ -107,7 +114,12 @@ export function GroupPicksModal({ userId, userName, onClose }: Props) {
 
           {hasResults && (
             <div className="text-right shrink-0">
-              <div className="text-yellow-300 font-black text-2xl leading-none">{totalPoints}</div>
+              <div className="flex items-baseline gap-1.5 justify-end">
+                <div className="text-yellow-300 font-black text-2xl leading-none">{totalPoints}</div>
+                {heartPoints > 0 && (
+                  <div className="text-red-400 font-black text-sm leading-none">+{heartPoints} ❤️</div>
+                )}
+              </div>
               <div className="text-white/40 text-[10px] uppercase tracking-wide">of 96 pts</div>
             </div>
           )}
@@ -178,7 +190,12 @@ export function GroupPicksModal({ userId, userName, onClose }: Props) {
                           <>
                             <FlagIcon cc={team.cc} name={team.name} className="w-8 h-[22px] rounded shrink-0" />
                             <div className="flex-1 min-w-0">
-                              <div className="text-white text-sm font-semibold leading-tight truncate">{team.name}</div>
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="text-white text-sm font-semibold leading-tight truncate">{team.name}</span>
+                                {team.id === heartPickTeamId && heartPoints > 0 && (
+                                  <span className="text-red-400 text-[11px] font-black shrink-0 whitespace-nowrap">+{heartPoints} ❤️</span>
+                                )}
+                              </div>
                               {groupHasResult && (
                                 <div className="text-white/35 text-[10px] leading-none mt-0.5">
                                   {actualLabel ? `finished ${actualLabel}` : "result pending"}
