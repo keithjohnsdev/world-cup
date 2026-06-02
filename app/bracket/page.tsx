@@ -12,6 +12,7 @@ import { NavHeader } from "@/components/ui/NavHeader";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { GroupPicksModal } from "@/components/GroupPicksModal";
+import { BracketPicker } from "@/components/BracketPicker";
 
 const GlobeView = dynamic(() => import("@/components/GlobeView"), { ssr: false });
 const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
@@ -912,6 +913,8 @@ export default function BracketPage() {
   const [hoveredTeam, setHoveredTeam] = useState<string | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [modalTeamId, setModalTeamId] = useState<string | null>(null);
+  const [bracketResults, setBracketResults] = useState<{ stage: string; slot: string; team_id: string }[]>([]);
+  const [bracketPhase, setBracketPhase] = useState("phase1_open");
   const router = useRouter();
 
   const picksRef = useRef<Picks>({});
@@ -935,6 +938,14 @@ export default function BracketPage() {
           setPicks(loaded);
         }
       });
+
+    fetch("/api/results", { headers: { "x-session-token": token } })
+      .then(r => r.json())
+      .then(data => {
+        if (data?.results) setBracketResults(data.results);
+        if (data?.phase) setBracketPhase(data.phase);
+      })
+      .catch(() => {});
   }, [router]);
 
   function handlePick(stage: string, slot: string, teamId: string) {
@@ -1181,21 +1192,12 @@ export default function BracketPage() {
 
       {/* Bracket tab */}
       {tab === "bracket" && (
-        <div className="min-h-screen" style={{ background: "linear-gradient(160deg, #060d1a 0%, #0d2137 60%, #071628 100%)" }}>
-          <div className="px-4 pt-10 pb-8 max-w-5xl mx-auto">
-            <div className="mb-10 text-center">
-              <p className="font-black uppercase leading-none text-white mb-1" style={{ fontSize: "clamp(2.2rem, 7vw, 3rem)", letterSpacing: "-0.02em" }}>The</p>
-              <div className="flex items-center justify-center gap-3">
-                <div className="h-px w-10 bg-gradient-to-r from-transparent to-yellow-300/60" />
-                <h2 className="font-black uppercase leading-none text-yellow-300" style={{ fontSize: "clamp(2.2rem, 7vw, 3rem)", letterSpacing: "-0.02em" }}>
-                  Bracket Stage
-                </h2>
-                <div className="h-px w-10 bg-gradient-to-l from-transparent to-yellow-300/60" />
-              </div>
-              <p className="text-white/75 text-sm mt-3">Bracket will be available to pick once the group stage is complete.</p>
-            </div>
-          </div>
-        </div>
+        <BracketPicker
+          picks={picks}
+          results={bracketResults}
+          phase={bracketPhase}
+          onPick={handlePick}
+        />
       )}
     </div>
   );

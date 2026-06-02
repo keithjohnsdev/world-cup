@@ -16,11 +16,6 @@ function authorized(req: NextRequest): boolean {
   );
 }
 
-function inMatchWindow(d: Date): boolean {
-  const h = d.getUTCHours();
-  return h >= 17 || h < 3;
-}
-
 export const dynamic = "force-dynamic";
 
 async function handler(req: NextRequest) {
@@ -28,13 +23,8 @@ async function handler(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const now = new Date();
-  if (!inMatchWindow(now)) {
-    return NextResponse.json({ skipped: "outside match window", utcHour: now.getUTCHours() });
-  }
-
   await initDb();
-  const dateStr = now.toISOString().slice(0, 10);
+  const dateStr = new Date().toISOString().slice(0, 10);
 
   let matches;
   try {
