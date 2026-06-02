@@ -130,8 +130,8 @@ export function GroupPicksModal({ userId, userName, onClose }: Props) {
                     let rowBg = "";
                     let ptsCls = "text-white/20";
                     if (groupHasResult && pickedId) {
-                      if (pts >= 3)      { rowBg = "rgba(234,179,8,0.13)";   ptsCls = "text-yellow-300"; }
-                      else if (pts === 2) { rowBg = "rgba(22,163,74,0.16)";   ptsCls = "text-green-400"; }
+                      if (pts >= 3)      { rowBg = "rgba(22,163,74,0.16)";   ptsCls = "text-green-400"; }
+                      else if (pts === 2) { rowBg = "rgba(234,179,8,0.13)";   ptsCls = "text-yellow-300"; }
                       else if (pts === 1) { rowBg = "rgba(96,165,250,0.12)";  ptsCls = "text-blue-400"; }
                       else               { rowBg = "rgba(239,68,68,0.11)";   ptsCls = "text-red-400"; }
                     }
