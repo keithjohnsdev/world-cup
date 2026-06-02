@@ -1030,15 +1030,19 @@ export default function BracketPage() {
               </p>
             </div>
             {(() => {
-              const filled = GROUPS.filter(g =>
+              const filledGroups = GROUPS.filter(g =>
                 picks[`group:${g.id}`] && picks[`runner:${g.id}`] && picks[`third:${g.id}`] && picks[`fourth:${g.id}`]
-              ).length;
+              );
+              const missingGroups = GROUPS.filter(g => !filledGroups.includes(g));
+              const filled = filledGroups.length;
               const total = GROUPS.length;
               const allDone = filled === total;
               return (
                 <div className="mb-8 text-center">
-                  <p className={`text-sm font-bold mb-2.5 ${allDone ? "text-green-400" : "text-white/50"}`}>
-                    {allDone ? "✓ All 12 groups complete — you're ready for Phase 2!" : `${filled} of ${total} groups filled in`}
+                  <p className={`text-sm font-bold mb-2.5 ${allDone ? "text-green-400" : "text-white"}`}>
+                    {allDone
+                      ? "✓ All 12 groups complete — you're ready for Phase 2!"
+                      : <>{filled} of {total} groups filled in <span className="text-white/50 font-medium">(missing {missingGroups.map(g => `Group ${g.id}`).join(", ")})</span></>}
                   </p>
                   <div className="h-1.5 rounded-full overflow-hidden max-w-xs mx-auto" style={{ background: "rgba(255,255,255,0.08)" }}>
                     <div
