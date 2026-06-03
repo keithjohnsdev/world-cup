@@ -27,14 +27,14 @@ export function NavHeader({ left, center, right, variant = "brand", className = 
       <div className="relative flex items-center px-4 py-3">
         <div className="flex items-center gap-3 flex-1">{left}</div>
         {center && (
-          <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 hidden md:flex items-stretch">
+          <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 hidden lg:flex items-stretch">
             {center}
           </div>
         )}
         <div className="flex items-center gap-2 flex-1 justify-end">
-          <div className="hidden md:flex items-center gap-2">{right}</div>
+          <div className="hidden lg:flex items-center gap-2">{right}</div>
           <button
-            className="md:hidden flex items-center justify-center w-9 h-9 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-all"
+            className="lg:hidden flex items-center justify-center w-9 h-9 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-all"
             onClick={() => setMobileOpen(o => !o)}
             aria-label={mobileOpen ? "Close menu" : "Open menu"}
           >
@@ -53,12 +53,12 @@ export function NavHeader({ left, center, right, variant = "brand", className = 
 
       {/* Backdrop — closes menu when tapping outside */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-20 md:hidden" onClick={() => setMobileOpen(false)} />
+        <div className="fixed inset-0 z-20 lg:hidden" onClick={() => setMobileOpen(false)} />
       )}
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="relative z-30 md:hidden flex flex-col border-t border-white/10" onClick={() => setMobileOpen(false)}>
+        <div className="relative z-30 lg:hidden flex flex-col border-t border-white/10" onClick={() => setMobileOpen(false)}>
           {center && (
             <div className="[&>div]:flex-col [&>div]:h-auto [&>div>*]:w-full [&>div>*]:min-h-[48px] [&>div>*]:border-b [&>div>*]:border-white/10 [&>div>*]:justify-start [&>div>*]:px-5">
               {center}

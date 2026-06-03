@@ -1042,7 +1042,7 @@ export default function BracketPage() {
         }
         right={
           <>
-            {userName && <span className="text-green-400 text-sm font-medium hidden sm:inline">{userName}</span>}
+            {userName && <span className="text-green-400 text-sm font-medium hidden lg:inline">{userName}</span>}
             <Button variant="ghost" size="sm" onClick={signOut}>Sign out</Button>
           </>
         }
