@@ -6,10 +6,6 @@ import { fetchCountryPhotos } from "@/lib/country-photos";
 import { Card } from "@/components/ui/Card";
 import { PhotoCarousel } from "@/components/PhotoCarousel";
 
-// Re-generate at most once per week so photo caches can refresh
-// if build-time Wikipedia fetches were rate-limited.
-export const revalidate = 60 * 60 * 24 * 7;
-
 export function generateStaticParams() {
   return TEAMS.map((t) => ({ teamId: t.id }));
 }
