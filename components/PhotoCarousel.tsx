@@ -14,7 +14,8 @@ interface Props {
 
 export function PhotoCarousel({ photos, country }: Props) {
   const [current, setCurrent] = useState(0);
-  const [loaded, setLoaded] = useState<Set<number>>(new Set([0]));
+  // Main display: lazy-load — only keep current + 1 adjacent preloaded
+  const [mainLoaded, setMainLoaded] = useState<Set<number>>(new Set([0]));
 
   const prev = useCallback(
     () => setCurrent((c) => (c - 1 + photos.length) % photos.length),
@@ -25,13 +26,13 @@ export function PhotoCarousel({ photos, country }: Props) {
     [photos.length]
   );
 
-  // Preload adjacent photos
+  // Preload the next photo in advance so transitions feel instant
   useEffect(() => {
     const adjacent = [
       (current + 1) % photos.length,
       (current - 1 + photos.length) % photos.length,
     ];
-    setLoaded((prev) => new Set([...prev, current, ...adjacent]));
+    setMainLoaded((prev) => new Set([...prev, current, ...adjacent]));
   }, [current, photos.length]);
 
   // Keyboard navigation
@@ -50,7 +51,7 @@ export function PhotoCarousel({ photos, country }: Props) {
 
   return (
     <div className="select-none">
-      {/* Main image */}
+      {/* Main display */}
       <div
         className="relative rounded-2xl overflow-hidden bg-black/30 group"
         style={{ aspectRatio: "16/10" }}
@@ -58,7 +59,7 @@ export function PhotoCarousel({ photos, country }: Props) {
         {photos.map((p, i) => (
           <img
             key={p.src}
-            src={loaded.has(i) ? p.src : undefined}
+            src={mainLoaded.has(i) ? p.src : undefined}
             alt={p.caption || `${country} photo ${i + 1}`}
             className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
               i === current ? "opacity-100" : "opacity-0"
@@ -83,7 +84,7 @@ export function PhotoCarousel({ photos, country }: Props) {
           {current + 1} / {photos.length}
         </div>
 
-        {/* Nav arrows — always visible on touch, hover-visible on desktop */}
+        {/* Nav arrows — always visible on touch, hover-reveals on desktop */}
         {photos.length > 1 && (
           <>
             <button
@@ -104,7 +105,7 @@ export function PhotoCarousel({ photos, country }: Props) {
         )}
       </div>
 
-      {/* Thumbnail strip */}
+      {/* Thumbnail strip — all thumbnails render immediately (they're tiny) */}
       {photos.length > 1 && (
         <div className="flex gap-2 mt-3 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {photos.map((p, i) => (
@@ -119,23 +120,22 @@ export function PhotoCarousel({ photos, country }: Props) {
               }`}
               aria-label={`Photo ${i + 1}`}
             >
-              {loaded.has(i) && (
-                <img
-                  src={p.src}
-                  alt=""
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).style.visibility =
-                      "hidden";
-                  }}
-                />
-              )}
+              {/* Always render — thumbnails are 64×44px, bandwidth is cheap */}
+              <img
+                src={p.src}
+                alt=""
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.visibility =
+                    "hidden";
+                }}
+              />
             </button>
           ))}
         </div>
       )}
 
-      {/* Dot indicators for small screens */}
+      {/* Dot indicators (mobile only) */}
       {photos.length > 1 && (
         <div className="flex justify-center gap-1.5 mt-2 sm:hidden">
           {photos.map((_, i) => (

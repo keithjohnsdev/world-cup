@@ -20,7 +20,7 @@ export default async function CountryPage({
   const info = COUNTRY_INFO[teamId];
   if (!team || !info) notFound();
 
-  const photos = await fetchCountryPhotos(team.id, team.name);
+  const photos = await fetchCountryPhotos(team.id, team.name, info.capital);
 
   return (
     <div className="min-h-screen bg-surface-deep">

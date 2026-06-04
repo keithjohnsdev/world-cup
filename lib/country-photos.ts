@@ -1,52 +1,3 @@
-// Wikipedia article title overrides — for team names that don't match Wikipedia's exact article title
-const WIKI_TITLE_OVERRIDES: Record<string, string> = {
-  CZE: "Czech Republic",
-  BIH: "Bosnia and Herzegovina",
-  TUR: "Turkey",
-  CIV: "Ivory Coast",
-  COD: "Democratic Republic of the Congo",
-  SCO: "Scotland",
-  ENG: "England",
-  KSA: "Saudi Arabia",
-  CPV: "Cape Verde",
-  RSA: "South Africa",
-  USA: "United States",
-  NED: "Netherlands",
-  IRN: "Iran",
-  NZL: "New Zealand",
-  CUW: "Curaçao",
-};
-
-function getWikiTitle(teamId: string, teamName: string): string {
-  return WIKI_TITLE_OVERRIDES[teamId] || teamName;
-}
-
-const SKIP_PATTERNS = [
-  /flag/i, /map/i, /coat.of.arms/i, /arms/i, /emblem/i,
-  /seal/i, /logo/i, /icon/i, /locator/i, /location/i,
-  /shield/i, /badge/i, /blank/i, /outline/i, /template/i,
-  /silhouette/i, /graph/i, /chart/i, /diagram/i, /administrative/i,
-];
-
-// Title keywords that suggest a scenic/wide shot — these get promoted to hero candidates
-const HERO_HINTS = /skyline|panoram|aerial|cityscape|landscape|skyscape|horizon|downtown|bird.?s.eye/i;
-
-function isGoodPhotoTitle(title: string): boolean {
-  // Skip SVG (usually flags, maps, icons)
-  if (title.toLowerCase().endsWith(".svg")) return false;
-  return !SKIP_PATTERNS.some((p) => p.test(title));
-}
-
-function toHttps(src: string): string {
-  return src.startsWith("//") ? `https:${src}` : src;
-}
-
-// Guess width from the srcset URL (e.g. "...1280px-File.jpg" → 1280)
-function widthFromSrc(src: string): number {
-  const m = src.match(/\/(\d+)px-[^/]+$/);
-  return m ? parseInt(m[1], 10) : 0;
-}
-
 export interface CountryPhoto {
   src: string;
   caption: string;
@@ -55,6 +6,79 @@ export interface CountryPhoto {
 export interface CountryPhotos {
   hero: string | null;
   gallery: CountryPhoto[];
+}
+
+// Wikipedia article names for each content type per country.
+// Cuisine articles follow "{Nationality} cuisine" — all verified to exist on Wikipedia.
+// Culture articles follow "Culture of {country}" consistently.
+// Capital articles are used for hero + landscape landmarks.
+const CUISINE_ARTICLE: Record<string, string> = {
+  MEX: "Mexican cuisine",
+  RSA: "South African cuisine",
+  KOR: "Korean cuisine",
+  CZE: "Czech cuisine",
+  CAN: "Canadian cuisine",
+  BIH: "Bosnian cuisine",
+  QAT: "Qatari cuisine",
+  SUI: "Swiss cuisine",
+  BRA: "Brazilian cuisine",
+  MAR: "Moroccan cuisine",
+  HAI: "Haitian cuisine",
+  SCO: "Scottish cuisine",
+  USA: "American cuisine",
+  PAR: "Paraguayan cuisine",
+  AUS: "Australian cuisine",
+  TUR: "Turkish cuisine",
+  GER: "German cuisine",
+  CUW: "Curaçaoan cuisine",
+  CIV: "Ivorian cuisine",
+  ECU: "Ecuadorian cuisine",
+  NED: "Dutch cuisine",
+  JPN: "Japanese cuisine",
+  SWE: "Swedish cuisine",
+  TUN: "Tunisian cuisine",
+  BEL: "Belgian cuisine",
+  EGY: "Egyptian cuisine",
+  IRN: "Iranian cuisine",
+  NZL: "New Zealand cuisine",
+  ESP: "Spanish cuisine",
+  CPV: "Cape Verdean cuisine",
+  KSA: "Saudi Arabian cuisine",
+  URU: "Uruguayan cuisine",
+  FRA: "French cuisine",
+  SEN: "Senegalese cuisine",
+  IRQ: "Iraqi cuisine",
+  NOR: "Norwegian cuisine",
+  ARG: "Argentine cuisine",
+  ALG: "Algerian cuisine",
+  AUT: "Austrian cuisine",
+  JOR: "Jordanian cuisine",
+  POR: "Portuguese cuisine",
+  COD: "Congolese cuisine",
+  UZB: "Uzbek cuisine",
+  COL: "Colombian cuisine",
+  ENG: "English cuisine",
+  CRO: "Croatian cuisine",
+  GHA: "Ghanaian cuisine",
+  PAN: "Panamanian cuisine",
+};
+
+// "Culture of X" article names (a few need "the")
+const CULTURE_ARTICLE: Record<string, string> = {
+  USA: "Culture of the United States",
+  NED: "Culture of the Netherlands",
+  CZE: "Culture of the Czech Republic",
+  RSA: "Culture of South Africa",
+  KOR: "Culture of South Korea",
+  BIH: "Culture of Bosnia and Herzegovina",
+  CIV: "Culture of Ivory Coast",
+  COD: "Culture of the Democratic Republic of the Congo",
+  ENG: "Culture of England",
+  SCO: "Culture of Scotland",
+  NZL: "Culture of New Zealand",
+};
+function getCultureArticle(teamId: string, teamName: string): string {
+  return CULTURE_ARTICLE[teamId] || `Culture of ${teamName}`;
 }
 
 interface WikiMediaItem {
@@ -67,68 +91,92 @@ interface WikiMediaItem {
   srcset?: { src: string; scale: string }[];
 }
 
-export async function fetchCountryPhotos(
-  teamId: string,
-  teamName: string
-): Promise<CountryPhotos> {
-  const title = getWikiTitle(teamId, teamName);
-  const encoded = encodeURIComponent(title.replace(/ /g, "_"));
+function widthFromSrc(src: string): number {
+  const m = src.match(/\/(\d+)px-[^/]+$/);
+  return m ? parseInt(m[1], 10) : 0;
+}
 
+function toHttps(src: string): string {
+  return src.startsWith("//") ? `https:${src}` : src;
+}
+
+// Patterns that indicate non-photographic content: flags, maps, paintings, etc.
+const ALWAYS_SKIP =
+  /flag|coat.of.arms|emblem|seal|logo|\bmap\b|locator|silhouette|blank|painting|lithograph|engraving|fresco|tapestry|\bartwork\b|\bmural\b|illustration|still.life|manuscript|codex|\bportrait\b/i;
+
+function extractPhotos(
+  items: WikiMediaItem[],
+  limit: number
+): CountryPhoto[] {
+  return items
+    .filter((item) => {
+      if (item.type !== "image") return false;
+      if (item.title.toLowerCase().endsWith(".svg")) return false;
+      if (ALWAYS_SKIP.test(item.title)) return false;
+      if (!item.srcset?.length) return false;
+      const maxW = Math.max(...item.srcset.map((s) => widthFromSrc(s.src)));
+      if (maxW < 400) return false;
+      return true;
+    })
+    .map((item) => {
+      const sorted = [...(item.srcset || [])].sort(
+        (a, b) => widthFromSrc(b.src) - widthFromSrc(a.src)
+      );
+      // Use the largest srcset size (already canonical for Wikimedia)
+      const src = toHttps(sorted[0].src);
+      return {
+        src,
+        caption: item.caption?.text?.trim() || "",
+        leadImage: !!item.leadImage,
+        sectionId: item.section_id ?? 99,
+      };
+    })
+    .slice(0, limit);
+}
+
+async function fetchArticlePhotos(
+  articleTitle: string,
+  limit: number
+): Promise<CountryPhoto[]> {
+  const encoded = encodeURIComponent(articleTitle.replace(/ /g, "_"));
   try {
     const res = await fetch(
       `https://en.wikipedia.org/api/rest_v1/page/media-list/${encoded}`,
       { cache: "force-cache" }
     );
-    if (!res.ok) return { hero: null, gallery: [] };
-
+    if (!res.ok) return [];
     const data = await res.json();
-    const items: WikiMediaItem[] = data.items || [];
-
-    const photos = items
-      .filter((item) => {
-        if (item.type !== "image") return false;
-        if (!isGoodPhotoTitle(item.title)) return false;
-        if (!item.srcset?.length) return false;
-        // Must have at least one reasonably-sized source
-        const maxW = Math.max(...item.srcset.map((s) => widthFromSrc(s.src)));
-        if (maxW < 400) return false;
-        return true;
-      })
-      .map((item) => {
-        // Use the largest available srcset entry — Wikimedia only serves
-        // thumbnails at canonical widths, so we can't request arbitrary sizes
-        const sorted = [...(item.srcset || [])].sort(
-          (a, b) => widthFromSrc(b.src) - widthFromSrc(a.src)
-        );
-        const largest = toHttps(sorted[0].src);
-        // For gallery thumbnails, prefer a smaller size if available (saves bandwidth)
-        const smaller = sorted.find((s) => widthFromSrc(s.src) <= 1000);
-        const galleryUrl = smaller ? toHttps(smaller.src) : largest;
-        return {
-          heroSrc: largest,
-          gallerySrc: galleryUrl,
-          caption: item.caption?.text?.trim() || "",
-          leadImage: !!item.leadImage,
-          sectionId: item.section_id ?? 99,
-          heroHint: HERO_HINTS.test(item.title),
-        };
-      });
-
-    // Hero priority: leadImage → scenic hint → early section → first photo
-    const hero =
-      photos.find((p) => p.leadImage)?.heroSrc ||
-      photos.find((p) => p.heroHint)?.heroSrc ||
-      photos.find((p) => p.sectionId <= 2)?.heroSrc ||
-      photos[0]?.heroSrc ||
-      null;
-
-    const gallery: CountryPhoto[] = photos.slice(0, 9).map((p) => ({
-      src: p.gallerySrc,
-      caption: p.caption,
-    }));
-
-    return { hero, gallery };
+    return extractPhotos(data.items || [], limit);
   } catch {
-    return { hero: null, gallery: [] };
+    return [];
   }
+}
+
+export async function fetchCountryPhotos(
+  teamId: string,
+  teamName: string,
+  capital: string
+): Promise<CountryPhotos> {
+  const cuisineArticle = CUISINE_ARTICLE[teamId] || `${teamName} cuisine`;
+  const cultureArticle = getCultureArticle(teamId, teamName);
+
+  // Three targeted article fetches in parallel — each article contains
+  // only its own theme (food, culture, city), so no historical paintings leak in
+  const [cityPhotos, foodPhotos, culturePhotos] = await Promise.all([
+    fetchArticlePhotos(capital, 6),
+    fetchArticlePhotos(cuisineArticle, 4),
+    fetchArticlePhotos(cultureArticle, 4),
+  ]);
+
+  // Hero: first photo from the capital city article (usually a skyline/panorama)
+  const hero = cityPhotos[0]?.src || null;
+
+  // Gallery: landmarks from city + food + culture, up to 9 total
+  const gallery: CountryPhoto[] = [
+    ...cityPhotos.slice(0, 3),
+    ...foodPhotos.slice(0, 3),
+    ...culturePhotos.slice(0, 3),
+  ].slice(0, 9);
+
+  return { hero, gallery };
 }
