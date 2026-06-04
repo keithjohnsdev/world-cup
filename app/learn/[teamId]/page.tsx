@@ -79,7 +79,7 @@ export default async function CountryPage({
             ← Back to Globe
           </Link>
           <Link
-            href="/bracket"
+            href="/bracket?tab=groups"
             className="flex-1 text-center bg-brand-600 hover:bg-brand-700 text-white py-3 rounded-xl font-medium transition-colors"
           >
             Make Picks →
@@ -151,7 +151,7 @@ export default async function CountryPage({
             ← Back to Globe
           </Link>
           <Link
-            href="/bracket"
+            href="/bracket?tab=groups"
             className="flex-1 text-center bg-brand-600 hover:bg-brand-700 text-white py-3 rounded-xl font-medium transition-colors"
           >
             Make Picks →
