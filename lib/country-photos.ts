@@ -91,6 +91,24 @@ interface WikiMediaItem {
   srcset?: { src: string; scale: string }[];
 }
 
+// Turn a Wikipedia filename into a human-readable caption fallback.
+// e.g. "File:Angel-de-la-Independencia--Mexico-D.F.jpg"
+//   → "Angel de la Independencia Mexico D.F."
+function filenameToCaption(rawTitle: string): string {
+  const base = rawTitle
+    .replace(/^File:/i, "")
+    .replace(/\.[^.]+$/, "");
+  const decoded = decodeURIComponent(base).replace(/[_\-]+/g, " ").trim();
+  // Strip parenthetical metadata like "(cropped)", "(25514321687)"
+  const cleaned = decoded
+    .replace(/\s*\([^)]{0,50}\)\s*/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  // Skip pure codes/IDs — must have at least one lowercase word
+  if (cleaned.length < 5 || !/[a-z]/.test(cleaned)) return "";
+  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+}
+
 function widthFromSrc(src: string): number {
   const m = src.match(/\/(\d+)px-[^/]+$/);
   return m ? parseInt(m[1], 10) : 0;
@@ -126,7 +144,7 @@ function extractPhotos(
       const src = toHttps(sorted[0].src);
       return {
         src,
-        caption: item.caption?.text?.trim() || "",
+        caption: item.caption?.text?.trim() || filenameToCaption(item.title),
         leadImage: !!item.leadImage,
         sectionId: item.section_id ?? 99,
       };
