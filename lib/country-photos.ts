@@ -152,22 +152,42 @@ function extractPhotos(
     .slice(0, limit);
 }
 
+const WIKIPEDIA_HEADERS = {
+  // Wikipedia's API policy requires a descriptive User-Agent for automated requests.
+  // Without it, requests are more aggressively rate-limited during bulk builds.
+  "User-Agent":
+    "JohnsiesWorldCup/1.0 (https://johnsies.vercel.app; keithjohnsdev@gmail.com)",
+};
+
 async function fetchArticlePhotos(
   articleTitle: string,
   limit: number
 ): Promise<CountryPhoto[]> {
   const encoded = encodeURIComponent(articleTitle.replace(/ /g, "_"));
-  try {
-    const res = await fetch(
-      `https://en.wikipedia.org/api/rest_v1/page/media-list/${encoded}`,
-      { cache: "force-cache" }
-    );
-    if (!res.ok) return [];
-    const data = await res.json();
-    return extractPhotos(data.items || [], limit);
-  } catch {
-    return [];
+  const url = `https://en.wikipedia.org/api/rest_v1/page/media-list/${encoded}`;
+
+  // Retry up to 2 times with backoff — Wikipedia occasionally returns 429 or 5xx
+  // during builds when many pages are generated concurrently.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      if (attempt > 0) {
+        await new Promise((r) => setTimeout(r, 800 * attempt));
+      }
+      const res = await fetch(url, {
+        // Revalidate weekly — allows empty/failed caches to refresh on next build
+        // rather than being permanently stuck as empty.
+        next: { revalidate: 60 * 60 * 24 * 7 },
+        headers: WIKIPEDIA_HEADERS,
+      });
+      if (res.status === 429 || res.status >= 500) continue;
+      if (!res.ok) return [];
+      const data = await res.json();
+      return extractPhotos(data.items || [], limit);
+    } catch {
+      if (attempt === 2) return [];
+    }
   }
+  return [];
 }
 
 export async function fetchCountryPhotos(
