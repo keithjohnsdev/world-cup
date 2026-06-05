@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSql, initDb } from "@/lib/db";
+import { takeStandingsSnapshot } from "@/lib/snapshots";
 
 const VALID_PHASES = ["phase1_open", "phase1_locked", "phase2_open", "phase2_locked", "complete"] as const;
 type Phase = typeof VALID_PHASES[number];
@@ -29,6 +30,14 @@ export async function POST(req: NextRequest) {
     VALUES ('phase', ${phase})
     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
   `;
+
+  // When opening Phase 2, snapshot standings immediately — this is the
+  // pre-R32 baseline used for Kaboose Boost and Comeback Kid.
+  if (phase === "phase2_open") {
+    await takeStandingsSnapshot(sql, "pre_r32").catch((e) =>
+      console.warn("[admin/phase] pre_r32 snapshot failed:", e)
+    );
+  }
 
   return NextResponse.json({ ok: true, phase });
 }

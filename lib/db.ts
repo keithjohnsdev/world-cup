@@ -18,75 +18,113 @@ export async function initDb() {
   _initialized = true;
   const sql = getSql();
 
+  // ── Core tables ──────────────────────────────────────────────────────────────
+
   await sql`
     CREATE TABLE IF NOT EXISTS users (
-      id SERIAL PRIMARY KEY,
-      name VARCHAR(100) NOT NULL,
-      session_token VARCHAR(64) UNIQUE NOT NULL,
-      is_kid BOOLEAN DEFAULT false,
-      chargeup_active BOOLEAN DEFAULT false,
-      heart_pick_team_id VARCHAR(10),
-      created_at TIMESTAMP DEFAULT NOW()
+      id                  SERIAL PRIMARY KEY,
+      name                VARCHAR(100) NOT NULL,
+      session_token       VARCHAR(64)  UNIQUE NOT NULL,
+      is_kid              BOOLEAN      DEFAULT false,
+      chargeup_active     BOOLEAN      DEFAULT false,
+      heart_pick_team_id  VARCHAR(10),
+      created_at          TIMESTAMP    DEFAULT NOW()
     )
   `;
 
-  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_kid BOOLEAN DEFAULT false`;
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_kid             BOOLEAN  DEFAULT false`;
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS heart_pick_team_id VARCHAR(10)`;
-  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS chargeup_active BOOLEAN DEFAULT false`;
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS chargeup_active    BOOLEAN  DEFAULT false`;
 
+  // All user selections — group picks, bracket picks, and meta (champion, star, etc.)
+  // stage ∈ {group, runner, third, fourth, champion, meta, heart, r32, r16, qf, sf, final}
+  // Phase gating is enforced in the API (not here) to stay flexible.
   await sql`
     CREATE TABLE IF NOT EXISTS picks (
-      id SERIAL PRIMARY KEY,
-      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-      stage VARCHAR(30) NOT NULL,
-      slot VARCHAR(30) NOT NULL,
-      team_id VARCHAR(10) NOT NULL,
+      id           SERIAL  PRIMARY KEY,
+      user_id      INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      stage        VARCHAR(30) NOT NULL,
+      slot         VARCHAR(30) NOT NULL,
+      team_id      VARCHAR(10) NOT NULL,
       is_star_power BOOLEAN DEFAULT false,
-      created_at TIMESTAMP DEFAULT NOW(),
+      created_at   TIMESTAMP DEFAULT NOW(),
       UNIQUE(user_id, stage, slot)
     )
   `;
-
   await sql`ALTER TABLE picks ADD COLUMN IF NOT EXISTS is_star_power BOOLEAN DEFAULT false`;
 
-  // Tracks which API-Football fixture IDs the cron has already processed,
-  // so re-runs are idempotent.
-  await sql`
-    CREATE TABLE IF NOT EXISTS processed_fixtures (
-      fixture_id INTEGER PRIMARY KEY,
-      processed_at TIMESTAMP DEFAULT NOW()
-    )
-  `;
-
-  // Actual tournament outcomes entered by admin.
-  // stage/slot mirrors the picks table convention.
-  // was_shootout enables the shootout mercy rule (half points).
+  // Group and knockout results written by the cron.
+  // stage ∈ {group, runner, third, fourth, gm, r32, r16, qf, sf, final}
+  // was_shootout enables the mercy-rule half-point in knockout scoring.
   await sql`
     CREATE TABLE IF NOT EXISTS results (
-      id SERIAL PRIMARY KEY,
-      stage VARCHAR(30) NOT NULL,
-      slot VARCHAR(30) NOT NULL,
-      team_id VARCHAR(10) NOT NULL,
-      was_shootout BOOLEAN DEFAULT false,
-      created_at TIMESTAMP DEFAULT NOW(),
+      id           SERIAL  PRIMARY KEY,
+      stage        VARCHAR(30) NOT NULL,
+      slot         VARCHAR(30) NOT NULL,
+      team_id      VARCHAR(10) NOT NULL,
+      was_shootout BOOLEAN     DEFAULT false,
+      created_at   TIMESTAMP   DEFAULT NOW(),
       UNIQUE(stage, slot)
     )
   `;
 
-  // Simple key/value store for tournament state.
-  // Key "phase" controls pick locking:
-  //   phase1_open | phase1_locked | phase2_open | phase2_locked | complete
+  // Idempotency guard — prevents reprocessing the same fixture twice.
   await sql`
-    CREATE TABLE IF NOT EXISTS tournament_settings (
-      key VARCHAR(50) PRIMARY KEY,
-      value TEXT NOT NULL,
-      updated_at TIMESTAMP DEFAULT NOW()
+    CREATE TABLE IF NOT EXISTS processed_fixtures (
+      fixture_id   INTEGER PRIMARY KEY,
+      processed_at TIMESTAMP DEFAULT NOW()
     )
   `;
 
+  // Phase FSM: phase1_open → phase1_locked → phase2_open → phase2_locked → complete
+  await sql`
+    CREATE TABLE IF NOT EXISTS tournament_settings (
+      key        VARCHAR(50) PRIMARY KEY,
+      value      TEXT NOT NULL,
+      updated_at TIMESTAMP DEFAULT NOW()
+    )
+  `;
   await sql`
     INSERT INTO tournament_settings (key, value)
     VALUES ('phase', 'phase1_open')
     ON CONFLICT (key) DO NOTHING
+  `;
+
+  // ── Standings snapshots ───────────────────────────────────────────────────────
+  // Taken at the start of each knockout round (before those round's picks are scored).
+  // round ∈ {pre_r32, pre_r16, pre_qf, pre_sf, pre_final}
+  //   pre_r32  — snapshot when phase1 locks and phase2 opens
+  //   pre_r16  — snapshot after all 16 R32 results are in
+  //   pre_qf   — snapshot after all 8 R16 results are in
+  //   pre_sf   — snapshot after all 4 QF results are in
+  //   pre_final — snapshot after both SF results are in
+  //
+  // Used for:
+  //   • Kaboose Boost: +3 pts each round a kid started in last place
+  //   • Pacemaker award: who held the lead for the most rounds
+  //   • Comeback Kid award: biggest rank swing across the tournament
+  await sql`
+    CREATE TABLE IF NOT EXISTS standings_snapshots (
+      round          VARCHAR(20) NOT NULL,
+      user_id        INTEGER     NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      rank           INTEGER     NOT NULL,
+      total_score    INTEGER     NOT NULL,
+      group_score    INTEGER     NOT NULL DEFAULT 0,
+      bracket_score  INTEGER     NOT NULL DEFAULT 0,
+      PRIMARY KEY (round, user_id)
+    )
+  `;
+
+  // ── Awards ────────────────────────────────────────────────────────────────────
+  // Computed by the admin after the tournament (or after each round for live awards).
+  // One row per award, re-runnable (DO UPDATE).
+  await sql`
+    CREATE TABLE IF NOT EXISTS awards (
+      name       VARCHAR(100) PRIMARY KEY,
+      user_id    INTEGER REFERENCES users(id),
+      user_name  VARCHAR(100),
+      reason     TEXT,
+      updated_at TIMESTAMP DEFAULT NOW()
+    )
   `;
 }

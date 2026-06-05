@@ -6,6 +6,7 @@ import { fetchGroupStandings, type CompletedMatch } from "@/lib/api-football";
 import { apiNameToTeamId } from "@/lib/team-mapping";
 import { findKnockoutSlot } from "@/lib/bracket";
 import { GROUPS, TEAMS } from "@/lib/data";
+import { maybeSnapshotAfterStage } from "@/lib/snapshots";
 
 type Sql = ReturnType<typeof getSql>;
 
@@ -46,6 +47,22 @@ export async function processMatches(
         ON CONFLICT DO NOTHING
       `;
       done.push(mid);
+
+      // After each knockout result, check if the round just completed and
+      // auto-snapshot standings for the next round.
+      if (match.round !== "group stage" && match.winnerName) {
+        const stageWritten = match.round.includes("round of 32") ? "r32"
+          : match.round.includes("round of 16") ? "r16"
+          : match.round.includes("quarter")     ? "qf"
+          : match.round.includes("semi")        ? "sf"
+          : match.round === "final"             ? "sf" // snapshot pre_final after both SFs
+          : null;
+        if (stageWritten) {
+          await maybeSnapshotAfterStage(sql, stageWritten).catch((e) =>
+            console.warn(`[process-matches] snapshot check failed for ${stageWritten}:`, e)
+          );
+        }
+      }
     } catch (err) {
       console.error(`[process-matches] match ${mid}:`, err);
       errors.push({ id: mid, err: String(err) });
