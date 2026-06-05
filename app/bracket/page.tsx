@@ -402,14 +402,17 @@ function KnockoutRound({
   );
 }
 
-// Build bracket matchups from picks
-// 2026 format: 32 teams advance (top 2 from each of 12 groups + 8 best 3rd place)
-// For simplicity we show R16 using group winners/runners in fixed slots
+function decodeSlot(code: string): string {
+  if (code.startsWith("3")) return `third:${code.slice(1)}`;
+  if (code.startsWith("2")) return `runner:${code.slice(1)}`;
+  return `group:${code}`;
+}
+
 function buildR32Matches(picks: Picks) {
   return BRACKET_PAIRS.map(([g1, g2], i) => ({
     slot: `m${i + 1}`,
-    team1: picks[`group:${g1}`] || undefined,
-    team2: picks[`runner:${g2}`] || undefined,
+    team1: picks[decodeSlot(g1)] || undefined,
+    team2: picks[decodeSlot(g2)] || undefined,
   }));
 }
 
