@@ -548,9 +548,9 @@ function RulesTab() {
             <div className="flex items-center gap-4">
               <div className="h-px flex-1 bg-green-700" />
               <p className="text-sm font-black uppercase tracking-[0.2em] text-yellow-300">
-                Study the flags.<br />
-                Trust your gut.<br />
-                Make your picks.
+                You&apos;ve been talking.<br />
+                Now it&apos;s in writing.<br />
+                No excuses.
               </p>
               <div className="h-px flex-1 bg-green-700" />
             </div>
@@ -604,23 +604,12 @@ function RulesTab() {
             <div className="rounded-xl border border-green-800 bg-green-900/40 px-4">
               <ScoreRow label="Your pick loses in a penalty shootout" pts="½ pts" />
             </div>
-            <p className="text-sm text-green-500 mt-2 px-1">Getting eliminated in the cruelest way possible shouldn&apos;t also cost you full points.</p>
+            <p className="text-sm text-green-500 mt-2 px-1">Penalties are a lottery and we acknowledge this. Half points for getting robbed by the spot-kick gods.</p>
           </Sub>
         </Section>
 
-        <Section title="Kid Powers">
-          <p className="text-base text-green-400 mb-4">Players age 10 and under get special powers. Each can only be used once.<br />Be careful, they're very powerful. Tell a grown-up before you use one.</p>
-          <div className="space-y-3">
-            <PowerRow name="🏆 Champion Charge-Up" description="Your champion bonus is worth +20 pts instead of +10 if they win it all." />
-            <PowerRow name="🚃 Kaboose Boost" description="Starting a round in last place? You get 3 free bonus points. Automatic. Can happen more than once." />
-            <PowerRow name="❤️ Heart Pick" description="Name your favorite team before the tournament. Every time they win any game — even ones you didn't pick — you earn 1 bonus point." />
-            <PowerRow name="⭐ Star Power" description="During Phase 2 (bracket stage only), pick one game and declare it your Star Pick before it starts. Get it right and earn double points. Cannot be used on the Final. One star. Use it well." />
-            <PowerRow name="🤝 With Our Powers Combined" description="At any point during the bracket stage, if two kids' scores added together is less than the current leader, they can add their scores together and play the rest of the game as a team." />
-          </div>
-        </Section>
-
         <Section title="Awards">
-          <p className="text-base text-green-400 mb-4">Everyone wins something. Awards are announced after the Final.</p>
+          <p className="text-base text-green-400 mb-4">These are official. Announced in the group chat after the Final whistle. The Wooden Spoon holder reads this section first.</p>
           <Sub title="Glory">
             <div className="rounded-xl border border-green-800 bg-green-900/40 px-4">
               <AwardRow name="The Champion" description="Most total points overall" />
@@ -655,8 +644,8 @@ function RulesTab() {
         <Section title="General Rules">
           <div className="rounded-xl border border-green-800 bg-green-900/40 px-4 divide-y divide-green-800 text-base text-green-100">
             <div className="py-3">All picks must be submitted before the relevant deadline or they will not count.</div>
-            <div className="py-3">Picks are final once locked, except where a Kid Power specifically allows otherwise.</div>
-            <div className="py-3">In case of a tie, the co-champions may agree to share the title — or settle it the fun way: all the kids secretly hold up some fingers behind their backs. Each tied player guesses even or odd. Kids reveal. Whoever guesses right wins.</div>
+            <div className="py-3">Picks are final once locked. No edits, no DMs, no trade offers.</div>
+            <div className="py-3">In case of a tie, the co-champions share the glory — unless they want to settle it, in which case: rock paper scissors in the group chat, best of three, public and witnessed. No do-overs.</div>
             <div className="py-3">Awards are announced together after the Final.</div>
             <div className="py-3 font-bold text-yellow-300">The Wooden Spoon is non-negotiable and must be accepted with grace.</div>
           </div>
@@ -671,7 +660,7 @@ function RulesTab() {
 
 
 function LeaderboardTab() {
-  const [entries, setEntries] = useState<{ id: number; name: string; is_kid: boolean; group_score: number; bracket_score: number; total_score: number }[]>([]);
+  const [entries, setEntries] = useState<{ id: number; name: string; group_score: number; bracket_score: number; total_score: number }[]>([]);
   const [phase, setPhase] = useState<string>("phase1_open");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -753,7 +742,6 @@ function LeaderboardTab() {
                 <div className={`text-sm font-black text-center tabular-nums ${i === 0 ? "text-yellow-300" : i === 1 ? "text-slate-300" : i === 2 ? "text-amber-600" : "text-white/20"}`}>{i === 0 ? "🏆" : i === 1 ? "🥈" : i === 2 ? "🥉" : i === entries.length - 1 ? <img src="/ladle.png" alt="Wooden Spoon" className="w-5 h-5 object-contain mx-auto" /> : i + 1}</div>
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="text-white font-bold text-sm truncate">{entry.name}</span>
-                  {entry.is_kid && <span className="text-sm shrink-0">⚡</span>}
                 </div>
                 <div className="text-white/40 text-sm tabular-nums text-right">{entry.group_score}</div>
                 <div className="text-white/40 text-sm tabular-nums text-right">{entry.bracket_score}</div>
@@ -778,89 +766,6 @@ function LeaderboardTab() {
   );
 }
 
-function KidPowerSection({ picks, onPick }: { picks: Picks; onPick: (stage: string, slot: string, teamId: string) => void }) {
-  const isKid = picks["meta:isKid"] === "true";
-  return (
-    <div className="max-w-5xl mx-auto px-4 pb-16">
-      <div className="h-px bg-gradient-to-r from-transparent via-white/15 to-transparent mb-10" />
-      <div className="text-center mb-8">
-        <h2 className="font-black uppercase text-white leading-none mb-3" style={{ fontSize: "clamp(2rem, 6vw, 2.8rem)", letterSpacing: "-0.02em" }}>
-          Kid Powers
-        </h2>
-        <div className="inline-flex items-center gap-2 bg-yellow-300/10 border border-yellow-300/20 rounded-full px-4 py-2">
-          <span className="text-lg">🚫</span>
-          <span className="text-yellow-300 text-xs font-black uppercase tracking-[0.2em]">No grownups allowed</span>
-        </div>
-      </div>
-
-      {isKid ? (
-        <div>
-          <div className="text-center mb-10">
-            <div className="inline-flex flex-col items-center gap-3 rounded-2xl border border-yellow-300/30 bg-yellow-300/8 px-10 py-8">
-              <span className="text-5xl">⚡</span>
-              <div className="text-yellow-300 font-black text-xl uppercase tracking-tight">Kid Powers: Unlocked!</div>
-              <p className="text-white/60 text-sm max-w-xs">Your special powers are active. Check the rules to see what you can do.</p>
-              <button
-                onClick={() => onPick("meta", "isKid", "false")}
-                className="mt-2 text-white/25 text-xs underline hover:text-white/50 transition-colors cursor-pointer"
-              >
-                Actually I&apos;m a grownup
-              </button>
-            </div>
-          </div>
-
-          {/* Heart Pick */}
-          <div className="text-center mb-5">
-            <div className="h-px bg-gradient-to-r from-transparent via-white/15 to-transparent mb-10" />
-            <p className="font-black uppercase leading-none text-white mb-1" style={{ fontSize: "clamp(1rem, 3vw, 1.25rem)", letterSpacing: "-0.01em" }}>Choose your</p>
-            <div className="flex items-center justify-center gap-3">
-              <div className="h-px w-10 bg-gradient-to-r from-transparent to-red-400/60" />
-              <h2 className="font-black uppercase leading-none text-red-400" style={{ fontSize: "clamp(2.2rem, 7vw, 3rem)", letterSpacing: "-0.02em" }}>
-                Heart Team
-              </h2>
-              <div className="h-px w-10 bg-gradient-to-l from-transparent to-red-400/60" />
-            </div>
-            <div className="text-3xl mt-1">❤️</div>
-            <p className="text-white/75 text-sm mt-3">Your favourite team — every game they win earns you +1 bonus point, even ones you didn&apos;t pick.</p>
-          </div>
-          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
-            {GROUPS.flatMap((g) => g.teams).map((team) => {
-              const isSelected = picks["heart:pick"] === team.id;
-              return (
-                <button
-                  key={team.id}
-                  onClick={() => onPick("heart", "pick", team.id)}
-                  className={`flex flex-col items-center justify-center gap-1 rounded-xl p-2 border-2 transition-all cursor-pointer
-                    ${isSelected ? "border-red-400 bg-red-400/10" : "border-white/10 bg-white/5 hover:border-white/30"}`}
-                >
-                  <div className="flex items-center gap-1">
-                    {isSelected && <span className="text-xl leading-none">❤️</span>}
-                    <FlagIcon cc={team.cc} name={team.name} className="w-10 h-7 rounded-sm" />
-                    {isSelected && <span className="text-xl leading-none">❤️</span>}
-                  </div>
-                  <span className={`text-xs font-bold text-center leading-tight truncate w-full ${isSelected ? "text-red-400" : "text-white/50"}`}>
-                    {team.name}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      ) : (
-        <div className="text-center">
-          <p className="text-white font-black text-2xl mb-8">Are you a kid?</p>
-          <button
-            onClick={() => onPick("meta", "isKid", "true")}
-            className="inline-flex items-center gap-3 bg-yellow-300 hover:bg-yellow-200 text-green-950 font-black text-xl uppercase tracking-tight rounded-2xl px-10 py-5 transition-all cursor-pointer shadow-lg hover:shadow-yellow-300/20 hover:scale-105 active:scale-95"
-          >
-            <span className="text-3xl">⚡</span>
-            Yes, Power Me Up!
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
 
 function ChampionPicker({ picks, onPick }: { picks: Picks; onPick: (stage: string, slot: string, teamId: string) => void }) {
   const selected = picks["champion:pick"];
@@ -877,7 +782,7 @@ function ChampionPicker({ picks, onPick }: { picks: Picks; onPick: (stage: strin
           </h2>
           <div className="h-px w-10 bg-gradient-to-l from-transparent to-yellow-300/60" />
         </div>
-        <p className="text-white/75 text-sm mt-3">A correctly chosen champion is worth <span className="text-yellow-300 font-bold">+10</span> bonus points, <span className="text-green-400 font-bold">+20</span> for kids.</p>
+        <p className="text-white/75 text-sm mt-3">A correctly chosen champion is worth <span className="text-yellow-300 font-bold">+10</span> bonus points. Call it early. Get the glory.</p>
       </div>
       <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
         {allTeams.map((team) => {
@@ -1015,7 +920,7 @@ export default function BracketPage() {
           <button onClick={() => { setTab("rules"); history.replaceState(null, "", "?tab=rules"); }} className="flex items-center gap-2 select-none cursor-pointer">
             <img src="/world_cup_trophy.png" alt="" style={{ height: 36 }} />
             <div>
-              <div className="font-black text-white uppercase tracking-tight text-sm leading-tight">Johnsies</div>
+              <div className="font-black text-white uppercase tracking-tight text-sm leading-tight">Brotherinos</div>
               <div className="font-black text-amber-400 uppercase tracking-tight text-sm leading-tight">World Cup</div>
             </div>
           </button>
@@ -1089,9 +994,7 @@ export default function BracketPage() {
               const filled = filledGroups.length;
               const total = GROUPS.length;
               const championPicked = !!picks["champion:pick"];
-              const isKid = picks["meta:isKid"] === "true";
-              const heartPicked = !isKid || !!picks["heart:pick"];
-              const allDone = filled === total && championPicked && heartPicked;
+              const allDone = filled === total && championPicked;
               const missingCount = missingGroups.length;
               const missingItems = [
                 ...(missingCount === total
@@ -1099,7 +1002,6 @@ export default function BracketPage() {
                   : missingGroups.map((g, i) => <span key={g.id}>{i > 0 && ", "}Group <span className="text-yellow-300 font-black">{g.id}</span></span>)
                 ),
                 ...(!championPicked ? [<span key="champion">{missingCount > 0 && ", "}<span className="text-yellow-300 font-black">Champion</span></span>] : []),
-                ...(!heartPicked ? [<span key="heart">{(missingCount > 0 || !championPicked) && ", "}<span className="text-red-400 font-black">Heart Team</span></span>] : []),
               ];
               return (
                 <div className="mb-8 text-center">
@@ -1124,7 +1026,6 @@ export default function BracketPage() {
             </div>
           </div>
           <ChampionPicker picks={picks} onPick={handlePick} />
-          <KidPowerSection picks={picks} onPick={handlePick} />
         </div>
       )}
 

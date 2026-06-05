@@ -156,7 +156,7 @@ const WIKIPEDIA_HEADERS = {
   // Wikipedia's API policy requires a descriptive User-Agent for automated requests.
   // Without it, requests are more aggressively rate-limited during bulk builds.
   "User-Agent":
-    "JohnsiesWorldCup/1.0 (https://johnsies.vercel.app; keithjohnsdev@gmail.com)",
+    "BrothersinosWorldCup/1.0 (https://brotherinos.vercel.app; keithjohnsdev@gmail.com)",
 };
 
 async function fetchArticlePhotos(

@@ -60,7 +60,7 @@ export default function LearnPage() {
         left={
           <div className="select-none">
             <div className="leading-none">
-              <span className="font-black text-white uppercase tracking-tight text-sm">Johnsies </span>
+              <span className="font-black text-white uppercase tracking-tight text-sm">Brotherinos </span>
               <span className="font-black text-amber-400 uppercase tracking-tight text-sm">World Cup</span>
             </div>
             <div className="text-green-600 text-[10px] font-black uppercase tracking-[0.2em] mt-0.5">2026</div>

@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "World Cup 2026 – Family Bracket Challenge",
-  description: "Pick your World Cup bracket and compete with family",
+  title: "Brotherinos World Cup 2026",
+  description: "Pick your bracket. Defend your honor. Settle it.",
 };
 
 export default function RootLayout({
