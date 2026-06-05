@@ -356,7 +356,7 @@ export default function Home() {
           <div className="text-center">
             <img src="/world_cup_trophy.png" alt="" className="mx-auto mb-2" style={{ height: 52 }} />
             <h1 className="font-black text-white uppercase leading-none tracking-tight" style={{ fontSize: "clamp(2.2rem, 7vw, 2.6rem)" }}>
-              Johnsies
+              Brotherinos
             </h1>
             <h2 className="font-black text-yellow-300 uppercase leading-none tracking-tight" style={{ fontSize: "clamp(1.75rem, 5.5vw, 2rem)" }}>
               World Cup
