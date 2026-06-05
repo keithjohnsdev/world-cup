@@ -26,13 +26,20 @@ interface Props {
   onPick: (stage: string, slot: string, teamId: string) => void;
 }
 
+// Decode a BRACKET_PAIRS group code into the results-map key
+function decodeCode(code: string): string {
+  if (code.startsWith("3")) return `third:${code.slice(1)}`;
+  if (code.startsWith("2")) return `runner:${code.slice(1)}`;
+  return `group:${code}`;
+}
+
 function buildBracket(results: ResultEntry[], picks: Picks) {
   const rm = new Map(results.map(r => [`${r.stage}:${r.slot}`, r.team_id]));
 
   const r32: MatchData[] = BRACKET_PAIRS.map(([g1, g2], i) => ({
     slot: `m${i + 1}`,
-    team1: rm.get(`group:${g1}`),
-    team2: rm.get(`runner:${g2}`),
+    team1: rm.get(decodeCode(g1)),
+    team2: rm.get(decodeCode(g2)),
   }));
 
   const r16: MatchData[] = Array.from({ length: 8 }, (_, i) => ({
