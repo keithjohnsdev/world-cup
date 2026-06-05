@@ -821,9 +821,6 @@ export default function BracketPage() {
   const [hoveredTeam, setHoveredTeam] = useState<string | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [modalTeamId, setModalTeamId] = useState<string | null>(null);
-  const [bracketResults, setBracketResults] = useState<{ stage: string; slot: string; team_id: string }[]>([]);
-  const [bracketPhase, setBracketPhase] = useState("phase1_open");
-  const [bracketPreview, setBracketPreview] = useState(false);
   const router = useRouter();
 
   const picksRef = useRef<Picks>({});
@@ -848,14 +845,6 @@ export default function BracketPage() {
         }
       });
 
-    fetch("/api/results", { headers: { "x-session-token": token } })
-      .then(r => r.json())
-      .then(data => {
-        if (data?.results) setBracketResults(data.results);
-        if (data?.phase) setBracketPhase(data.phase);
-        if (data?.preview) setBracketPreview(true);
-      })
-      .catch(() => {});
   }, [router]);
 
   function handlePick(stage: string, slot: string, teamId: string) {
@@ -1100,9 +1089,6 @@ export default function BracketPage() {
       {tab === "bracket" && (
         <BracketPicker
           picks={picks}
-          results={bracketResults}
-          phase={bracketPhase}
-          preview={bracketPreview}
           onPick={handlePick}
         />
       )}

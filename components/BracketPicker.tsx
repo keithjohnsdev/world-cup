@@ -6,12 +6,6 @@ import { FlagIcon } from "@/components/FlagIcon";
 
 type Picks = Record<string, string>;
 
-interface ResultEntry {
-  stage: string;
-  slot: string;
-  team_id: string;
-}
-
 interface MatchData {
   slot: string;
   team1?: string;
@@ -20,26 +14,20 @@ interface MatchData {
 
 interface Props {
   picks: Picks;
-  results: ResultEntry[];
-  phase: string;
-  preview?: boolean;
   onPick: (stage: string, slot: string, teamId: string) => void;
 }
 
-// Decode a BRACKET_PAIRS group code into the results-map key
 function decodeCode(code: string): string {
   if (code.startsWith("3")) return `third:${code.slice(1)}`;
   if (code.startsWith("2")) return `runner:${code.slice(1)}`;
   return `group:${code}`;
 }
 
-function buildBracket(results: ResultEntry[], picks: Picks) {
-  const rm = new Map(results.map(r => [`${r.stage}:${r.slot}`, r.team_id]));
-
+function buildBracket(picks: Picks) {
   const r32: MatchData[] = BRACKET_PAIRS.map(([g1, g2], i) => ({
     slot: `m${i + 1}`,
-    team1: rm.get(decodeCode(g1)),
-    team2: rm.get(decodeCode(g2)),
+    team1: picks[decodeCode(g1)] || undefined,
+    team2: picks[decodeCode(g2)] || undefined,
   }));
 
   const r16: MatchData[] = Array.from({ length: 8 }, (_, i) => ({
@@ -119,13 +107,11 @@ function MatchCard({
   match,
   stage,
   winner,
-  canPick,
   onPick,
 }: {
   match: MatchData;
   stage: string;
   winner?: string;
-  canPick: boolean;
   onPick: (stage: string, slot: string, teamId: string) => void;
 }) {
   const bothTeams = !!(match.team1 && match.team2);
@@ -143,7 +129,7 @@ function MatchCard({
         teamId={match.team1}
         isWinner={winner === match.team1}
         isDimmed={!!(winner && winner !== match.team1)}
-        canClick={canPick && bothTeams && !!match.team1}
+        canClick={bothTeams && !!match.team1}
         onClick={() => match.team1 && onPick(stage, match.slot, match.team1)}
       />
       <div className="mx-2.5 h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
@@ -151,7 +137,7 @@ function MatchCard({
         teamId={match.team2}
         isWinner={winner === match.team2}
         isDimmed={!!(winner && winner !== match.team2)}
-        canClick={canPick && bothTeams && !!match.team2}
+        canClick={bothTeams && !!match.team2}
         onClick={() => match.team2 && onPick(stage, match.slot, match.team2)}
       />
     </div>
@@ -163,7 +149,6 @@ function RoundSection({
   stage,
   matches,
   picks,
-  canPick,
   onPick,
   cols = 2,
 }: {
@@ -171,7 +156,6 @@ function RoundSection({
   stage: string;
   matches: MatchData[];
   picks: Picks;
-  canPick: boolean;
   onPick: (stage: string, slot: string, teamId: string) => void;
   cols?: 1 | 2;
 }) {
@@ -195,7 +179,6 @@ function RoundSection({
                 match={m}
                 stage={stage}
                 winner={picks[`${stage}:${m.slot}`]}
-                canPick={canPick}
                 onPick={onPick}
               />
             ))
@@ -205,7 +188,6 @@ function RoundSection({
                   match={m}
                   stage={stage}
                   winner={picks[`${stage}:${m.slot}`]}
-                  canPick={canPick}
                   onPick={onPick}
                 />
               </div>
@@ -224,23 +206,10 @@ function Divider() {
   );
 }
 
-export function BracketPicker({ picks, results, phase, preview, onPick }: Props) {
-  const canPick = phase === "phase2_open";
-  const { r32, r16, qf, sf, finalMatch } = buildBracket(results, picks);
+export function BracketPicker({ picks, onPick }: Props) {
+  const { r32, r16, qf, sf, finalMatch } = buildBracket(picks);
   const champion = picks["final:m1"];
   const championTeam = champion ? getTeam(champion) : undefined;
-
-  if (phase === "phase1_open" || phase === "phase1_locked") {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center">
-        <div className="text-5xl mb-6 opacity-30">🏆</div>
-        <h3 className="text-white font-black text-2xl uppercase tracking-tight mb-3">Phase 2 — Coming Soon</h3>
-        <p className="text-white/35 text-sm max-w-sm leading-relaxed">
-          Once the group stage is complete, the full knockout bracket opens. You&apos;ll pick every match — Round of 32 through the Final.
-        </p>
-      </div>
-    );
-  }
 
   return (
     <div
@@ -259,27 +228,18 @@ export function BracketPicker({ picks, results, phase, preview, onPick }: Props)
             </h2>
             <div className="h-px w-10 bg-gradient-to-l from-transparent to-yellow-300/60" />
           </div>
-          {preview && (
-            <div className="inline-flex items-center gap-2 mt-3 rounded-full px-3 py-1 text-xs font-black uppercase tracking-widest" style={{ background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.3)", color: "#fbbf24" }}>
-              ⚙ Preview — mock bracket
-            </div>
-          )}
-          {!preview && (canPick ? (
-            <p className="text-white/60 text-sm mt-3">Click a team to pick them as the match winner — they advance to the next round.</p>
-          ) : (
-            <p className="text-white/40 text-sm mt-3">Bracket picks are locked.</p>
-          ))}
+          <p className="text-white/60 text-sm mt-3">Click a team to pick them as the match winner — they advance to the next round.</p>
         </div>
 
-        <RoundSection label="Round of 32" stage="r32" matches={r32} picks={picks} canPick={canPick} onPick={onPick} cols={2} />
+        <RoundSection label="Round of 32" stage="r32" matches={r32} picks={picks} onPick={onPick} cols={2} />
         <Divider />
-        <RoundSection label="Round of 16" stage="r16" matches={r16} picks={picks} canPick={canPick} onPick={onPick} cols={2} />
+        <RoundSection label="Round of 16" stage="r16" matches={r16} picks={picks} onPick={onPick} cols={2} />
         <Divider />
-        <RoundSection label="Quarterfinals" stage="qf" matches={qf} picks={picks} canPick={canPick} onPick={onPick} cols={2} />
+        <RoundSection label="Quarterfinals" stage="qf" matches={qf} picks={picks} onPick={onPick} cols={2} />
         <Divider />
-        <RoundSection label="Semifinals" stage="sf" matches={sf} picks={picks} canPick={canPick} onPick={onPick} cols={2} />
+        <RoundSection label="Semifinals" stage="sf" matches={sf} picks={picks} onPick={onPick} cols={2} />
         <Divider />
-        <RoundSection label="The Final" stage="final" matches={[finalMatch]} picks={picks} canPick={canPick} onPick={onPick} cols={1} />
+        <RoundSection label="The Final" stage="final" matches={[finalMatch]} picks={picks} onPick={onPick} cols={1} />
 
         {/* Champion */}
         <div className="mt-4 text-center">
