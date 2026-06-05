@@ -940,6 +940,14 @@ export default function BracketPage() {
         right={
           <>
             {userName && <span className="text-green-400 text-sm font-medium hidden lg:inline">{userName}</span>}
+            {userName.toLowerCase() === "keith" && (
+              <a
+                href="/admin"
+                className="text-xs font-black uppercase tracking-wide text-amber-400 hover:text-amber-300 transition-colors hidden sm:inline"
+              >
+                Admin
+              </a>
+            )}
             <Button variant="ghost" size="sm" onClick={signOut}>Sign out</Button>
           </>
         }
