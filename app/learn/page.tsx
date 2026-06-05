@@ -71,7 +71,7 @@ export default function LearnPage() {
             {(["rules", "groups", "bracket"] as const).map((t) => (
               <a
                 key={t}
-                href={`/bracket?tab=${t}`}
+                href={`/?tab=${t}`}
                 className="relative flex items-center h-full px-4 text-xs font-black uppercase tracking-[0.15em] whitespace-nowrap text-slate-200 transition-all"
                 onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.color = "#ffffff"; el.style.textShadow = "0 0 10px rgba(255,255,255,0.5)"; }}
                 onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = ""; el.style.textShadow = ""; }}

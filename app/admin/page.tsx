@@ -49,7 +49,7 @@ export default function AdminPage() {
     setLoading(true);
     fetch("/api/admin/players", { headers: { "x-session-token": token } })
       .then((r) => {
-        if (r.status === 403) { router.replace("/bracket"); return null; }
+        if (r.status === 403) { router.replace("/"); return null; }
         if (!r.ok) throw new Error("Failed");
         return r.json();
       })
@@ -128,7 +128,7 @@ export default function AdminPage() {
               ↻ Refresh
             </button>
             <a
-              href="/bracket"
+              href="/"
               className="bg-green-800 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg text-sm font-bold transition-colors"
             >
               ← Back
