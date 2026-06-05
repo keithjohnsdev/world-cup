@@ -128,6 +128,12 @@ export default function AdminPage() {
               ↻ Refresh
             </button>
             <a
+              href="/admin/results"
+              className="bg-yellow-300 hover:bg-yellow-200 text-green-950 px-3 py-1.5 rounded-lg text-sm font-bold transition-colors"
+            >
+              Results
+            </a>
+            <a
               href="/bracket"
               className="bg-green-800 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg text-sm font-bold transition-colors"
             >
