@@ -16,11 +16,28 @@ interface Player {
 
 type SortKey = "name" | "groups" | "bracket";
 
+const PHASE_LABELS: Record<string, string> = {
+  phase1_open:   "Phase 1 Open",
+  phase1_locked: "Phase 1 Locked",
+  phase2_open:   "Phase 2 Open",
+  phase2_locked: "Phase 2 Locked",
+  complete:      "Complete",
+};
+
+const PHASE_TRANSITIONS: Record<string, { label: string; next: string; confirm: string; color: string }[]> = {
+  phase1_open:   [{ label: "Lock Group Stage & Open Bracket",  next: "phase2_open",   confirm: "This locks all group picks and opens bracket picks for everyone. Continue?", color: "bg-yellow-300 text-green-950 hover:bg-yellow-200" }],
+  phase1_locked: [{ label: "Open Bracket Picks",               next: "phase2_open",   confirm: "Open Phase 2 bracket picks for everyone. Continue?",                         color: "bg-green-500 text-white hover:bg-green-400" }],
+  phase2_open:   [{ label: "Lock Bracket Picks",               next: "phase2_locked", confirm: "Lock all bracket picks. Continue?",                                           color: "bg-orange-400 text-white hover:bg-orange-300" }],
+  phase2_locked: [{ label: "Mark Tournament Complete",         next: "complete",      confirm: "Mark the tournament as complete. Continue?",                                  color: "bg-red-500 text-white hover:bg-red-400" }],
+  complete:      [],
+};
+
 export default function AdminPage() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [phase, setPhase] = useState("phase1_open");
   const [bracketTotal, setBracketTotal] = useState(31);
   const [loading, setLoading] = useState(true);
+  const [phaseLoading, setPhaseLoading] = useState(false);
   const [error, setError] = useState("");
   const [sort, setSort] = useState<SortKey>("groups");
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
@@ -48,6 +65,25 @@ export default function AdminPage() {
   }
 
   useEffect(() => { fetchData(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function transitionPhase(nextPhase: string, confirmMsg: string) {
+    if (!window.confirm(confirmMsg)) return;
+    setPhaseLoading(true);
+    const token = localStorage.getItem("wc_token");
+    try {
+      const res = await fetch("/api/admin/phase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-session-token": token! },
+        body: JSON.stringify({ phase: nextPhase }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      setPhase(nextPhase);
+    } catch {
+      setError("Phase update failed.");
+    } finally {
+      setPhaseLoading(false);
+    }
+  }
 
   const showBracket = phase !== "phase1_open" && phase !== "phase1_locked";
 
@@ -101,6 +137,31 @@ export default function AdminPage() {
         </div>
 
         {error && <p className="text-red-400 mb-4">{error}</p>}
+
+        {/* Phase control */}
+        <div className="rounded-2xl border border-white/10 bg-white/5 px-5 py-4 mb-6">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <div className="text-white/40 text-xs font-bold uppercase tracking-wider mb-1">Current Phase</div>
+              <div className="font-black text-lg text-white">{PHASE_LABELS[phase] ?? phase}</div>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {(PHASE_TRANSITIONS[phase] ?? []).map((t) => (
+                <button
+                  key={t.next}
+                  onClick={() => transitionPhase(t.next, t.confirm)}
+                  disabled={phaseLoading}
+                  className={`px-4 py-2 rounded-xl font-black text-sm uppercase tracking-wide transition-all cursor-pointer disabled:opacity-50 ${t.color}`}
+                >
+                  {phaseLoading ? "Saving…" : t.label}
+                </button>
+              ))}
+              {phase === "complete" && (
+                <span className="text-white/30 text-sm font-bold self-center">Tournament over 🏆</span>
+              )}
+            </div>
+          </div>
+        </div>
 
         {/* Summary cards */}
         {!loading && players.length > 0 && (
