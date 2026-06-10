@@ -89,6 +89,11 @@ export async function initDb() {
     VALUES ('phase', 'phase1_open')
     ON CONFLICT (key) DO NOTHING
   `;
+  await sql`
+    INSERT INTO tournament_settings (key, value)
+    VALUES ('awards_visible', 'false')
+    ON CONFLICT (key) DO NOTHING
+  `;
 
   // ── Standings snapshots ───────────────────────────────────────────────────────
   // Taken at the start of each knockout round (before those round's picks are scored).

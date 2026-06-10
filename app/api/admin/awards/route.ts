@@ -13,18 +13,35 @@ async function requireKeith(req: NextRequest) {
   return true;
 }
 
-// GET — return currently stored award winners
+// GET — return currently stored award winners + visibility state
 export async function GET(req: NextRequest) {
   await initDb();
   const ok = await requireKeith(req);
   if (!ok) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const sql = getSql();
-  const rows = await sql`
-    SELECT name, user_id, user_name, reason, updated_at FROM awards ORDER BY name
-  ` as { name: string; user_id: number | null; user_name: string; reason: string; updated_at: string }[];
+  const [rows, visRows] = await Promise.all([
+    sql`SELECT name, user_id, user_name, reason, updated_at FROM awards ORDER BY name`,
+    sql`SELECT value FROM tournament_settings WHERE key = 'awards_visible' LIMIT 1`,
+  ]) as [{ name: string; user_id: number | null; user_name: string; reason: string; updated_at: string }[], { value: string }[]];
 
-  return NextResponse.json({ awards: rows });
+  return NextResponse.json({ awards: rows, visible: visRows[0]?.value === "true" });
+}
+
+// PATCH — toggle awards visibility
+export async function PATCH(req: NextRequest) {
+  await initDb();
+  const ok = await requireKeith(req);
+  if (!ok) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const { visible } = await req.json() as { visible: boolean };
+  const sql = getSql();
+  await sql`
+    INSERT INTO tournament_settings (key, value)
+    VALUES ('awards_visible', ${visible ? "true" : "false"})
+    ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
+  `;
+  return NextResponse.json({ ok: true, visible });
 }
 
 // POST — (re)calculate all awards and persist them
