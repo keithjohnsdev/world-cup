@@ -38,6 +38,10 @@ export default function AdminPage() {
   const [bracketTotal, setBracketTotal] = useState(31);
   const [loading, setLoading] = useState(true);
   const [phaseLoading, setPhaseLoading] = useState(false);
+  const [awardsVisible, setAwardsVisible] = useState(false);
+  const [awardsLoading, setAwardsLoading] = useState(false);
+  const [recalcLoading, setRecalcLoading] = useState(false);
+  const [recalcMsg, setRecalcMsg] = useState("");
   const [error, setError] = useState("");
   const [sort, setSort] = useState<SortKey>("groups");
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
@@ -64,7 +68,16 @@ export default function AdminPage() {
       .finally(() => setLoading(false));
   }
 
-  useEffect(() => { fetchData(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  function fetchAwardsState() {
+    const token = localStorage.getItem("wc_token");
+    if (!token) return;
+    fetch("/api/admin/awards", { headers: { "x-session-token": token } })
+      .then(r => r.json())
+      .then(data => { if (typeof data.visible === "boolean") setAwardsVisible(data.visible); })
+      .catch(() => {});
+  }
+
+  useEffect(() => { fetchData(); fetchAwardsState(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function transitionPhase(nextPhase: string, confirmMsg: string) {
     if (!window.confirm(confirmMsg)) return;
@@ -82,6 +95,44 @@ export default function AdminPage() {
       setError("Phase update failed.");
     } finally {
       setPhaseLoading(false);
+    }
+  }
+
+  async function recalculateAwards() {
+    setRecalcLoading(true);
+    setRecalcMsg("");
+    const token = localStorage.getItem("wc_token");
+    try {
+      const res = await fetch("/api/admin/awards", {
+        method: "POST",
+        headers: { "x-session-token": token! },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error("Failed");
+      setRecalcMsg(`Done — ${data.count} awards saved`);
+    } catch {
+      setRecalcMsg("Recalculation failed.");
+    } finally {
+      setRecalcLoading(false);
+    }
+  }
+
+  async function toggleAwardsVisible() {
+    setAwardsLoading(true);
+    const token = localStorage.getItem("wc_token");
+    const next = !awardsVisible;
+    try {
+      const res = await fetch("/api/admin/awards", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-session-token": token! },
+        body: JSON.stringify({ visible: next }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      setAwardsVisible(next);
+    } catch {
+      setError("Failed to update awards visibility.");
+    } finally {
+      setAwardsLoading(false);
     }
   }
 
@@ -134,6 +185,12 @@ export default function AdminPage() {
               Results
             </a>
             <a
+              href="/awards"
+              className="bg-amber-600 hover:bg-amber-500 text-white px-3 py-1.5 rounded-lg text-sm font-bold transition-colors"
+            >
+              Awards
+            </a>
+            <a
               href="/"
               className="bg-green-800 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg text-sm font-bold transition-colors"
             >
@@ -165,6 +222,39 @@ export default function AdminPage() {
               {phase === "complete" && (
                 <span className="text-white/30 text-sm font-bold self-center">Tournament over 🏆</span>
               )}
+            </div>
+          </div>
+        </div>
+
+        {/* Awards control */}
+        <div className="rounded-2xl border border-white/10 bg-white/5 px-5 py-4 mb-6">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <div className="text-white/40 text-xs font-bold uppercase tracking-wider mb-1">Awards</div>
+              <div className="font-black text-lg text-white">
+                {awardsVisible ? "Visible to everyone" : "Hidden"}
+              </div>
+              {recalcMsg && <p className="text-green-400 text-xs mt-1">{recalcMsg}</p>}
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={recalculateAwards}
+                disabled={recalcLoading}
+                className="px-4 py-2 rounded-xl font-black text-sm uppercase tracking-wide transition-all cursor-pointer disabled:opacity-50 bg-white/10 hover:bg-white/20 text-white"
+              >
+                {recalcLoading ? "Calculating…" : "Recalculate Awards"}
+              </button>
+              <button
+                onClick={toggleAwardsVisible}
+                disabled={awardsLoading}
+                className={`px-4 py-2 rounded-xl font-black text-sm uppercase tracking-wide transition-all cursor-pointer disabled:opacity-50 ${
+                  awardsVisible
+                    ? "bg-red-500/80 hover:bg-red-500 text-white"
+                    : "bg-green-500 hover:bg-green-400 text-white"
+                }`}
+              >
+                {awardsLoading ? "Saving…" : awardsVisible ? "Hide Awards" : "Show Awards"}
+              </button>
             </div>
           </div>
         </div>

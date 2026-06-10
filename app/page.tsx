@@ -923,6 +923,7 @@ export default function BracketPage() {
   const [bracketResults, setBracketResults] = useState<{ stage: string; slot: string; team_id: string }[]>([]);
   const [bracketPhase, setBracketPhase] = useState("phase1_open");
   const [bracketPreview, setBracketPreview] = useState(false);
+  const [awardsVisible, setAwardsVisible] = useState(false);
   const router = useRouter();
 
   const picksRef = useRef<Picks>({});
@@ -953,6 +954,7 @@ export default function BracketPage() {
         if (data?.results) setBracketResults(data.results);
         if (data?.phase) setBracketPhase(data.phase);
         if (data?.preview) setBracketPreview(true);
+        if (data?.awardsVisible) setAwardsVisible(true);
       })
       .catch(() => {});
   }, [router]);
@@ -1045,6 +1047,17 @@ export default function BracketPage() {
                 <span className={`absolute bottom-[-1px] inset-x-0 h-[2px] ${tab === t ? "bg-yellow-300" : ""}`} />
               </button>
             ))}
+            {awardsVisible && (
+              <a
+                href="/awards"
+                className="relative flex items-center h-full px-4 text-xs font-black uppercase tracking-[0.15em] whitespace-nowrap transition-all cursor-pointer text-amber-400 hover:text-amber-300"
+                onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.textShadow = "0 0 10px rgba(251,191,36,0.5)"; }}
+                onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.textShadow = ""; }}
+              >
+                🏆 Awards
+                <span className="absolute bottom-[-1px] inset-x-0 h-[2px]" />
+              </a>
+            )}
           </div>
         }
         right={
