@@ -1053,7 +1053,7 @@ export default function BracketPage() {
             {userName.toLowerCase() === "keith" && (
               <a
                 href="/admin"
-                className="text-xs font-black uppercase tracking-wide text-amber-400 hover:text-amber-300 transition-colors hidden sm:inline"
+                className="text-xs font-black uppercase tracking-wide text-amber-400 hover:text-amber-300 transition-colors"
               >
                 Admin
               </a>
