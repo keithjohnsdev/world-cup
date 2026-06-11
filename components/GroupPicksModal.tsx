@@ -194,6 +194,28 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
                 </div>
               );
             })()}
+            {/* Heart pick (kids only) */}
+            {(() => {
+              const heartTeam = breakdown.isKid && heartPickTeamId ? getTeam(heartPickTeamId) : null;
+              if (!heartTeam) return null;
+              return (
+                <div className="rounded-xl overflow-hidden mb-1" style={{ border: "1px solid rgba(248,113,113,0.25)", background: "rgba(248,113,113,0.06)" }}>
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <span className="text-lg leading-none">❤️</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-red-400/60 text-[10px] font-black uppercase tracking-[0.2em] mb-0.5">Heart Pick</div>
+                      <div className="flex items-center gap-2">
+                        <FlagIcon cc={heartTeam.cc} name={heartTeam.name} className="w-8 h-[22px] rounded shrink-0" />
+                        <span className="text-white font-bold text-sm truncate">{heartTeam.name}</span>
+                      </div>
+                    </div>
+                    {heartPoints > 0 && (
+                      <span className="text-red-400 font-black text-sm tabular-nums shrink-0">+{heartPoints}</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
             {GROUPS.map(group => {
               const predicted = pickMap[group.id] ?? [];
               const actual = resultMap[group.id] ?? [];

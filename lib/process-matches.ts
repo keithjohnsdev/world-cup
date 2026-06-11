@@ -109,12 +109,15 @@ async function handleGroupMatch(
     const entries = allStandings.get(group);
     if (!entries || entries.length === 0) return;
 
-    const stageByPosition = ["group", "runner", "third", "fourth"];
-    for (const entry of entries) {
-      const ourId = apiNameToTeamId(entry.teamName);
+    // Assign slots by sorted table order, not raw position — the API reports tied
+    // teams with the same position (e.g. two teams at 2), which would make them
+    // fight over one slot and leave another slot empty.
+    const sorted = [...entries].sort((a, b) => a.position - b.position);
+    const stageBySlot = ["group", "runner", "third", "fourth"];
+    for (let i = 0; i < sorted.length && i < stageBySlot.length; i++) {
+      const ourId = apiNameToTeamId(sorted[i].teamName);
       if (!ourId) continue;
-      const stage = stageByPosition[entry.position - 1];
-      if (!stage) continue;
+      const stage = stageBySlot[i];
       await sql`
         INSERT INTO results (stage, slot, team_id, was_shootout)
         VALUES (${stage}, ${group}, ${ourId}, false)
