@@ -216,6 +216,7 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
                 </div>
               );
             })()}
+            <div className="space-y-3 pt-2">
             {GROUPS.map(group => {
               const predicted = pickMap[group.id] ?? [];
               const actual = resultMap[group.id] ?? [];
@@ -300,6 +301,7 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
                 </div>
               );
             })}
+            </div>
             </>
           )}
         </div>
