@@ -33,13 +33,26 @@ function buildMap(entries: Entry[]): Record<string, (string | null)[]> {
   return map;
 }
 
+export interface ScoreBreakdownProps {
+  groupScore: number;
+  bracketScore: number;
+  totalScore: number;
+  championBonus: number;
+  chargeupBonus: number;
+  heartPickBonus: number;
+  starPowerBonus: number;
+  kabooseBoosts: number;
+  isKid: boolean;
+}
+
 interface Props {
   userId: number;
   userName: string;
+  breakdown: ScoreBreakdownProps;
   onClose: () => void;
 }
 
-export function GroupPicksModal({ userId, userName, onClose }: Props) {
+export function GroupPicksModal({ userId, userName, breakdown, onClose }: Props) {
   const [picks, setPicks] = useState<Entry[]>([]);
   const [results, setResults] = useState<Entry[]>([]);
   const [heartPickTeamId, setHeartPickTeamId] = useState<string | null>(null);
@@ -80,9 +93,6 @@ export function GroupPicksModal({ userId, userName, onClose }: Props) {
   const resultMap = buildMap(results);
   const hasResults = results.length > 0;
 
-  const totalPoints = GROUPS.reduce((sum, g) =>
-    sum + STAGES.reduce((s, _, i) => s + scorePosition(pickMap[g.id]?.[i] ?? null, i, resultMap[g.id] ?? []), 0), 0);
-
   return (
     <>
       <div className="fixed inset-0 z-50 bg-black/75 md:block hidden" onClick={handleClose} />
@@ -114,17 +124,10 @@ export function GroupPicksModal({ userId, userName, onClose }: Props) {
             <div className="text-green-400 text-xs font-bold uppercase tracking-wider mt-0.5">Group Stage Picks</div>
           </div>
 
-          {hasResults && (
-            <div className="text-right shrink-0">
-              <div className="flex items-center gap-1.5 justify-end">
-                {heartPoints > 0 && (
-                  <div className="text-red-400 font-black text-sm leading-none">({heartPoints} ❤️)</div>
-                )}
-                <div className="text-yellow-300 font-black text-2xl leading-none">{totalPoints + heartPoints}</div>
-              </div>
-              <div className="text-white/40 text-[10px] uppercase tracking-wide">of 96 pts</div>
-            </div>
-          )}
+          <div className="text-right shrink-0">
+            <div className="text-yellow-300 font-black text-2xl leading-none">{breakdown.totalScore}</div>
+            <div className="text-white/40 text-[10px] uppercase tracking-wide">total pts</div>
+          </div>
 
           {/* Desktop close button */}
           <button
@@ -142,6 +145,35 @@ export function GroupPicksModal({ userId, userName, onClose }: Props) {
             <div className="text-white/30 text-sm text-center py-20">Loading…</div>
           ) : (
             <>
+            {/* Score breakdown */}
+            {(() => {
+              const { groupScore, bracketScore, championBonus, chargeupBonus, heartPickBonus, starPowerBonus, kabooseBoosts } = breakdown;
+              const hasAnyScore = groupScore > 0 || bracketScore > 0 || championBonus > 0 || chargeupBonus > 0 || heartPickBonus > 0 || starPowerBonus > 0 || kabooseBoosts > 0;
+              if (!hasAnyScore) return null;
+              const rows: { label: string; value: number; color: string }[] = [
+                { label: "Groups", value: groupScore, color: "text-white/70" },
+                { label: "Bracket", value: bracketScore, color: "text-white/70" },
+                ...(championBonus > 0 ? [{ label: "Champion", value: championBonus, color: "text-yellow-300" }] : []),
+                ...(chargeupBonus > 0 ? [{ label: "Charge-Up ⚡", value: chargeupBonus, color: "text-yellow-300" }] : []),
+                ...(heartPickBonus > 0 ? [{ label: "Heart Pick ❤️", value: heartPickBonus, color: "text-red-400" }] : []),
+                ...(starPowerBonus > 0 ? [{ label: "Star Power ⭐", value: starPowerBonus, color: "text-yellow-300" }] : []),
+                ...(kabooseBoosts > 0 ? [{ label: "Kaboose 🚃", value: kabooseBoosts, color: "text-purple-400" }] : []),
+              ];
+              return (
+                <div className="rounded-xl px-4 py-3 mb-1" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                  <div className="text-white/30 text-[10px] font-black uppercase tracking-[0.2em] mb-2">Score Breakdown</div>
+                  <div className="flex flex-wrap gap-x-5 gap-y-1.5">
+                    {rows.map(({ label, value, color }) => (
+                      <div key={label} className="flex items-baseline gap-1.5">
+                        <span className="text-white/40 text-[11px]">{label}</span>
+                        <span className={`font-black text-sm tabular-nums ${color}`}>{value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+            {/* Champion pick */}
             {(() => {
               const championTeam = championPickTeamId ? getTeam(championPickTeamId) : null;
               if (!championTeam) return null;

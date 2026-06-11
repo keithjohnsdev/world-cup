@@ -11,7 +11,7 @@ import { FlagIcon } from "@/components/FlagIcon";
 import { NavHeader } from "@/components/ui/NavHeader";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { GroupPicksModal } from "@/components/GroupPicksModal";
+import { GroupPicksModal, type ScoreBreakdownProps } from "@/components/GroupPicksModal";
 import { BracketPicker } from "@/components/BracketPicker";
 
 const GlobeView = dynamic(() => import("@/components/GlobeView"), { ssr: false });
@@ -678,12 +678,12 @@ function RulesTab() {
 
 
 function LeaderboardTab() {
-  const [entries, setEntries] = useState<{ id: number; name: string; is_kid: boolean; group_score: number; bracket_score: number; total_score: number }[]>([]);
+  const [entries, setEntries] = useState<{ id: number; name: string; is_kid: boolean; group_score: number; bracket_score: number; total_score: number; champion_bonus: number; chargeup_bonus: number; heart_pick_bonus: number; star_power_bonus: number; kaboose_boosts: number }[]>([]);
   const [phase, setPhase] = useState<string>("phase1_open");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lastFetched, setLastFetched] = useState<Date | null>(null);
-  const [selected, setSelected] = useState<{ id: number; name: string } | null>(null);
+  const [selected, setSelected] = useState<{ id: number; name: string; breakdown: ScoreBreakdownProps } | null>(null);
 
   const picksVisible = phase !== "phase1_open";
 
@@ -754,7 +754,7 @@ function LeaderboardTab() {
             {entries.map((entry, i) => (
               <button
                 key={entry.id}
-                onClick={picksVisible ? () => setSelected({ id: entry.id, name: entry.name }) : undefined}
+                onClick={picksVisible ? () => setSelected({ id: entry.id, name: entry.name, breakdown: { groupScore: entry.group_score, bracketScore: entry.bracket_score, totalScore: entry.total_score, championBonus: entry.champion_bonus, chargeupBonus: entry.chargeup_bonus, heartPickBonus: entry.heart_pick_bonus, starPowerBonus: entry.star_power_bonus, kabooseBoosts: entry.kaboose_boosts, isKid: entry.is_kid } }) : undefined}
                 className={`w-full grid items-center px-4 py-4 border-b border-white/5 last:border-0 text-left transition-colors grid-cols-[1.5rem_1fr_4rem_4.5rem_4rem] sm:grid-cols-[2rem_1fr_6.5rem_7rem_6rem] ${picksVisible ? "cursor-pointer hover:bg-white/[0.06] active:bg-white/10" : "cursor-default"} ${i === 0 ? "bg-yellow-300/5 hover:bg-yellow-300/10" : ""}`}
               >
                 <div className={`text-sm font-black text-center tabular-nums ${i === 0 ? "text-yellow-300" : i === 1 ? "text-slate-300" : i === 2 ? "text-amber-600" : "text-white/20"}`}>{i === 0 ? "🏆" : i === 1 ? "🥈" : i === 2 ? "🥉" : i === entries.length - 1 ? <img src="/ladle.png" alt="Wooden Spoon" className="w-5 h-5 object-contain mx-auto" /> : i + 1}</div>
@@ -778,6 +778,7 @@ function LeaderboardTab() {
         <GroupPicksModal
           userId={selected.id}
           userName={selected.name}
+          breakdown={selected.breakdown}
           onClose={() => setSelected(null)}
         />
       )}
