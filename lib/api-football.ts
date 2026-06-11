@@ -19,6 +19,9 @@ export interface CompletedMatch {
   awayTeamName: string;
   winnerName: string;  // empty string for draws
   wasShootout: boolean;
+  // false when the API reports FINISHED but score.winner is still null (brief lag
+  // right after full-time). Optional so hand-built test payloads default to true.
+  hasResult?: boolean;
 }
 
 export interface StandingEntry {
@@ -68,6 +71,7 @@ export async function fetchCompletedMatchesForDate(date: string): Promise<Comple
       awayTeamName: m.awayTeam.name,
       winnerName,
       wasShootout:  m.score?.duration === "PENALTY_SHOOTOUT",
+      hasResult:    (m.score?.winner ?? null) !== null,
     } satisfies CompletedMatch;
   });
 }
@@ -83,7 +87,8 @@ export async function fetchGroupStandings(): Promise<Map<string, StandingEntry[]
 
   const out = new Map<string, StandingEntry[]>();
   for (const group of (json.standings ?? [])) {
-    const letter = (group.group as string)?.replace(/^GROUP_/i, "").trim();
+    // API returns "Group A" (v4 2026 season) — older docs show "GROUP_A". Handle both.
+    const letter = (group.group as string)?.replace(/^GROUP[_\s]/i, "").trim();
     if (!letter) continue;
     out.set(letter, (group.table ?? []).map((row: any) => ({
       position:    row.position as number,

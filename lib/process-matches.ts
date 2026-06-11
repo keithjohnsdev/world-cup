@@ -32,6 +32,10 @@ export async function processMatches(
     ` as unknown[];
     if (already.length > 0) { skipped.push(mid); continue; }
 
+    // FINISHED but score.winner still null — API lag right after full-time.
+    // Skip WITHOUT marking processed so the next cron run retries.
+    if (match.hasResult === false) { skipped.push(mid); continue; }
+
     try {
       if (match.round === "group stage") {
         await handleGroupMatch(sql, match);
