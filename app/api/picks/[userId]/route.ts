@@ -11,7 +11,7 @@ export async function GET(
   if (isNaN(id)) return NextResponse.json({ error: "Invalid user ID" }, { status: 400 });
 
   const sql = getSql();
-  const [rawUsers, rawPicks, rawStandings, rawHeartPick] = await Promise.all([
+  const [rawUsers, rawPicks, rawStandings, rawHeartPick, rawChampionPick] = await Promise.all([
     sql`SELECT name FROM users WHERE id = ${id}`,
     sql`SELECT stage, slot, team_id FROM picks
         WHERE user_id = ${id} AND stage IN ('group','runner','third','fourth')
@@ -21,6 +21,8 @@ export async function GET(
         ORDER BY slot, stage`,
     sql`SELECT team_id FROM picks
         WHERE user_id = ${id} AND stage = 'heart' AND slot = 'pick' LIMIT 1`,
+    sql`SELECT team_id FROM picks
+        WHERE user_id = ${id} AND stage = 'champion' AND slot = 'pick' LIMIT 1`,
   ]);
 
   const userRows = rawUsers    as { name: string }[];
@@ -30,6 +32,7 @@ export async function GET(
   if (!userRows.length) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const heartPickTeamId = (rawHeartPick as { team_id: string }[])[0]?.team_id ?? null;
+  const championPickTeamId = (rawChampionPick as { team_id: string }[])[0]?.team_id ?? null;
 
   // Count gm wins for the heart pick team
   let heartPoints = 0;
@@ -47,5 +50,6 @@ export async function GET(
     results,
     heartPickTeamId,
     heartPoints,
+    championPickTeamId,
   });
 }

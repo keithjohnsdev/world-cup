@@ -44,6 +44,7 @@ export function GroupPicksModal({ userId, userName, onClose }: Props) {
   const [results, setResults] = useState<Entry[]>([]);
   const [heartPickTeamId, setHeartPickTeamId] = useState<string | null>(null);
   const [heartPoints, setHeartPoints] = useState(0);
+  const [championPickTeamId, setChampionPickTeamId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -54,6 +55,7 @@ export function GroupPicksModal({ userId, userName, onClose }: Props) {
         setResults(d.results ?? []);
         setHeartPickTeamId(d.heartPickTeamId ?? null);
         setHeartPoints(d.heartPoints ?? 0);
+        setChampionPickTeamId(d.championPickTeamId ?? null);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -139,7 +141,26 @@ export function GroupPicksModal({ userId, userName, onClose }: Props) {
           {loading ? (
             <div className="text-white/30 text-sm text-center py-20">Loading…</div>
           ) : (
-            GROUPS.map(group => {
+            <>
+            {(() => {
+              const championTeam = championPickTeamId ? getTeam(championPickTeamId) : null;
+              if (!championTeam) return null;
+              return (
+                <div className="rounded-xl overflow-hidden mb-1" style={{ border: "1px solid rgba(251,191,36,0.25)", background: "rgba(251,191,36,0.06)" }}>
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <span className="text-lg leading-none">🏆</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-yellow-300/60 text-[10px] font-black uppercase tracking-[0.2em] mb-0.5">Champion Pick</div>
+                      <div className="flex items-center gap-2">
+                        <FlagIcon cc={championTeam.cc} name={championTeam.name} className="w-8 h-[22px] rounded shrink-0" />
+                        <span className="text-white font-bold text-sm truncate">{championTeam.name}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+            {GROUPS.map(group => {
               const predicted = pickMap[group.id] ?? [];
               const actual = resultMap[group.id] ?? [];
               const groupHasResult = actual.some(Boolean);
@@ -222,7 +243,8 @@ export function GroupPicksModal({ userId, userName, onClose }: Props) {
                   })}
                 </div>
               );
-            })
+            })}
+            </>
           )}
         </div>
       </div>
