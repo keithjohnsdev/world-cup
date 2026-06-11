@@ -779,6 +779,7 @@ function LeaderboardTab() {
           userId={selected.id}
           userName={selected.name}
           breakdown={selected.breakdown}
+          groupStageComplete={phase !== "phase1_open" && phase !== "phase1_locked"}
           onClose={() => setSelected(null)}
         />
       )}

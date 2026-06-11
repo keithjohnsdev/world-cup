@@ -49,10 +49,12 @@ interface Props {
   userId: number;
   userName: string;
   breakdown: ScoreBreakdownProps;
+  // True once the group stage is over (phase2+) — switches "currently in" to "finished".
+  groupStageComplete?: boolean;
   onClose: () => void;
 }
 
-export function GroupPicksModal({ userId, userName, breakdown, onClose }: Props) {
+export function GroupPicksModal({ userId, userName, breakdown, groupStageComplete, onClose }: Props) {
   const [picks, setPicks] = useState<Entry[]>([]);
   const [results, setResults] = useState<Entry[]>([]);
   const [heartPickTeamId, setHeartPickTeamId] = useState<string | null>(null);
@@ -256,7 +258,7 @@ export function GroupPicksModal({ userId, userName, breakdown, onClose }: Props)
                               </div>
                               {groupHasResult && (
                                 <div className="text-white/35 text-[10px] leading-none mt-0.5">
-                                  {actualLabel ? `finished ${actualLabel}` : "result pending"}
+                                  {actualLabel ? `${groupStageComplete ? "finished" : "currently in"} ${actualLabel}` : "result pending"}
                                 </div>
                               )}
                             </div>
