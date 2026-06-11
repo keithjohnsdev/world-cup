@@ -155,11 +155,13 @@ function DraggableGroupCard({
   picks,
   onPick,
   onInfoClick,
+  locked = false,
 }: {
   group: (typeof GROUPS)[0];
   picks: Picks;
   onPick: (stage: string, slot: string, teamId: string) => void;
   onInfoClick: (teamId: string) => void;
+  locked?: boolean;
 }) {
   const [order, setOrder] = useState<Team[]>([...group.teams]);
   const hasInitialized = useRef(false);
@@ -190,6 +192,7 @@ function DraggableGroupCard({
   }, [picks, group]);
 
   function handlePointerDown(e: React.PointerEvent, index: number) {
+    if (locked) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     dragStartY.current = e.clientY;
     if (containerRef.current) {
@@ -297,11 +300,11 @@ function DraggableGroupCard({
                   boxShadow: isDragging ? "0 8px 24px rgba(0,0,0,0.13)" : undefined,
                 }}
                 className={`flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 select-none
-                  ${isDragging ? "cursor-grabbing" : "cursor-grab"}
+                  ${locked ? "cursor-default" : isDragging ? "cursor-grabbing" : "cursor-grab"}
                   ${rankColors[visualIndex]}
                 `}
               >
-                <span className="text-gray-300 text-base leading-none">⠿</span>
+                {!locked && <span className="text-gray-300 text-base leading-none">⠿</span>}
                 <FlagIcon cc={team.cc} name={team.name} className="w-7 h-5" />
                 <span className="text-sm font-medium truncate">{team.name}</span>
                 <span className={`ml-auto text-xs font-bold tabular-nums ${visualIndex < 2 ? "" : "opacity-40"}`}>
@@ -787,7 +790,7 @@ function LeaderboardTab() {
   );
 }
 
-function KidPowerSection({ picks, onPick }: { picks: Picks; onPick: (stage: string, slot: string, teamId: string) => void }) {
+function KidPowerSection({ picks, onPick, locked = false }: { picks: Picks; onPick: (stage: string, slot: string, teamId: string) => void; locked?: boolean }) {
   const isKid = picks["meta:isKid"] === "true";
   return (
     <div className="max-w-5xl mx-auto px-4 pb-16">
@@ -809,12 +812,14 @@ function KidPowerSection({ picks, onPick }: { picks: Picks; onPick: (stage: stri
               <span className="text-5xl">⚡</span>
               <div className="text-yellow-300 font-black text-xl uppercase tracking-tight">Kid Powers: Unlocked!</div>
               <p className="text-white/60 text-sm max-w-xs">Your special powers are active. Check the rules to see what you can do.</p>
-              <button
-                onClick={() => onPick("meta", "isKid", "false")}
-                className="mt-2 text-white/25 text-xs underline hover:text-white/50 transition-colors cursor-pointer"
-              >
-                Actually I&apos;m a grownup
-              </button>
+              {!locked && (
+                <button
+                  onClick={() => onPick("meta", "isKid", "false")}
+                  className="mt-2 text-white/25 text-xs underline hover:text-white/50 transition-colors cursor-pointer"
+                >
+                  Actually I&apos;m a grownup
+                </button>
+              )}
             </div>
           </div>
 
@@ -838,9 +843,10 @@ function KidPowerSection({ picks, onPick }: { picks: Picks; onPick: (stage: stri
               return (
                 <button
                   key={team.id}
-                  onClick={() => onPick("heart", "pick", team.id)}
-                  className={`flex flex-col items-center justify-center gap-1 rounded-xl p-2 border-2 transition-all cursor-pointer
-                    ${isSelected ? "border-red-400 bg-red-400/10" : "border-white/10 bg-white/5 hover:border-white/30"}`}
+                  onClick={locked ? undefined : () => onPick("heart", "pick", team.id)}
+                  className={`flex flex-col items-center justify-center gap-1 rounded-xl p-2 border-2 transition-all
+                    ${locked ? "cursor-default" : "cursor-pointer"}
+                    ${isSelected ? "border-red-400 bg-red-400/10" : `border-white/10 bg-white/5 ${locked ? "" : "hover:border-white/30"}`}`}
                 >
                   <div className="flex items-center gap-1">
                     {isSelected && <span className="text-xl leading-none">❤️</span>}
@@ -857,21 +863,27 @@ function KidPowerSection({ picks, onPick }: { picks: Picks; onPick: (stage: stri
         </div>
       ) : (
         <div className="text-center">
-          <p className="text-white font-black text-2xl mb-8">Are you a kid?</p>
-          <button
-            onClick={() => onPick("meta", "isKid", "true")}
-            className="inline-flex items-center gap-3 bg-yellow-300 hover:bg-yellow-200 text-green-950 font-black text-xl uppercase tracking-tight rounded-2xl px-10 py-5 transition-all cursor-pointer shadow-lg hover:shadow-yellow-300/20 hover:scale-105 active:scale-95"
-          >
-            <span className="text-3xl">⚡</span>
-            Yes, Power Me Up!
-          </button>
+          {locked ? (
+            <p className="text-white/40 text-sm">Kid sign-ups are locked — the tournament has started.</p>
+          ) : (
+            <>
+              <p className="text-white font-black text-2xl mb-8">Are you a kid?</p>
+              <button
+                onClick={() => onPick("meta", "isKid", "true")}
+                className="inline-flex items-center gap-3 bg-yellow-300 hover:bg-yellow-200 text-green-950 font-black text-xl uppercase tracking-tight rounded-2xl px-10 py-5 transition-all cursor-pointer shadow-lg hover:shadow-yellow-300/20 hover:scale-105 active:scale-95"
+              >
+                <span className="text-3xl">⚡</span>
+                Yes, Power Me Up!
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-function ChampionPicker({ picks, onPick }: { picks: Picks; onPick: (stage: string, slot: string, teamId: string) => void }) {
+function ChampionPicker({ picks, onPick, locked = false }: { picks: Picks; onPick: (stage: string, slot: string, teamId: string) => void; locked?: boolean }) {
   const selected = picks["champion:pick"];
   const allTeams = GROUPS.flatMap((g) => g.teams);
   return (
@@ -894,9 +906,10 @@ function ChampionPicker({ picks, onPick }: { picks: Picks; onPick: (stage: strin
           return (
             <button
               key={team.id}
-              onClick={() => onPick("champion", "pick", team.id)}
-              className={`flex flex-col items-center justify-center gap-1 rounded-xl p-2 border-2 transition-all cursor-pointer
-                ${isSelected ? "border-yellow-400 bg-yellow-400/10" : "border-white/10 bg-white/5 hover:border-white/30"}`}
+              onClick={locked ? undefined : () => onPick("champion", "pick", team.id)}
+              className={`flex flex-col items-center justify-center gap-1 rounded-xl p-2 border-2 transition-all
+                ${locked ? "cursor-default" : "cursor-pointer"}
+                ${isSelected ? "border-yellow-400 bg-yellow-400/10" : `border-white/10 bg-white/5 ${locked ? "" : "hover:border-white/30"}`}`}
             >
               <div className="flex items-center gap-1">
                 {isSelected && <span className="text-xl leading-none">🏆</span>}
@@ -1008,6 +1021,9 @@ export default function BracketPage() {
 
   const groupPickCount = GROUPS.filter((g) => picks[`group:${g.id}`]).length;
 
+  // Group-stage picks lock as soon as phase 1 closes (server enforces this too).
+  const phase1Locked = bracketPhase !== "phase1_open";
+
   const handleGlobeHover = useCallback((teamId: string | null) => setHoveredTeam(teamId), []);
   const handleGlobeClick = useCallback((teamId: string) => router.push(`/learn/${teamId}`), [router]);
 
@@ -1108,10 +1124,12 @@ export default function BracketPage() {
                 <div className="h-px w-10 bg-gradient-to-l from-transparent to-yellow-300/60" />
               </div>
               <p className="text-white/75 text-sm mt-3">
-                Drag teams to rank all four finishing positions — <span className="text-green-400 font-bold">top 2</span> advance, but you still get points for correctly choosing <span className="text-yellow-300 font-bold">3rd</span> and <span className="text-yellow-300 font-bold">4th</span> place!
+                {phase1Locked
+                  ? <>The tournament is underway — picks are <span className="text-yellow-300 font-bold">locked</span>. Check the leaderboard to see how everyone&apos;s doing!</>
+                  : <>Drag teams to rank all four finishing positions — <span className="text-green-400 font-bold">top 2</span> advance, but you still get points for correctly choosing <span className="text-yellow-300 font-bold">3rd</span> and <span className="text-yellow-300 font-bold">4th</span> place!</>}
               </p>
             </div>
-            {(() => {
+            {!phase1Locked && (() => {
               const filledGroups = GROUPS.filter(g =>
                 picks[`group:${g.id}`] && picks[`runner:${g.id}`] && picks[`third:${g.id}`] && picks[`fourth:${g.id}`]
               );
@@ -1149,12 +1167,12 @@ export default function BracketPage() {
             })()}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-3 sm:px-0">
               {GROUPS.map((group) => (
-                <DraggableGroupCard key={group.id} group={group} picks={picks} onPick={handlePick} onInfoClick={setModalTeamId} />
+                <DraggableGroupCard key={group.id} group={group} picks={picks} onPick={handlePick} onInfoClick={setModalTeamId} locked={phase1Locked} />
               ))}
             </div>
           </div>
-          <ChampionPicker picks={picks} onPick={handlePick} />
-          <KidPowerSection picks={picks} onPick={handlePick} />
+          <ChampionPicker picks={picks} onPick={handlePick} locked={phase1Locked} />
+          <KidPowerSection picks={picks} onPick={handlePick} locked={phase1Locked} />
         </div>
       )}
 
