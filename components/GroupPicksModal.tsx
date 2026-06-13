@@ -235,10 +235,10 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
                       <div className="flex items-center gap-2">
                         {groupPts === 8 && (
                           <span
-                            className="text-green-300 text-[10px] font-black uppercase tracking-wide rounded-full px-2 py-0.5 leading-none"
+                            className="inline-flex items-center text-green-300 text-[10px] font-black uppercase tracking-wide rounded-full px-2 py-0.5 leading-none"
                             style={{ background: "rgba(34,197,94,0.18)", border: "1px solid rgba(34,197,94,0.45)" }}
                           >
-                            Perfect group!
+                            <span className="relative -top-px">Perfect group!</span>
                           </span>
                         )}
                         <span className="text-white/50 text-xs font-bold tabular-nums leading-none">{groupPts} / 8 pts</span>
