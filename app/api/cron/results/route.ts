@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { initDb, getSql } from "@/lib/db";
 import { fetchCompletedMatchesForDate } from "@/lib/api-football";
 import { processMatches } from "@/lib/process-matches";
+import { syncGroupPoints } from "@/lib/sync-standings";
 
 function authorized(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
@@ -40,7 +41,17 @@ async function handler(req: NextRequest) {
   }
 
   const result = await processMatches(getSql(), matches);
-  return NextResponse.json({ dateFrom: yesterday, dateTo: today, ...result });
+
+  // Refresh every group's live points regardless of whether new matches landed,
+  // so the score view stays current between fixtures. Non-fatal on failure.
+  let pointsSynced = 0;
+  try {
+    ({ updated: pointsSynced } = await syncGroupPoints(getSql()));
+  } catch (err) {
+    console.warn("[cron/results] group points sync failed:", err);
+  }
+
+  return NextResponse.json({ dateFrom: yesterday, dateTo: today, pointsSynced, ...result });
 }
 
 export const POST = handler;

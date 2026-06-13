@@ -268,7 +268,7 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
                     >
                       <div className="w-7 shrink-0" />
                       <div className="flex-1 text-white/30 text-[9px] font-black uppercase tracking-[0.18em]">Your Pick</div>
-                      <div className="w-16 shrink-0 text-center text-white/30 text-[9px] font-black uppercase tracking-[0.18em]">
+                      <div className="w-[4.5rem] shrink-0 text-center text-white/30 text-[9px] font-black uppercase tracking-[0.18em]">
                         {groupStageComplete ? "Final" : "Actual"}
                       </div>
                       <div className="w-8 shrink-0" />
@@ -335,7 +335,7 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
                         {/* Actual — the flag of whoever is really in this position,
                             with their live group points alongside */}
                         {groupHasResult && (
-                          <div className="w-16 shrink-0 flex items-center justify-center gap-1.5">
+                          <div className="w-[4.5rem] shrink-0 flex items-center justify-center gap-2.5">
                             {actualTeam ? (
                               <>
                                 <FlagIcon
