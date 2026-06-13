@@ -249,7 +249,7 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
                     >
                       <div className="w-7 shrink-0" />
                       <div className="flex-1 text-white/30 text-[9px] font-black uppercase tracking-[0.18em]">Your Pick</div>
-                      <div className="w-12 shrink-0 text-center text-white/30 text-[9px] font-black uppercase tracking-[0.18em]">
+                      <div className="w-16 shrink-0 text-center text-white/30 text-[9px] font-black uppercase tracking-[0.18em]">
                         {groupStageComplete ? "Final" : "Actual"}
                       </div>
                       <div className="w-8 shrink-0" />
@@ -299,15 +299,25 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
                           <div className="flex-1 text-white/20 text-sm italic">No pick</div>
                         )}
 
-                        {/* Actual — the flag of whoever is really in this position */}
+                        {/* Actual — the flag of whoever is really in this position,
+                            with a ✓ (exact match) or – (advance only) marker to its left */}
                         {groupHasResult && (
-                          <div className="w-12 shrink-0 flex justify-center">
+                          <div className="w-16 shrink-0 flex items-center justify-center gap-1">
                             {actualTeam ? (
-                              <FlagIcon
-                                cc={actualTeam.cc}
-                                name={actualTeam.name}
-                                className={`w-8 h-[22px] rounded ${isExact ? "ring-2 ring-green-400/90 ring-offset-1 ring-offset-[#0d2137] shadow-[0_0_6px_1px_rgba(74,222,128,0.55)]" : "opacity-90"}`}
-                              />
+                              <>
+                                <span className="w-2.5 text-center text-xs font-black leading-none">
+                                  {isExact ? (
+                                    <span className="text-green-400">✓</span>
+                                  ) : pts === 2 ? (
+                                    <span className="text-yellow-300">–</span>
+                                  ) : null}
+                                </span>
+                                <FlagIcon
+                                  cc={actualTeam.cc}
+                                  name={actualTeam.name}
+                                  className="w-8 h-[22px] rounded opacity-90"
+                                />
+                              </>
                             ) : (
                               <span className="text-white/20 text-xs">—</span>
                             )}
