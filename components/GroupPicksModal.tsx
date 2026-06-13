@@ -306,7 +306,7 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
                               <FlagIcon
                                 cc={actualTeam.cc}
                                 name={actualTeam.name}
-                                className={`w-8 h-[22px] rounded ${isExact ? "ring-2 ring-green-400 ring-offset-1 ring-offset-[#0d2137] shadow-[0_0_10px_2px_rgba(74,222,128,0.85)]" : "opacity-90"}`}
+                                className={`w-8 h-[22px] rounded ${isExact ? "ring-2 ring-green-400/90 ring-offset-1 ring-offset-[#0d2137] shadow-[0_0_6px_1px_rgba(74,222,128,0.55)]" : "opacity-90"}`}
                               />
                             ) : (
                               <span className="text-white/20 text-xs">—</span>
