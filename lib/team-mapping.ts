@@ -8,6 +8,7 @@ const OVERRIDES: Record<string, string> = {
   "usa":                          "USA",
   "bosnia and herzegovina":       "BIH",
   "bosnia & herzegovina":         "BIH",
+  "bosniaherzegovina":            "BIH", // API sends "Bosnia-Herzegovina"; hyphen is stripped on normalize
   "ivory coast":                  "CIV",
   "cote d'ivoire":                "CIV",
   "cote divoire":                 "CIV",

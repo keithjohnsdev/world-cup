@@ -24,18 +24,23 @@ async function handler(req: NextRequest) {
   }
 
   await initDb();
-  const dateStr = new Date().toISOString().slice(0, 10);
+  // Query a 2-day UTC window (yesterday→today). The API dates matches by UTC
+  // kickoff, so a match finishing just before 00:00 UTC would drop out of a
+  // single-day query before the next cron run could pick it up. Processing is
+  // idempotent (processed_fixtures), so re-fetching yesterday is harmless.
+  const today = new Date().toISOString().slice(0, 10);
+  const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
 
   let matches;
   try {
-    matches = await fetchCompletedMatchesForDate(dateStr);
+    matches = await fetchCompletedMatchesForDate(yesterday, today);
   } catch (err) {
     console.error("[cron/results] fetch failed:", err);
     return NextResponse.json({ error: String(err) }, { status: 502 });
   }
 
   const result = await processMatches(getSql(), matches);
-  return NextResponse.json({ date: dateStr, ...result });
+  return NextResponse.json({ dateFrom: yesterday, dateTo: today, ...result });
 }
 
 export const POST = handler;

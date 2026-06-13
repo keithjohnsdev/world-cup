@@ -46,11 +46,17 @@ function normaliseRound(stage: string): string {
 
 // ─── Requests ─────────────────────────────────────────────────────────────────
 
-// Fetch all FINISHED World Cup matches on a given date (YYYY-MM-DD).
+// Fetch all FINISHED World Cup matches in a UTC date range (YYYY-MM-DD), inclusive.
+// Callers should pass a window (e.g. yesterday→today) rather than a single day:
+// the API dates matches by UTC kickoff, so a match finishing just before 00:00 UTC
+// can otherwise fall out of a single-day query before any cron run picks it up.
 // Draws are included — callers decide whether to use winnerName.
-export async function fetchCompletedMatchesForDate(date: string): Promise<CompletedMatch[]> {
+export async function fetchCompletedMatchesForDate(
+  dateFrom: string,
+  dateTo: string = dateFrom,
+): Promise<CompletedMatch[]> {
   const res = await fetch(
-    `${BASE}/competitions/${WC}/matches?status=FINISHED&dateFrom=${date}&dateTo=${date}`,
+    `${BASE}/competitions/${WC}/matches?status=FINISHED&dateFrom=${dateFrom}&dateTo=${dateTo}`,
     { headers: headers() },
   );
   if (!res.ok) throw new Error(`football-data.org /matches ${res.status}`);
