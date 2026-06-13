@@ -349,9 +349,13 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
                                         : "opacity-40" /* provisional — this team hasn't played */
                                   }`}
                                 />
-                                {actualId != null && playedSet.has(actualId) && (
+                                {actualId != null && playedSet.has(actualId) ? (
                                   <span className="text-white/55 text-[11px] font-bold tabular-nums leading-none w-4 text-left">
                                     {groupPoints[actualId] ?? 0}
+                                  </span>
+                                ) : (
+                                  <span className="text-white/20 text-[11px] font-bold tabular-nums leading-none w-4 text-left">
+                                    –
                                   </span>
                                 )}
                               </>
