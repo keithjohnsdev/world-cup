@@ -123,6 +123,16 @@ async function handleGroupMatch(
         VALUES (${stage}, ${group}, ${ourId}, false)
         ON CONFLICT (stage, slot) DO UPDATE SET team_id = EXCLUDED.team_id
       `;
+      // Mirror live league points so the score view can show each team's
+      // standing next to its "Actual" flag.
+      await sql`
+        INSERT INTO group_points (team_id, points, played_games, updated_at)
+        VALUES (${ourId}, ${sorted[i].points}, ${sorted[i].playedGames}, NOW())
+        ON CONFLICT (team_id) DO UPDATE
+          SET points = EXCLUDED.points,
+              played_games = EXCLUDED.played_games,
+              updated_at = NOW()
+      `;
       // Record any team that has played a match so its group-stage pick can score.
       if (sorted[i].playedGames > 0) {
         await sql`

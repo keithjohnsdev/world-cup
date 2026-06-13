@@ -67,6 +67,7 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
   const [heartPoints, setHeartPoints] = useState(0);
   const [championPickTeamId, setChampionPickTeamId] = useState<string | null>(null);
   const [playedTeamIds, setPlayedTeamIds] = useState<string[]>([]);
+  const [groupPoints, setGroupPoints] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -79,6 +80,7 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
         setHeartPoints(d.heartPoints ?? 0);
         setChampionPickTeamId(d.championPickTeamId ?? null);
         setPlayedTeamIds(d.playedTeamIds ?? []);
+        setGroupPoints(d.groupPoints ?? {});
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -266,7 +268,7 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
                     >
                       <div className="w-7 shrink-0" />
                       <div className="flex-1 text-white/30 text-[9px] font-black uppercase tracking-[0.18em]">Your Pick</div>
-                      <div className="w-12 shrink-0 text-center text-white/30 text-[9px] font-black uppercase tracking-[0.18em]">
+                      <div className="w-16 shrink-0 text-center text-white/30 text-[9px] font-black uppercase tracking-[0.18em]">
                         {groupStageComplete ? "Final" : "Actual"}
                       </div>
                       <div className="w-8 shrink-0" />
@@ -330,21 +332,29 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
                           <div className="flex-1 text-white/20 text-sm italic">No pick</div>
                         )}
 
-                        {/* Actual — the flag of whoever is really in this position */}
+                        {/* Actual — the flag of whoever is really in this position,
+                            with their live group points alongside */}
                         {groupHasResult && (
-                          <div className="w-12 shrink-0 flex justify-center">
+                          <div className="w-16 shrink-0 flex items-center justify-center gap-1.5">
                             {actualTeam ? (
-                              <FlagIcon
-                                cc={actualTeam.cc}
-                                name={actualTeam.name}
-                                className={`w-8 h-[22px] rounded ${
-                                  isExact
-                                    ? "ring-2 ring-green-400/90 ring-offset-1 ring-offset-[#0d2137] shadow-[0_0_6px_1px_rgba(74,222,128,0.55)]"
-                                    : actualId != null && playedSet.has(actualId)
-                                      ? "opacity-90"
-                                      : "opacity-40" /* provisional — this team hasn't played */
-                                }`}
-                              />
+                              <>
+                                <FlagIcon
+                                  cc={actualTeam.cc}
+                                  name={actualTeam.name}
+                                  className={`w-8 h-[22px] rounded ${
+                                    isExact
+                                      ? "ring-2 ring-green-400/90 ring-offset-1 ring-offset-[#0d2137] shadow-[0_0_6px_1px_rgba(74,222,128,0.55)]"
+                                      : actualId != null && playedSet.has(actualId)
+                                        ? "opacity-90"
+                                        : "opacity-40" /* provisional — this team hasn't played */
+                                  }`}
+                                />
+                                {actualId != null && playedSet.has(actualId) && (
+                                  <span className="text-white/55 text-[11px] font-bold tabular-nums leading-none w-4 text-left">
+                                    {groupPoints[actualId] ?? 0}
+                                  </span>
+                                )}
+                              </>
                             ) : (
                               <span className="text-white/20 text-xs">—</span>
                             )}

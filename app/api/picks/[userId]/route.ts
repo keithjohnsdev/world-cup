@@ -11,7 +11,7 @@ export async function GET(
   if (isNaN(id)) return NextResponse.json({ error: "Invalid user ID" }, { status: 400 });
 
   const sql = getSql();
-  const [rawUsers, rawPicks, rawStandings, rawHeartPick, rawChampionPick, rawPlayed] = await Promise.all([
+  const [rawUsers, rawPicks, rawStandings, rawHeartPick, rawChampionPick, rawPlayed, rawGroupPoints] = await Promise.all([
     sql`SELECT name FROM users WHERE id = ${id}`,
     sql`SELECT stage, slot, team_id FROM picks
         WHERE user_id = ${id} AND stage IN ('group','runner','third','fourth')
@@ -24,12 +24,16 @@ export async function GET(
     sql`SELECT team_id FROM picks
         WHERE user_id = ${id} AND stage = 'champion' AND slot = 'pick' LIMIT 1`,
     sql`SELECT team_id FROM teams_played`,
+    sql`SELECT team_id, points FROM group_points`,
   ]);
 
   const userRows = rawUsers    as { name: string }[];
   const pickRows = rawPicks    as { stage: string; slot: string; team_id: string }[];
   const results  = rawStandings as { stage: string; slot: string; team_id: string }[];
   const playedTeamIds = (rawPlayed as { team_id: string }[]).map((r) => r.team_id);
+  const groupPoints = Object.fromEntries(
+    (rawGroupPoints as { team_id: string; points: number }[]).map((r) => [r.team_id, r.points]),
+  );
 
   if (!userRows.length) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
@@ -54,5 +58,6 @@ export async function GET(
     heartPoints,
     championPickTeamId,
     playedTeamIds,
+    groupPoints,
   });
 }

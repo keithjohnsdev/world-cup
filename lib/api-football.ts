@@ -28,6 +28,7 @@ export interface StandingEntry {
   position: number;
   teamName: string;
   playedGames: number;
+  points: number;
 }
 
 // ─── Round name normalisation ─────────────────────────────────────────────────
@@ -100,6 +101,7 @@ export async function fetchGroupStandings(): Promise<Map<string, StandingEntry[]
       position:    row.position as number,
       teamName:    row.team.name as string,
       playedGames: row.playedGames as number,
+      points:      (row.points ?? 0) as number,
     })));
   }
   return out;

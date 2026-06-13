@@ -87,6 +87,18 @@ export async function initDb() {
     )
   `;
 
+  // Live league points (3/1/0) per team in the group stage, mirrored from the
+  // football-data.org standings table on every group-match processing run.
+  // Surfaced in the player score view next to each team's "Actual" flag.
+  await sql`
+    CREATE TABLE IF NOT EXISTS group_points (
+      team_id      VARCHAR(10) PRIMARY KEY,
+      points       INTEGER     NOT NULL DEFAULT 0,
+      played_games INTEGER     NOT NULL DEFAULT 0,
+      updated_at   TIMESTAMP   DEFAULT NOW()
+    )
+  `;
+
   // Phase FSM: phase1_open → phase1_locked → phase2_open → phase2_locked → complete
   await sql`
     CREATE TABLE IF NOT EXISTS tournament_settings (
