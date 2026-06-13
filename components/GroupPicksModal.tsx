@@ -16,8 +16,14 @@ const POS_LABEL: Record<Stage, string> = {
 
 interface Entry { stage: string; slot: string; team_id: string; }
 
-function scorePosition(pickedId: string | null, posIdx: number, actual: (string | null)[]): number {
-  if (!pickedId || !actual.some(Boolean)) return 0;
+function scorePosition(
+  pickedId: string | null,
+  posIdx: number,
+  actual: (string | null)[],
+  played: boolean,
+): number {
+  // A pick only scores once its team has actually played a match.
+  if (!pickedId || !played || !actual.some(Boolean)) return 0;
   const exact = actual[posIdx] === pickedId ? 1 : 0;
   const advance = posIdx < 2 && (actual[0] === pickedId || actual[1] === pickedId) ? 2 : 0;
   return exact + advance;
@@ -60,6 +66,7 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
   const [heartPickTeamId, setHeartPickTeamId] = useState<string | null>(null);
   const [heartPoints, setHeartPoints] = useState(0);
   const [championPickTeamId, setChampionPickTeamId] = useState<string | null>(null);
+  const [playedTeamIds, setPlayedTeamIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -71,6 +78,7 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
         setHeartPickTeamId(d.heartPickTeamId ?? null);
         setHeartPoints(d.heartPoints ?? 0);
         setChampionPickTeamId(d.championPickTeamId ?? null);
+        setPlayedTeamIds(d.playedTeamIds ?? []);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -93,6 +101,7 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
 
   const pickMap = buildMap(picks);
   const resultMap = buildMap(results);
+  const playedSet = new Set(playedTeamIds);
   const hasResults = results.length > 0;
 
   return (
@@ -221,7 +230,10 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
               const predicted = pickMap[group.id] ?? [];
               const actual = resultMap[group.id] ?? [];
               const groupHasResult = actual.some(Boolean);
-              const groupPts = STAGES.reduce((s, _, i) => s + scorePosition(predicted[i] ?? null, i, actual), 0);
+              const groupPts = STAGES.reduce((s, _, i) => {
+                const pid = predicted[i] ?? null;
+                return s + scorePosition(pid, i, actual, pid != null && playedSet.has(pid));
+              }, 0);
 
               return (
                 <div key={group.id} className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.09)" }}>
@@ -265,16 +277,23 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
                   {STAGES.map((stage, posIdx) => {
                     const pickedId = predicted[posIdx] ?? null;
                     const team = pickedId ? getTeam(pickedId) : null;
-                    const pts = scorePosition(pickedId, posIdx, actual);
+                    const played = pickedId != null && playedSet.has(pickedId);
+                    const pts = scorePosition(pickedId, posIdx, actual, played);
 
                     // The team actually sitting in this real position right now.
                     const actualId = actual[posIdx] ?? null;
                     const actualTeam = actualId ? getTeam(actualId) : null;
-                    const isExact = pickedId != null && actualId === pickedId;
+                    const isExact = played && actualId === pickedId;
+
+                    // Picked but the team hasn't kicked off yet — scores nothing so far.
+                    const notPlayed = groupHasResult && pickedId != null && !played;
 
                     let rowBg = "";
                     let ptsCls = "text-white/20";
-                    if (groupHasResult && pickedId) {
+                    if (notPlayed) {
+                      rowBg = "rgba(255,255,255,0.02)";
+                      ptsCls = "text-white/25";
+                    } else if (groupHasResult && pickedId) {
                       if (pts >= 3)       { rowBg = "rgba(22,163,74,0.16)";  ptsCls = "text-green-400"; }
                       else if (pts === 2) { rowBg = "rgba(234,179,8,0.13)";  ptsCls = "text-yellow-300"; }
                       else if (pts === 1) { rowBg = "rgba(96,165,250,0.12)"; ptsCls = "text-blue-400"; }
@@ -295,10 +314,17 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
                         {team ? (
                           <div className="flex items-center gap-2 flex-1 min-w-0">
                             <FlagIcon cc={team.cc} name={team.name} className="w-8 h-[22px] rounded shrink-0" />
-                            <span className="text-white text-sm font-semibold leading-tight truncate">{team.name}</span>
-                            {team.id === heartPickTeamId && heartPoints > 0 && (
-                              <span className="text-red-400 text-[11px] font-black shrink-0 whitespace-nowrap">+{heartPoints} ❤️</span>
-                            )}
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="text-white text-sm font-semibold leading-tight truncate">{team.name}</span>
+                                {team.id === heartPickTeamId && heartPoints > 0 && (
+                                  <span className="text-red-400 text-[11px] font-black shrink-0 whitespace-nowrap">+{heartPoints} ❤️</span>
+                                )}
+                              </div>
+                              {notPlayed && (
+                                <div className="text-white/30 text-[10px] italic leading-none mt-0.5">hasn’t played yet</div>
+                              )}
+                            </div>
                           </div>
                         ) : (
                           <div className="flex-1 text-white/20 text-sm italic">No pick</div>
@@ -311,7 +337,13 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
                               <FlagIcon
                                 cc={actualTeam.cc}
                                 name={actualTeam.name}
-                                className={`w-8 h-[22px] rounded ${isExact ? "ring-2 ring-green-400/90 ring-offset-1 ring-offset-[#0d2137] shadow-[0_0_6px_1px_rgba(74,222,128,0.55)]" : "opacity-90"}`}
+                                className={`w-8 h-[22px] rounded ${
+                                  isExact
+                                    ? "ring-2 ring-green-400/90 ring-offset-1 ring-offset-[#0d2137] shadow-[0_0_6px_1px_rgba(74,222,128,0.55)]"
+                                    : actualId != null && playedSet.has(actualId)
+                                      ? "opacity-90"
+                                      : "opacity-40" /* provisional — this team hasn't played */
+                                }`}
                               />
                             ) : (
                               <span className="text-white/20 text-xs">—</span>

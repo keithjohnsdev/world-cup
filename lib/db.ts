@@ -76,6 +76,17 @@ export async function initDb() {
     )
   `;
 
+  // Teams that have played at least one match. A group-stage pick only scores
+  // once its team appears here, so positions seeded into the standings before a
+  // team has kicked a ball don't award premature points. Populated by the cron
+  // from group standings (playedGames > 0).
+  await sql`
+    CREATE TABLE IF NOT EXISTS teams_played (
+      team_id         VARCHAR(10) PRIMARY KEY,
+      first_played_at TIMESTAMP DEFAULT NOW()
+    )
+  `;
+
   // Phase FSM: phase1_open → phase1_locked → phase2_open → phase2_locked → complete
   await sql`
     CREATE TABLE IF NOT EXISTS tournament_settings (

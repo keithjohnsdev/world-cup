@@ -83,9 +83,17 @@ function resultMap(results: ResultRow[]): Map<string, ResultRow> {
 //   stage="fourth" slot="A" team_id=<4th place team>
 // Picks use the same convention.
 
-function scoreGroupStage(picks: Map<string, PickRow>, results: Map<string, ResultRow>): number {
+function scoreGroupStage(
+  picks: Map<string, PickRow>,
+  results: Map<string, ResultRow>,
+  // When provided, a pick only scores once its team has played a match — keeps
+  // teams seeded into the standings before kickoff from awarding premature points.
+  playedTeams?: Set<string>,
+): number {
   let pts = 0;
   const positions = ["group", "runner", "third", "fourth"] as const;
+  const hasPlayed = (id: string | null): boolean =>
+    id != null && (playedTeams ? playedTeams.has(id) : true);
 
   for (const group of GROUPS) {
     const g = group.id;
@@ -95,12 +103,12 @@ function scoreGroupStage(picks: Map<string, PickRow>, results: Map<string, Resul
     // 2 pts: picked this team 1st or 2nd and it actually finished 1st or 2nd
     const advancers = new Set([actual[0], actual[1]].filter(Boolean));
     for (let i = 0; i < 2; i++) {
-      if (predicted[i] && advancers.has(predicted[i]!)) pts += 2;
+      if (predicted[i] && hasPlayed(predicted[i]) && advancers.has(predicted[i]!)) pts += 2;
     }
 
     // 1 pt: exact position match (any of the four positions)
     for (let i = 0; i < 4; i++) {
-      if (predicted[i] && predicted[i] === actual[i]) pts += 1;
+      if (predicted[i] && hasPlayed(predicted[i]) && predicted[i] === actual[i]) pts += 1;
     }
   }
 
@@ -208,11 +216,14 @@ export function scoreUser(
   // Number of rounds this user started in last place (for Kaboose Boost).
   // Provide 0 until standings-snapshot tracking is wired up.
   kabooseRoundsInLast = 0,
+  // Teams that have played a match. When provided, group-stage picks only score
+  // once their team has played. Omit to score every position (legacy behaviour).
+  playedTeams?: Set<string>,
 ): ScoreBreakdown {
   const pm = pickMap(picks);
   const rm = resultMap(results);
 
-  const groupStage = scoreGroupStage(pm, rm);
+  const groupStage = scoreGroupStage(pm, rm, playedTeams);
   const { pts: knockout, starPowerExtra } = scoreKnockout(pm, rm);
   const { championBonus, chargeupBonus } = scoreChampionBonus(pm, rm, user);
   const heartPickBonus = scoreHeartPick(user, rm);

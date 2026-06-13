@@ -123,6 +123,13 @@ async function handleGroupMatch(
         VALUES (${stage}, ${group}, ${ourId}, false)
         ON CONFLICT (stage, slot) DO UPDATE SET team_id = EXCLUDED.team_id
       `;
+      // Record any team that has played a match so its group-stage pick can score.
+      if (sorted[i].playedGames > 0) {
+        await sql`
+          INSERT INTO teams_played (team_id) VALUES (${ourId})
+          ON CONFLICT DO NOTHING
+        `;
+      }
     }
   } catch (e) {
     console.warn(`[process-matches] standings update skipped for group ${group}:`, e);

@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const auth = await sql`SELECT id FROM users WHERE session_token = ${token}` as { id: number }[];
   if (!auth.length) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const [rawUsers, rawPicks, rawResults, phaseRows, rawSnapshots] = await Promise.all([
+  const [rawUsers, rawPicks, rawResults, phaseRows, rawSnapshots, rawPlayed] = await Promise.all([
     sql`SELECT id, name, is_kid, chargeup_active, heart_pick_team_id FROM users`,
     // ── Separate group and bracket picks to avoid accidental cross-stage scoring ──
     // We fetch all picks but the scoring engine already filters by stage via KNOCKOUT_PTS.
@@ -41,9 +41,11 @@ export async function GET(req: NextRequest) {
     sql`SELECT value FROM tournament_settings WHERE key = 'phase' LIMIT 1`,
     sql`SELECT round, user_id, rank, total_score, group_score, bracket_score
         FROM standings_snapshots`,
-  ]) as [UserRow[], (PickRow & { user_id: number })[], ResultRow[], { value: string }[], SnapshotRow[]];
+    sql`SELECT team_id FROM teams_played`,
+  ]) as [UserRow[], (PickRow & { user_id: number })[], ResultRow[], { value: string }[], SnapshotRow[], { team_id: string }[]];
 
   const phase = phaseRows[0]?.value ?? "phase1_open";
+  const playedTeams = new Set(rawPlayed.map((r) => r.team_id));
 
   // Group picks by user_id
   const picksByUser = new Map<number, PickRow[]>();
@@ -61,6 +63,7 @@ export async function GET(req: NextRequest) {
         picksByUser.get(user.id) ?? [],
         rawResults,
         kabooseRounds,
+        playedTeams,
       );
       return {
         id: user.id,
