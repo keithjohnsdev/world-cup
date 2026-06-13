@@ -241,7 +241,7 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
                             Perfect group!
                           </span>
                         )}
-                        <span className="text-white/50 text-xs font-bold tabular-nums">{groupPts} / 8 pts</span>
+                        <span className="text-white/50 text-xs font-bold tabular-nums leading-none">{groupPts} / 8 pts</span>
                       </div>
                     )}
                   </div>
