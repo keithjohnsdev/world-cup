@@ -241,14 +241,31 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
                     )}
                   </div>
 
+                  {/* Column labels — only once results exist */}
+                  {groupHasResult && (
+                    <div
+                      className="flex items-center gap-3 px-4 py-1"
+                      style={{ borderTop: "1px solid rgba(255,255,255,0.05)", background: "rgba(0,0,0,0.18)" }}
+                    >
+                      <div className="w-7 shrink-0" />
+                      <div className="flex-1 text-white/30 text-[9px] font-black uppercase tracking-[0.18em]">Your Pick</div>
+                      <div className="w-12 shrink-0 text-center text-white/30 text-[9px] font-black uppercase tracking-[0.18em]">
+                        {groupStageComplete ? "Final" : "Actual"}
+                      </div>
+                      <div className="w-8 shrink-0" />
+                    </div>
+                  )}
+
                   {/* 4 position rows */}
                   {STAGES.map((stage, posIdx) => {
                     const pickedId = predicted[posIdx] ?? null;
                     const team = pickedId ? getTeam(pickedId) : null;
                     const pts = scorePosition(pickedId, posIdx, actual);
 
-                    const actualIdx = pickedId ? actual.indexOf(pickedId) : -1;
-                    const actualLabel = actualIdx >= 0 ? POS_LABEL[STAGES[actualIdx]] : null;
+                    // The team actually sitting in this real position right now.
+                    const actualId = actual[posIdx] ?? null;
+                    const actualTeam = actualId ? getTeam(actualId) : null;
+                    const isExact = pickedId != null && actualId === pickedId;
 
                     let rowBg = "";
                     let ptsCls = "text-white/20";
@@ -269,30 +286,38 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
                           {POS_LABEL[stage]}
                         </div>
 
+                        {/* Your pick */}
                         {team ? (
-                          <>
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
                             <FlagIcon cc={team.cc} name={team.name} className="w-8 h-[22px] rounded shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                <span className="text-white text-sm font-semibold leading-tight truncate">{team.name}</span>
-                                {team.id === heartPickTeamId && heartPoints > 0 && (
-                                  <span className="text-red-400 text-[11px] font-black shrink-0 whitespace-nowrap">+{heartPoints} ❤️</span>
-                                )}
-                              </div>
-                              {groupHasResult && (
-                                <div className="text-white/35 text-[10px] leading-none mt-0.5">
-                                  {actualLabel ? `${groupStageComplete ? "finished" : "currently in"} ${actualLabel}` : "result pending"}
-                                </div>
-                              )}
-                            </div>
-                          </>
+                            <span className="text-white text-sm font-semibold leading-tight truncate">{team.name}</span>
+                            {team.id === heartPickTeamId && heartPoints > 0 && (
+                              <span className="text-red-400 text-[11px] font-black shrink-0 whitespace-nowrap">+{heartPoints} ❤️</span>
+                            )}
+                          </div>
                         ) : (
                           <div className="flex-1 text-white/20 text-sm italic">No pick</div>
                         )}
 
-                        {groupHasResult && pickedId && (
-                          <div className={`text-sm font-black shrink-0 tabular-nums ${ptsCls}`}>
-                            +{pts}
+                        {/* Actual — the flag of whoever is really in this position */}
+                        {groupHasResult && (
+                          <div className="w-12 shrink-0 flex justify-center">
+                            {actualTeam ? (
+                              <FlagIcon
+                                cc={actualTeam.cc}
+                                name={actualTeam.name}
+                                className={`w-8 h-[22px] rounded ${isExact ? "ring-2 ring-green-400/70" : "opacity-90"}`}
+                              />
+                            ) : (
+                              <span className="text-white/20 text-xs">—</span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Points */}
+                        {groupHasResult && (
+                          <div className={`w-8 shrink-0 text-right text-sm font-black tabular-nums ${pickedId ? ptsCls : "text-white/20"}`}>
+                            {pickedId ? `+${pts}` : ""}
                           </div>
                         )}
                       </div>
