@@ -2,10 +2,7 @@
 // Env vars: FOOTBALL_DATA_KEY, CRON_SECRET
 
 import { NextRequest, NextResponse } from "next/server";
-import { initDb, getSql } from "@/lib/db";
-import { fetchCompletedMatchesForDate } from "@/lib/api-football";
-import { processMatches } from "@/lib/process-matches";
-import { syncGroupPoints } from "@/lib/sync-standings";
+import { runResultsSync } from "@/lib/run-results-sync";
 
 function authorized(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
@@ -24,34 +21,13 @@ async function handler(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  await initDb();
-  // Query a 2-day UTC window (yesterday→today). The API dates matches by UTC
-  // kickoff, so a match finishing just before 00:00 UTC would drop out of a
-  // single-day query before the next cron run could pick it up. Processing is
-  // idempotent (processed_fixtures), so re-fetching yesterday is harmless.
-  const today = new Date().toISOString().slice(0, 10);
-  const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
-
-  let matches;
   try {
-    matches = await fetchCompletedMatchesForDate(yesterday, today);
+    const result = await runResultsSync();
+    return NextResponse.json(result);
   } catch (err) {
-    console.error("[cron/results] fetch failed:", err);
+    console.error("[cron/results] sync failed:", err);
     return NextResponse.json({ error: String(err) }, { status: 502 });
   }
-
-  const result = await processMatches(getSql(), matches);
-
-  // Refresh every group's live points regardless of whether new matches landed,
-  // so the score view stays current between fixtures. Non-fatal on failure.
-  let pointsSynced = 0;
-  try {
-    ({ updated: pointsSynced } = await syncGroupPoints(getSql()));
-  } catch (err) {
-    console.warn("[cron/results] group points sync failed:", err);
-  }
-
-  return NextResponse.json({ dateFrom: yesterday, dateTo: today, pointsSynced, ...result });
 }
 
 export const POST = handler;

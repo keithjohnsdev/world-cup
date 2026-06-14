@@ -42,6 +42,8 @@ export default function AdminPage() {
   const [awardsLoading, setAwardsLoading] = useState(false);
   const [recalcLoading, setRecalcLoading] = useState(false);
   const [recalcMsg, setRecalcMsg] = useState("");
+  const [syncLoading, setSyncLoading] = useState(false);
+  const [syncMsg, setSyncMsg] = useState("");
   const [error, setError] = useState("");
   const [sort, setSort] = useState<SortKey>("groups");
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
@@ -114,6 +116,26 @@ export default function AdminPage() {
       setRecalcMsg("Recalculation failed.");
     } finally {
       setRecalcLoading(false);
+    }
+  }
+
+  async function runSync() {
+    setSyncLoading(true);
+    setSyncMsg("");
+    const token = localStorage.getItem("wc_token");
+    try {
+      const res = await fetch("/api/admin/sync", {
+        method: "POST",
+        headers: { "x-session-token": token! },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      setSyncMsg(`Done — ${data.done?.length ?? 0} processed, ${data.skipped?.length ?? 0} skipped, ${data.pointsSynced ?? 0} groups synced`);
+      fetchData();
+    } catch (e) {
+      setSyncMsg(`Sync failed${e instanceof Error ? `: ${e.message}` : ""}`);
+    } finally {
+      setSyncLoading(false);
     }
   }
 
@@ -222,6 +244,26 @@ export default function AdminPage() {
               {phase === "complete" && (
                 <span className="text-white/30 text-sm font-bold self-center">Tournament over 🏆</span>
               )}
+            </div>
+          </div>
+        </div>
+
+        {/* Results sync */}
+        <div className="rounded-2xl border border-white/10 bg-white/5 px-5 py-4 mb-6">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <div className="text-white/40 text-xs font-bold uppercase tracking-wider mb-1">Results Sync</div>
+              <div className="font-black text-lg text-white">Fetch & process latest matches</div>
+              {syncMsg && <p className="text-green-400 text-xs mt-1">{syncMsg}</p>}
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={runSync}
+                disabled={syncLoading}
+                className="px-4 py-2 rounded-xl font-black text-sm uppercase tracking-wide transition-all cursor-pointer disabled:opacity-50 bg-yellow-300 hover:bg-yellow-200 text-green-950"
+              >
+                {syncLoading ? "Syncing…" : "Run Sync Now"}
+              </button>
             </div>
           </div>
         </div>
