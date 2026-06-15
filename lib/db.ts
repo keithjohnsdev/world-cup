@@ -171,10 +171,8 @@ export async function initDb() {
   // In-app reader recap: an original, Claude-generated summary of the story so
   // readers stay on our site (no ad-stripped republishing of the source). Lazily
   // generated on first open and cached here, so we pay for it once per story.
-  await sql`ALTER TABLE news_articles ADD COLUMN IF NOT EXISTS recap          TEXT`;
-  await sql`ALTER TABLE news_articles ADD COLUMN IF NOT EXISTS recap_at       TIMESTAMPTZ`;
-  // Comedic-tone variant, cached separately from the straight recap.
-  await sql`ALTER TABLE news_articles ADD COLUMN IF NOT EXISTS recap_comedic  TEXT`;
+  await sql`ALTER TABLE news_articles ADD COLUMN IF NOT EXISTS recap    TEXT`;
+  await sql`ALTER TABLE news_articles ADD COLUMN IF NOT EXISTS recap_at TIMESTAMPTZ`;
 
   // ── Awards ────────────────────────────────────────────────────────────────────
   // Computed by the admin after the tournament (or after each round for live awards).
