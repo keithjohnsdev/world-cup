@@ -31,6 +31,13 @@ export interface StandingEntry {
   points: number;
 }
 
+// A match plus its live status/kickoff — used by the match-aware cron gate to
+// decide whether we're in an active window worth syncing.
+export interface MatchWindowEntry extends CompletedMatch {
+  status: string;  // TIMED | SCHEDULED | IN_PLAY | PAUSED | FINISHED | …
+  utcDate: string; // ISO 8601 kickoff time
+}
+
 // ─── Round name normalisation ─────────────────────────────────────────────────
 
 function normaliseRound(stage: string): string {
@@ -43,6 +50,25 @@ function normaliseRound(stage: string): string {
     FINAL:          "final",
   };
   return map[stage] ?? stage.toLowerCase().replace(/_/g, " ");
+}
+
+// Normalise one raw API match into our CompletedMatch shape.
+function normaliseMatch(m: any): CompletedMatch {
+  const winnerField: string = m.score?.winner ?? "";
+  const winnerName =
+    winnerField === "HOME_TEAM" ? m.homeTeam.name :
+    winnerField === "AWAY_TEAM" ? m.awayTeam.name :
+    "";
+  return {
+    id:           m.id,
+    round:        normaliseRound(m.stage ?? ""),
+    matchday:     m.matchday ?? null,
+    homeTeamName: m.homeTeam.name,
+    awayTeamName: m.awayTeam.name,
+    winnerName,
+    wasShootout:  m.score?.duration === "PENALTY_SHOOTOUT",
+    hasResult:    (m.score?.winner ?? null) !== null,
+  };
 }
 
 // ─── Requests ─────────────────────────────────────────────────────────────────
@@ -62,25 +88,27 @@ export async function fetchCompletedMatchesForDate(
   );
   if (!res.ok) throw new Error(`football-data.org /matches ${res.status}`);
   const json = await res.json();
+  return (json.matches ?? []).map(normaliseMatch);
+}
 
-  return (json.matches ?? []).map((m: any) => {
-    const winnerField: string = m.score?.winner ?? "";
-    const winnerName =
-      winnerField === "HOME_TEAM" ? m.homeTeam.name :
-      winnerField === "AWAY_TEAM" ? m.awayTeam.name :
-      "";
-
-    return {
-      id:           m.id,
-      round:        normaliseRound(m.stage ?? ""),
-      matchday:     m.matchday ?? null,
-      homeTeamName: m.homeTeam.name,
-      awayTeamName: m.awayTeam.name,
-      winnerName,
-      wasShootout:  m.score?.duration === "PENALTY_SHOOTOUT",
-      hasResult:    (m.score?.winner ?? null) !== null,
-    } satisfies CompletedMatch;
-  });
+// Fetch every WC match in a UTC date range (any status), with status + kickoff.
+// Powers the match-aware cron gate, and its FINISHED entries can be processed
+// directly (they're a superset of CompletedMatch).
+export async function fetchMatchesWindow(
+  dateFrom: string,
+  dateTo: string = dateFrom,
+): Promise<MatchWindowEntry[]> {
+  const res = await fetch(
+    `${BASE}/competitions/${WC}/matches?dateFrom=${dateFrom}&dateTo=${dateTo}`,
+    { headers: headers() },
+  );
+  if (!res.ok) throw new Error(`football-data.org /matches ${res.status}`);
+  const json = await res.json();
+  return (json.matches ?? []).map((m: any) => ({
+    ...normaliseMatch(m),
+    status:  m.status ?? "",
+    utcDate: m.utcDate ?? "",
+  } satisfies MatchWindowEntry));
 }
 
 // Fetch group standings — returns map of group letter ("A"…"L") → entries sorted by position.

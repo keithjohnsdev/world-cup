@@ -1,9 +1,11 @@
-// Cron handler — triggered by cron-job.org every 15 minutes.
+// Fast results cron — triggered by cron-job.org every ~2 minutes.
+// Match-aware gated: idle ticks make one cheap football-data call and return with
+// no DB access; during match windows it runs the full results sync. News lives on
+// its own slower schedule (/api/cron/news), which also runs an ungated backstop.
 // Env vars: FOOTBALL_DATA_KEY, CRON_SECRET
 
 import { NextRequest, NextResponse } from "next/server";
-import { runResultsSync } from "@/lib/run-results-sync";
-import { runNewsSync } from "@/lib/run-news-sync";
+import { runResultsSyncIfActive } from "@/lib/run-results-sync";
 
 function authorized(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
@@ -16,7 +18,6 @@ function authorized(req: NextRequest): boolean {
 }
 
 export const dynamic = "force-dynamic";
-// Feed fetches can add a few seconds; give the function headroom past the default.
 export const maxDuration = 30;
 
 async function handler(req: NextRequest) {
@@ -24,21 +25,13 @@ async function handler(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Run results and news independently — a feed outage must never block scoring,
-  // and a results error must never block news.
-  const [results, news] = await Promise.allSettled([runResultsSync(), runNewsSync()]);
-
-  if (results.status === "rejected") {
-    console.error("[cron/results] results sync failed:", results.reason);
+  try {
+    const result = await runResultsSyncIfActive();
+    return NextResponse.json(result);
+  } catch (err) {
+    console.error("[cron/results] sync failed:", err);
+    return NextResponse.json({ error: String(err) }, { status: 502 });
   }
-  if (news.status === "rejected") {
-    console.error("[cron/results] news sync failed:", news.reason);
-  }
-
-  return NextResponse.json({
-    results: results.status === "fulfilled" ? results.value : { error: String(results.reason) },
-    news: news.status === "fulfilled" ? news.value : { error: String(news.reason) },
-  });
 }
 
 export const POST = handler;

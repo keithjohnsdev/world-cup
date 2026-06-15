@@ -707,8 +707,14 @@ function LeaderboardTab() {
 
   useEffect(() => {
     fetchLeaderboard();
-    const id = setInterval(() => fetchLeaderboard(), 15 * 60_000);
-    return () => clearInterval(id);
+    // Refresh ~60s while the tab is visible; pause when hidden and refetch on return.
+    // Keeps the board near-live during matches without polling for backgrounded tabs.
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible") fetchLeaderboard();
+    }, 60_000);
+    const onVisible = () => { if (document.visibilityState === "visible") fetchLeaderboard(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { clearInterval(id); document.removeEventListener("visibilitychange", onVisible); };
   }, [fetchLeaderboard]);
 
   function timeAgo(d: Date) {
@@ -947,6 +953,22 @@ export default function BracketPage() {
   const picksRef = useRef<Picks>({});
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Pull live results/standings/phase. Reused for the initial load and the
+  // periodic refresh so Groups/Bracket stay current as matches finish.
+  const fetchResults = useCallback(() => {
+    const token = localStorage.getItem("wc_token");
+    if (!token) return;
+    fetch("/api/results", { headers: { "x-session-token": token } })
+      .then(r => r.json())
+      .then(data => {
+        if (data?.results) setBracketResults(data.results);
+        if (data?.phase) setBracketPhase(data.phase);
+        if (data?.preview) setBracketPreview(true);
+        if (data?.awardsVisible) setAwardsVisible(true);
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     const token = localStorage.getItem("wc_token");
     const name = localStorage.getItem("wc_name");
@@ -966,16 +988,18 @@ export default function BracketPage() {
         }
       });
 
-    fetch("/api/results", { headers: { "x-session-token": token } })
-      .then(r => r.json())
-      .then(data => {
-        if (data?.results) setBracketResults(data.results);
-        if (data?.phase) setBracketPhase(data.phase);
-        if (data?.preview) setBracketPreview(true);
-        if (data?.awardsVisible) setAwardsVisible(true);
-      })
-      .catch(() => {});
-  }, [router]);
+    fetchResults();
+  }, [router, fetchResults]);
+
+  // Keep results/standings fresh ~60s while the tab is visible; pause when hidden.
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible") fetchResults();
+    }, 60_000);
+    const onVisible = () => { if (document.visibilityState === "visible") fetchResults(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { clearInterval(id); document.removeEventListener("visibilitychange", onVisible); };
+  }, [fetchResults]);
 
   function handlePick(stage: string, slot: string, teamId: string) {
     setPicks((prev) => {

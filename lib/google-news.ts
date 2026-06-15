@@ -31,13 +31,21 @@ function tag(block: string, name: string): string | null {
   return m ? m[1] : null;
 }
 
+// Bias the query toward World Cup football so generic names ("adams" → Tyler
+// Adams, not Amy Adams) resolve to the sport. Skips terms that already say so.
+export function footballScope(query: string): string {
+  return /\b(soccer|football|world ?cup|fifa|usmnt|uswnt)\b/i.test(query)
+    ? query
+    : `${query} soccer World Cup`;
+}
+
 // Public search URL (for a "browse more" link), distinct from the RSS endpoint.
 export function googleNewsSearchUrl(query: string): string {
-  return `https://news.google.com/search?q=${encodeURIComponent(query)}`;
+  return `https://news.google.com/search?q=${encodeURIComponent(footballScope(query))}`;
 }
 
 export async function fetchGoogleNews(query: string): Promise<WebSearchArticle[]> {
-  const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
+  const url = `https://news.google.com/rss/search?q=${encodeURIComponent(footballScope(query))}&hl=en-US&gl=US&ceid=US:en`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 

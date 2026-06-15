@@ -8,26 +8,37 @@ A plain-English walkthrough of how match results travel from the real world into
 
 ```
 football-data.org API
-        ↓  (every 15 min)
-  /api/cron/results
-        ↓
-  processMatches()
+   ↓  (~2 min, match-aware)        ↓  (~15 min)
+  /api/cron/results               /api/cron/news
+   └─ gated: full sync only        ├─ news RSS sync
+      during match windows         └─ ungated results backstop
+        ↓                                  ↓
+  processMatches()  ◀───────────────────────┘
         ↓
    results table (DB)
         ↓              ↓
   Leaderboard       Snapshots
-  (on demand)       (auto, each round)
-        ↓              ↓
-   scoreUser()      Awards
+  (on demand,       (auto, each round)
+   auto-refresh)        ↓
+        ↓              Awards
+   scoreUser()
 ```
 
 ---
 
-## Step 1 — The Cron Fires
+## Step 1 — The Crons Fire
 
-Every 15 minutes, cron-job.org calls `GET /api/cron/results?secret=<CRON_SECRET>`.
+There are **two** cron-job.org schedules (both pass `?secret=<CRON_SECRET>`):
 
-The handler (`app/api/cron/results/route.ts`) checks the secret, grabs today's date, and asks football-data.org for all **finished** World Cup matches that day.
+1. **`GET /api/cron/results` — every ~2 minutes (fast, match-aware).**
+   The handler (`app/api/cron/results/route.ts`) calls `runResultsSyncIfActive()`, which makes **one** football-data call for the match window (yesterday→tomorrow). If no match is live, recently finished (within ~3h of kickoff), or about to start (~10 min), it returns `{ idle: true }` immediately — **no database access**, keeping idle ticks cheap. During a match window it runs the full results sync. This is what makes standings/leaderboard land within ~2 min of full time.
+
+2. **`GET /api/cron/news` — every ~15 minutes (slow).**
+   Runs the RSS news sync **and** an *ungated* `runResultsSync()` as a correctness backstop — so even if the fast gate ever misses a late result, it's caught within ~15 min (the old behavior, as a floor).
+
+Why two schedules: hitting the news RSS feeds + writing standings every 2 minutes would waste requests and keep Neon awake 24/7. football-data's free tier (10 req/min, no daily cap) easily affords the 2-min results polling; the binding limits are Vercel invocations and Neon compute, which the match-aware gate protects.
+
+> **Note:** the free tier delivers scores *delayed*, not truly live in-match — and group standings only change at full time anyway. So the win here is **fast pickup after a match ends**, not ball-by-ball live scores.
 
 ---
 

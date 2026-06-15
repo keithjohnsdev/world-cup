@@ -3,9 +3,62 @@
 // Keeping it here ensures both paths run identical logic.
 
 import { initDb, getSql } from "@/lib/db";
-import { fetchCompletedMatchesForDate } from "@/lib/api-football";
+import { fetchCompletedMatchesForDate, fetchMatchesWindow, type MatchWindowEntry } from "@/lib/api-football";
 import { processMatches } from "@/lib/process-matches";
 import { syncGroupPoints } from "@/lib/sync-standings";
+
+const POST_MATCH_WINDOW_MS = 3 * 60 * 60 * 1000; // keep polling ~3h after kickoff (covers full-time + free-tier delay)
+const WARMUP_MS = 10 * 60 * 1000;                 // start ~10 min before kickoff
+
+function ymd(offsetMs: number): string {
+  return new Date(Date.now() + offsetMs).toISOString().slice(0, 10);
+}
+
+// Is any match currently worth a full sync? Live now, recently finished (so a
+// result we haven't picked up yet may have just landed), or kicking off shortly.
+function isWindowActive(matches: MatchWindowEntry[]): boolean {
+  const now = Date.now();
+  return matches.some((m) => {
+    if (m.status === "IN_PLAY" || m.status === "PAUSED") return true;
+    const kickoff = m.utcDate ? new Date(m.utcDate).getTime() : NaN;
+    if (isNaN(kickoff)) return false;
+    if (m.status === "FINISHED") return now <= kickoff + POST_MATCH_WINDOW_MS;
+    if (m.status === "TIMED" || m.status === "SCHEDULED") {
+      const untilKickoff = kickoff - now;
+      return untilKickoff > 0 && untilKickoff <= WARMUP_MS;
+    }
+    return false;
+  });
+}
+
+// Match-aware gate for the fast (~2 min) cron. Makes ONE football-data call and,
+// when nothing is in an active window, returns immediately with no DB access —
+// keeping idle ticks cheap (protects Neon/Vercel free limits). The 15-min news
+// cron runs the ungated runResultsSync() as a correctness backstop.
+export async function runResultsSyncIfActive() {
+  // yesterday → tomorrow covers matches straddling 00:00 UTC and their post-match window.
+  const dateFrom = ymd(-86_400_000);
+  const dateTo = ymd(86_400_000);
+
+  const window = await fetchMatchesWindow(dateFrom, dateTo);
+  if (!isWindowActive(window)) {
+    return { idle: true as const };
+  }
+
+  // Active — now do the DB work, reusing the FINISHED matches we already fetched.
+  await initDb();
+  const finished = window.filter((m) => m.status === "FINISHED");
+  const result = await processMatches(getSql(), finished);
+
+  let pointsSynced = 0;
+  try {
+    ({ updated: pointsSynced } = await syncGroupPoints(getSql()));
+  } catch (err) {
+    console.warn("[results-sync] group points sync failed:", err);
+  }
+
+  return { idle: false as const, dateFrom, dateTo, pointsSynced, ...result };
+}
 
 export async function runResultsSync() {
   await initDb();

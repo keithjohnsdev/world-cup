@@ -273,9 +273,13 @@ export function NewsTab() {
     : selectedTeam
       ? selectedTeam.name
       : "World Cup news";
-  // Always-available "browse more" escape hatch — a plain Google News search.
+  // Always-available "browse more" escape hatch — a plain Google News search,
+  // biased toward World Cup football (mirrors footballScope in lib/google-news).
   const liveTerm = [query, selectedTeam?.name].filter(Boolean).join(" ").trim() || "World Cup 2026";
-  const googleNewsUrl = `https://news.google.com/search?q=${encodeURIComponent(liveTerm)}`;
+  const scopedTerm = /\b(soccer|football|world ?cup|fifa|usmnt|uswnt)\b/i.test(liveTerm)
+    ? liveTerm
+    : `${liveTerm} soccer World Cup`;
+  const googleNewsUrl = `https://news.google.com/search?q=${encodeURIComponent(scopedTerm)}`;
 
   return (
     <div className="min-h-screen" style={{ background: "linear-gradient(160deg, #060d1a 0%, #0d2137 60%, #071628 100%)" }}>
