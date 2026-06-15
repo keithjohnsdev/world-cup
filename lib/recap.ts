@@ -6,20 +6,40 @@
 import Anthropic from "@anthropic-ai/sdk";
 
 // Default to Opus 4.8. Override with NEWS_RECAP_MODEL (e.g. claude-haiku-4-5 /
-// claude-sonnet-4-6) to trade quality for cost — recaps are cached per story, so
-// each one is generated at most once.
+// claude-sonnet-4-6) to trade quality for cost — recaps are cached per story and
+// tone, so each variant is generated at most once.
 const MODEL = process.env.NEWS_RECAP_MODEL || "claude-opus-4-8";
 
-const SYSTEM = `You are a sports writer for a family World Cup 2026 web app.
-Write an original, concise recap of the news story described below, in your own words,
-based ONLY on the facts present in the provided source text.
+export type RecapTone = "straight" | "comedic";
 
-Rules:
-- Do not copy sentences verbatim from the source — paraphrase entirely.
-- Do not invent scores, names, quotes, dates, or any detail not present in the source.
-- If the source text is thin, keep the recap short and general rather than inventing specifics.
-- Write 2 to 4 short paragraphs of plain Markdown. No headings, no bullet lists, no preamble.
+export function isRecapTone(v: string | null | undefined): v is RecapTone {
+  return v === "straight" || v === "comedic";
+}
+
+// Shared grounding rules — identical factual constraints across tones so the
+// comedic version stays funny about *real* facts and never invents anything.
+const GROUNDING = `Base everything ONLY on the facts present in the provided source text.
+- Paraphrase entirely — never copy sentences verbatim from the source.
+- Never invent scores, names, quotes, dates, or any detail not present in the source.
+- If the source text is thin, write a shorter recap rather than inventing specifics.
+- Write 4 to 6 paragraphs of plain Markdown. No headings, no bullet lists, no preamble.
 - Start directly with the recap. Output only the recap — no "Here is", no meta-commentary.`;
+
+const SYSTEMS: Record<RecapTone, string> = {
+  straight: `You are a sports writer for a family World Cup 2026 web app. Write an engaging,
+detailed recap of the news story below in your own words — cover the key facts, the
+relevant background and context, and what it means going forward, so a reader gets the
+full picture without leaving for the original article.
+
+${GROUNDING}`,
+  comedic: `You are a witty, irreverent sports columnist for a family World Cup 2026 web app.
+Write a genuinely funny, entertaining recap of the news story below — playful banter, clever
+asides, and a light comedic spin on what actually happened. Keep it warm and family-friendly:
+no crude language, no mean-spirited insults, no profanity. The humor rides on top of the real
+facts; be funny about what happened, never funny by making things up.
+
+${GROUNDING}`,
+};
 
 let _client: Anthropic | undefined;
 function client(): Anthropic {
@@ -35,16 +55,17 @@ export async function generateRecap(args: {
   title: string;
   source: string;
   text: string;
+  tone: RecapTone;
 }): Promise<string> {
   const body = args.text.trim()
     ? `SOURCE: ${args.source}\nHEADLINE: ${args.title}\n\nARTICLE TEXT:\n${args.text}`
-    : `SOURCE: ${args.source}\nHEADLINE: ${args.title}\n\n(No article body was available — write a brief, neutral recap based on the headline alone, without inventing specifics.)`;
+    : `SOURCE: ${args.source}\nHEADLINE: ${args.title}\n\n(No article body was available — write a brief recap based on the headline alone, without inventing specifics.)`;
 
   const res = await client().messages.create({
     model: MODEL,
-    max_tokens: 1024,
-    output_config: { effort: "low" }, // simple grounded summarization
-    system: SYSTEM,
+    max_tokens: 2048, // room for the longer, more detailed recaps
+    output_config: { effort: "low" }, // grounded summarization; length comes from the prompt
+    system: SYSTEMS[args.tone],
     messages: [{ role: "user", content: body }],
   });
 

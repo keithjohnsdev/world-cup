@@ -194,7 +194,15 @@ const COUNTRY_MATCHERS: CountryMatcher[] = TEAMS.flatMap((team) => {
   });
 });
 
-const WORLD_CUP_RE = /(world cup|fifa)/;
+const WORLD_CUP_RE = /(world cup|\bwc[\s-]?2026\b|\bfifa\b)/;
+
+// Transfer/club-football giveaways — used to reject stories that only name-drop
+// the World Cup (or a national-team player) in passing.
+const TRANSFER_RE = /\b(sign|signs|signed|signing|transfer|transfers|loan|loaned|bid|swap|unveil|unveiled|contract)\b|[£€$]\s?\d/;
+
+// Other-sport "World Cup" events that share the feeds (Sky carries darts, etc.).
+// "world cup of X" is never the FIFA World Cup.
+const NON_FOOTBALL_RE = /\bworld cup of\b|\b(darts|rugby|cricket|netball|snooker|hockey|handball|baseball|basketball)\b/;
 
 export function matchCountries(text: string): string[] {
   const norm = normalizeText(text);
@@ -205,10 +213,17 @@ export function matchCountries(text: string): string[] {
   return [...ids];
 }
 
-// A story is World Cup-relevant if it names a participating nation or mentions
-// the World Cup / FIFA — this filters out generic club football from the feeds.
-function isRelevant(text: string, countries: string[]): boolean {
-  return countries.length > 0 || WORLD_CUP_RE.test(normalizeText(text));
+// World Cup-relevant only. A bare country mention is too noisy — club/transfer
+// stories constantly name national-team players — so we require an explicit World
+// Cup signal, and additionally reject stories whose headline is clearly a
+// transfer/club item that just mentions the tournament in passing.
+function isRelevant(title: string, summary: string): boolean {
+  const full = normalizeText(`${title} ${summary}`);
+  if (!WORLD_CUP_RE.test(full)) return false;
+  if (NON_FOOTBALL_RE.test(full)) return false; // darts/rugby/etc. World Cups
+  const titleN = normalizeText(title);
+  if (TRANSFER_RE.test(titleN) && !/world cup/.test(titleN)) return false;
+  return true;
 }
 
 // ── Clustering & scoring ────────────────────────────────────────────────────────
@@ -265,7 +280,7 @@ export function clusterAndScore(articles: RawArticle[]): ScoredArticle[] {
   const candidates = [...byUrl.values()]
     .filter((a) => a.publishedAt.getTime() >= cutoff)
     .map((a) => ({ a, countries: matchCountries(`${a.title} ${a.summary}`) }))
-    .filter(({ a, countries }) => isRelevant(`${a.title} ${a.summary}`, countries))
+    .filter(({ a }) => isRelevant(a.title, a.summary))
     .sort((x, y) => y.a.publishedAt.getTime() - x.a.publishedAt.getTime());
 
   const clusters: Cluster[] = [];

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { TEAMS, getTeam } from "@/lib/data";
 import { FlagIcon } from "@/components/FlagIcon";
@@ -16,9 +16,6 @@ interface Article {
   countries: string[];
   sourceCount: number;
 }
-
-// Tournament hosts get quick-filter pills; everything else lives in the dropdown.
-const HOST_IDS = ["USA", "MEX", "CAN"] as const;
 
 function relativeTime(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -50,12 +47,13 @@ function NewsReaderModal({ article, onClose }: { article: Article; onClose: () =
   const [recap, setRecap] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
+  const [tone, setTone] = useState<"straight" | "comedic">("straight");
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setFailed(false);
-    fetch(`/api/news/recap?url=${encodeURIComponent(article.url)}`)
+    fetch(`/api/news/recap?url=${encodeURIComponent(article.url)}&tone=${tone}`)
       .then((r) => r.json())
       .then((data: { recap: string | null }) => {
         if (cancelled) return;
@@ -71,7 +69,7 @@ function NewsReaderModal({ article, onClose }: { article: Article; onClose: () =
     return () => {
       cancelled = true;
     };
-  }, [article.url]);
+  }, [article.url, tone]);
 
   return (
     <div
@@ -111,6 +109,21 @@ function NewsReaderModal({ article, onClose }: { article: Article; onClose: () =
               <CountryFlags ids={article.countries} className="w-6 h-4 rounded-[2px]" />
             </div>
           )}
+
+          {/* Tone toggle — experiment with the recap voice */}
+          <div className="flex items-center gap-1 mb-5 rounded-full bg-white/5 p-1 w-fit">
+            {(["straight", "comedic"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTone(t)}
+                className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-[0.1em] transition-all cursor-pointer ${
+                  tone === t ? "bg-yellow-300 text-green-950" : "text-white/60 hover:text-white"
+                }`}
+              >
+                {t === "straight" ? "Straight" : "😂 Comedic"}
+              </button>
+            ))}
+          </div>
 
           {loading ? (
             <div className="space-y-3 animate-pulse" aria-label="Loading recap">
@@ -159,6 +172,9 @@ function timeAgo(d: Date): string {
 
 export function NewsTab() {
   const [country, setCountry] = useState<string>(""); // "" = all
+  const [sort, setSort] = useState<"hot" | "new">("hot");
+  const [countryOpen, setCountryOpen] = useState(false);
+  const countryRef = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState<string>(""); // raw input
   const [query, setQuery] = useState<string>(""); // debounced — what we fetch on
   const [articles, setArticles] = useState<Article[]>([]);
@@ -185,6 +201,18 @@ export function NewsTab() {
     return () => clearInterval(id);
   }, []);
 
+  // Close the country dropdown on an outside click.
+  useEffect(() => {
+    if (!countryOpen) return;
+    function onDown(e: MouseEvent) {
+      if (countryRef.current && !countryRef.current.contains(e.target as Node)) {
+        setCountryOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [countryOpen]);
+
   // Debounce the free-text search so we don't fetch on every keystroke.
   useEffect(() => {
     const id = setTimeout(() => setQuery(search.trim()), 300);
@@ -202,6 +230,7 @@ export function NewsTab() {
     const params = new URLSearchParams();
     if (country) params.set("country", country);
     if (query) params.set("q", query);
+    if (sort === "new") params.set("sort", "new");
     const qs = params.toString() ? `?${params.toString()}` : "";
 
     // When the local feed has nothing for a typed query, ask Claude to search
@@ -242,7 +271,9 @@ export function NewsTab() {
     return () => {
       cancelled = true;
     };
-  }, [country, query]);
+  }, [country, query, sort]);
+
+  const selectedTeam = country ? getTeam(country) : null;
 
   return (
     <div className="min-h-screen" style={{ background: "linear-gradient(160deg, #060d1a 0%, #0d2137 60%, #071628 100%)" }}>
@@ -268,44 +299,79 @@ export function NewsTab() {
           </p>
         )}
 
-        {/* Filter: host pills + full-country dropdown */}
+        {/* Filter: sort pills + country dropdown + search */}
         <div className="flex flex-wrap items-center justify-center gap-2 mb-8">
           <button
-            onClick={() => setCountry("")}
+            onClick={() => setSort("hot")}
             className={`px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-[0.1em] transition-all cursor-pointer ${
-              country === "" ? "bg-yellow-300 text-green-950" : "bg-white/10 text-white/70 hover:text-white"
+              sort === "hot" ? "bg-yellow-300 text-green-950" : "bg-white/10 text-white/70 hover:text-white"
             }`}
           >
-            All
+            🔥 Hottest
           </button>
-          {HOST_IDS.map((id) => {
-            const team = getTeam(id);
-            if (!team) return null;
-            return (
-              <button
-                key={id}
-                onClick={() => setCountry(id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-[0.1em] transition-all cursor-pointer ${
-                  country === id ? "bg-yellow-300 text-green-950" : "bg-white/10 text-white/70 hover:text-white"
-                }`}
-              >
-                <FlagIcon cc={team.cc} name={team.name} className="w-4 h-3 rounded-[2px]" />
-                {team.id}
-              </button>
-            );
-          })}
-          <select
-            value={HOST_IDS.includes(country as typeof HOST_IDS[number]) || country === "" ? "" : country}
-            onChange={(e) => setCountry(e.target.value)}
-            className="px-3 py-1.5 rounded-full bg-white/10 border border-white/15 text-white/80 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-yellow-300/50 cursor-pointer"
+          <button
+            onClick={() => setSort("new")}
+            className={`px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-[0.1em] transition-all cursor-pointer ${
+              sort === "new" ? "bg-yellow-300 text-green-950" : "bg-white/10 text-white/70 hover:text-white"
+            }`}
           >
-            <option value="">More countries…</option>
-            {sortedTeams.map((t) => (
-              <option key={t.id} value={t.id} className="text-black">
-                {t.name}
-              </option>
-            ))}
-          </select>
+            🕐 Newest
+          </button>
+
+          {/* Country: styled flag dropdown */}
+          <div className="relative" ref={countryRef}>
+            <button
+              onClick={() => setCountryOpen((o) => !o)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-[0.1em] transition-all cursor-pointer ${
+                country ? "bg-yellow-300 text-green-950" : "bg-white/10 text-white/70 hover:text-white"
+              }`}
+            >
+              {selectedTeam ? (
+                <>
+                  <FlagIcon cc={selectedTeam.cc} name={selectedTeam.name} className="w-4 h-3 rounded-[2px]" />
+                  {selectedTeam.id}
+                </>
+              ) : (
+                "Country"
+              )}
+              <svg
+                width="9" height="9" viewBox="0 0 10 10" fill="none"
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                className="transition-transform"
+                style={{ transform: countryOpen ? "rotate(180deg)" : "none" }}
+              >
+                <path d="M2 3.5L5 6.5L8 3.5" />
+              </svg>
+            </button>
+
+            {countryOpen && (
+              <div className="absolute z-30 mt-2 left-1/2 -translate-x-1/2 w-60 max-h-72 overflow-y-auto rounded-2xl border border-white/15 shadow-2xl p-1.5" style={{ background: "#0d2137" }}>
+                <button
+                  onClick={() => { setCountry(""); setCountryOpen(false); }}
+                  className={`flex items-center gap-2 w-full px-2.5 py-2 rounded-xl text-left text-xs transition-colors cursor-pointer ${
+                    country === "" ? "bg-yellow-300/15 text-yellow-300" : "text-white hover:bg-white/10"
+                  }`}
+                >
+                  <span className="w-5 text-center shrink-0">🌐</span>
+                  <span className="font-bold">All countries</span>
+                </button>
+                <div className="h-px bg-white/10 my-1" />
+                {sortedTeams.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => { setCountry(t.id); setCountryOpen(false); }}
+                    className={`flex items-center gap-2 w-full px-2.5 py-2 rounded-xl text-left text-xs transition-colors cursor-pointer ${
+                      country === t.id ? "bg-yellow-300/15 text-yellow-300" : "text-white hover:bg-white/10"
+                    }`}
+                  >
+                    <FlagIcon cc={t.cc} name={t.name} className="w-5 h-3.5 rounded-[2px] shrink-0" />
+                    <span className="font-black w-8 shrink-0">{t.id}</span>
+                    <span className="truncate text-white/70">{t.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Free-text search across story titles & summaries */}
           <div className="relative">

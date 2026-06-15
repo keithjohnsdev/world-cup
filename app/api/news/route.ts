@@ -26,6 +26,8 @@ export async function GET(req: NextRequest) {
 
   const country = req.nextUrl.searchParams.get("country");
   const q = (req.nextUrl.searchParams.get("q") ?? "").trim();
+  // "hot" (most cross-outlet traction) is the default; "new" is purely recency.
+  const sort = req.nextUrl.searchParams.get("sort") === "new" ? "new" : "hot";
   const limitParam = parseInt(req.nextUrl.searchParams.get("limit") ?? "40", 10);
   const limit = Math.min(Math.max(isNaN(limitParam) ? 40 : limitParam, 1), 100);
 
@@ -44,6 +46,12 @@ export async function GET(req: NextRequest) {
   }
   const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
 
+  // Whitelisted ordering (never interpolate user input directly).
+  const orderBy =
+    sort === "new"
+      ? "published_at DESC, traction DESC"
+      : "traction DESC, published_at DESC";
+
   // Over-fetch so cluster dedupe still leaves a full page.
   const fetchLimit = limit * 4;
   params.push(fetchLimit);
@@ -52,7 +60,7 @@ export async function GET(req: NextRequest) {
             countries, cluster_id, source_count, traction
      FROM news_articles
      ${where}
-     ORDER BY traction DESC, published_at DESC
+     ORDER BY ${orderBy}
      LIMIT $${params.length}`,
     params,
   )) as NewsRow[];
