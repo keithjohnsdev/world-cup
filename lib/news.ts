@@ -49,7 +49,14 @@ function stripHtml(s: string): string {
 }
 
 function clean(s: string): string {
-  return decodeEntities(stripHtml(stripCdata(s))).replace(/\s+/g, " ").trim();
+  // Order matters: some feeds (e.g. Guardian) entity-encode their HTML
+  // (`&lt;p&gt;…`). Decode first so those become real tags, then strip tags, then
+  // decode once more for any plain text entities (`&amp;`, `&#39;`) left behind.
+  let t = stripCdata(s);
+  t = decodeEntities(t); // reveal entity-encoded tags
+  t = stripHtml(t); // remove tags (literal or just-revealed)
+  t = decodeEntities(t); // decode remaining text entities
+  return t.replace(/\s+/g, " ").trim();
 }
 
 // ascii-lowercase, diacritics removed, smart quotes normalized — so "Türkiye"
