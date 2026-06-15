@@ -143,6 +143,31 @@ export async function initDb() {
     )
   `;
 
+  // ── News ──────────────────────────────────────────────────────────────────────
+  // Aggregated World Cup stories pulled from reputable RSS feeds by the cron.
+  // url is the primary key, giving natural idempotency across runs (a story keeps
+  // its row and just refreshes its traction/source_count). countries holds the
+  // matched team ids (e.g. ["USA","MEX"]); source_count is how many distinct
+  // outlets are covering the same story (the traction signal). Old rows are pruned
+  // by the sync, so this table stays small.
+  await sql`
+    CREATE TABLE IF NOT EXISTS news_articles (
+      url           TEXT PRIMARY KEY,
+      title         TEXT NOT NULL,
+      source        TEXT NOT NULL,
+      summary       TEXT,
+      image_url     TEXT,
+      published_at  TIMESTAMPTZ NOT NULL,
+      countries     JSONB NOT NULL DEFAULT '[]',
+      cluster_id    TEXT,
+      source_count  INTEGER NOT NULL DEFAULT 1,
+      traction      DOUBLE PRECISION NOT NULL DEFAULT 0,
+      fetched_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS news_published_idx ON news_articles (published_at DESC)`;
+  await sql`CREATE INDEX IF NOT EXISTS news_traction_idx ON news_articles (traction DESC)`;
+
   // ── Awards ────────────────────────────────────────────────────────────────────
   // Computed by the admin after the tournament (or after each round for live awards).
   // One row per award, re-runnable (DO UPDATE).

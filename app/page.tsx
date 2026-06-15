@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { GroupPicksModal, type ScoreBreakdownProps } from "@/components/GroupPicksModal";
 import { BracketPicker } from "@/components/BracketPicker";
+import { NewsTab } from "@/components/NewsTab";
 
 const GlobeView = dynamic(() => import("@/components/GlobeView"), { ssr: false });
 const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
@@ -929,7 +930,7 @@ function ChampionPicker({ picks, onPick, locked = false }: { picks: Picks; onPic
 
 export default function BracketPage() {
   const [picks, setPicks] = useState<Picks>({});
-  const [tab, setTab] = useState<"groups" | "bracket" | "rules" | "world" | "leaderboard">("rules");
+  const [tab, setTab] = useState<"groups" | "bracket" | "rules" | "world" | "leaderboard" | "news">("rules");
   const [userName, setUserName] = useState("");
   const [worldView, setWorldView] = useState<"globe" | "map">("globe");
   const [hoveredTeam, setHoveredTeam] = useState<string | null>(null);
@@ -950,8 +951,8 @@ export default function BracketPage() {
     if (!token) { router.replace("/landing"); return; }
     setUserName(name || "");
 
-    const urlTab = new URLSearchParams(window.location.search).get("tab") as "rules" | "groups" | "bracket" | "world" | "leaderboard" | null;
-    if (urlTab && ["rules", "groups", "bracket", "world", "leaderboard"].includes(urlTab)) setTab(urlTab);
+    const urlTab = new URLSearchParams(window.location.search).get("tab") as "rules" | "groups" | "bracket" | "world" | "leaderboard" | "news" | null;
+    if (urlTab && ["rules", "groups", "bracket", "world", "leaderboard", "news"].includes(urlTab)) setTab(urlTab);
 
     fetch("/api/picks", { headers: { "x-session-token": token } })
       .then((r) => r.json())
@@ -1049,7 +1050,7 @@ export default function BracketPage() {
         }
         center={
           <div className="flex h-full">
-            {(["rules", "groups", "bracket", "leaderboard", "world"] as const).map((t) => (
+            {(["rules", "groups", "bracket", "leaderboard", "news", "world"] as const).map((t) => (
               <button
                 key={t}
                 onClick={e => { (e.currentTarget as HTMLElement).style.color = ""; (e.currentTarget as HTMLElement).style.textShadow = ""; setTab(t); history.replaceState(null, "", `?tab=${t}`); }}
@@ -1061,7 +1062,7 @@ export default function BracketPage() {
                 onMouseEnter={e => { if (tab !== t) { const el = e.currentTarget as HTMLElement; el.style.color = "#ffffff"; el.style.textShadow = "0 0 10px rgba(255,255,255,0.5)"; }}}
                 onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = ""; el.style.textShadow = ""; }}
               >
-                {t === "groups" ? "Phase 1 - Groups" : t === "bracket" ? "Phase 2 - Bracket" : t === "world" ? "🌍 The World" : t === "leaderboard" ? "Leaderboard" : "The Rules"}
+                {t === "groups" ? "Phase 1 - Groups" : t === "bracket" ? "Phase 2 - Bracket" : t === "world" ? "🌍 The World" : t === "leaderboard" ? "Leaderboard" : t === "news" ? "📰 News" : "The Rules"}
                 <span className={`absolute bottom-[-1px] inset-x-0 h-[2px] ${tab === t ? "bg-yellow-300" : ""}`} />
               </button>
             ))}
@@ -1179,6 +1180,7 @@ export default function BracketPage() {
       {/* Rules tab */}
       {tab === "rules" && <RulesTab />}
       {tab === "leaderboard" && <LeaderboardTab />}
+      {tab === "news" && <NewsTab />}
 
       {/* World tab */}
       {tab === "world" && (
