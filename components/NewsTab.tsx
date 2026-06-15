@@ -245,7 +245,14 @@ export function NewsTab() {
         setArticles(list);
         setLastFetched(new Date());
         setLoading(false);
-        if (list.length === 0 && query) runWebSearch(query);
+        // Never serve an empty page: on any miss (string and/or country, or even
+        // a cold feed) fall back to a live web search of the same outlets.
+        if (list.length === 0) {
+          const countryName = country ? getTeam(country)?.name ?? country : "";
+          const term =
+            [query, countryName].filter(Boolean).join(" ").trim() || "World Cup 2026 latest";
+          runWebSearch(term);
+        }
       })
       .catch(() => {
         if (cancelled) return;
@@ -258,6 +265,12 @@ export function NewsTab() {
   }, [country, query, sort]);
 
   const selectedTeam = country ? getTeam(country) : null;
+  // Human label for the live web-search states (string and/or country filter).
+  const searchLabel = query
+    ? `“${query}”${selectedTeam ? ` · ${selectedTeam.name}` : ""}`
+    : selectedTeam
+      ? selectedTeam.name
+      : "World Cup news";
 
   return (
     <div className="min-h-screen" style={{ background: "linear-gradient(160deg, #060d1a 0%, #0d2137 60%, #071628 100%)" }}>
@@ -383,44 +396,40 @@ export function NewsTab() {
         ) : error ? (
           <p className="text-center text-white/50 text-sm py-16">Couldn&apos;t load the news right now. Try again shortly.</p>
         ) : articles.length === 0 ? (
-          query ? (
-            // Local feed had no match for this query → live web fallback via Claude.
-            webSearching ? (
-              <p className="text-center text-white/50 text-sm py-16">Searching the web for &ldquo;{query}&rdquo;&hellip;</p>
-            ) : webArticles.length > 0 ? (
-              <div>
-                <div className="flex items-center justify-center gap-2 mb-4">
-                  <span className="text-[10px] font-black uppercase tracking-[0.15em] text-yellow-300">🌐 Live web results</span>
-                </div>
-                <div className="space-y-3">
-                  {webArticles.map((a) => (
-                    <a
-                      key={a.url}
-                      href={a.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block rounded-2xl border border-white/10 bg-white/5 hover:bg-white/[0.08] transition-colors p-4"
-                    >
-                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                        <span className="text-[11px] font-black uppercase tracking-[0.1em] text-green-400">{a.source}</span>
-                      </div>
-                      <h3 className="font-bold text-white leading-snug">{a.title}</h3>
-                      {a.summary && <p className="text-white/55 text-sm mt-1 line-clamp-2">{a.summary}</p>}
-                    </a>
-                  ))}
-                </div>
-                <p className="text-center text-white/25 text-[11px] mt-4">Found live on the web &mdash; not from our usual feed.</p>
+          // Never serve an empty page: any miss falls back to a live web search.
+          webSearching ? (
+            <p className="text-center text-white/50 text-sm py-16">Searching the web for {searchLabel}&hellip;</p>
+          ) : webArticles.length > 0 ? (
+            <div>
+              <div className="flex items-center justify-center gap-2 mb-4">
+                <span className="text-[10px] font-black uppercase tracking-[0.15em] text-yellow-300">🌐 Live web results</span>
               </div>
-            ) : (
-              <p className="text-center text-white/50 text-sm py-16">
-                No stories matching &ldquo;{query}&rdquo;{country ? ` for ${getTeam(country)?.name ?? "this country"}` : ""}.
-                {webDone && webEnabled ? " We checked the web too." : ""}
-              </p>
-            )
-          ) : (
+              <div className="space-y-3">
+                {webArticles.map((a) => (
+                  <a
+                    key={a.url}
+                    href={a.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block rounded-2xl border border-white/10 bg-white/5 hover:bg-white/[0.08] transition-colors p-4"
+                  >
+                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                      <span className="text-[11px] font-black uppercase tracking-[0.1em] text-green-400">{a.source}</span>
+                    </div>
+                    <h3 className="font-bold text-white leading-snug">{a.title}</h3>
+                    {a.summary && <p className="text-white/55 text-sm mt-1 line-clamp-2">{a.summary}</p>}
+                  </a>
+                ))}
+              </div>
+              <p className="text-center text-white/25 text-[11px] mt-4">Found live on the web &mdash; not from our usual feed.</p>
+            </div>
+          ) : webDone ? (
             <p className="text-center text-white/50 text-sm py-16">
-              No stories yet{country ? ` for ${getTeam(country)?.name ?? "this country"}` : ""}. Check back soon.
+              Couldn&apos;t find anything for {searchLabel} right now.
+              {webEnabled ? " Check back soon." : ""}
             </p>
+          ) : (
+            <p className="text-center text-white/50 text-sm py-16">Searching the web for {searchLabel}&hellip;</p>
           )
         ) : (
           <div className="space-y-3">
