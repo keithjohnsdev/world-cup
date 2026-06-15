@@ -263,7 +263,7 @@ export function NewsTab() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search stories…"
-              className="w-44 pl-8 pr-3 py-1.5 rounded-full bg-white/10 border border-white/15 text-white/80 text-xs font-bold placeholder:text-white/40 placeholder:font-medium focus:outline-none focus:ring-2 focus:ring-yellow-300/50"
+              className="w-44 pl-8 pr-3 py-1.5 rounded-full bg-white/[0.06] border border-white/10 text-white/80 text-xs font-bold placeholder:text-white/40 placeholder:font-medium focus:outline-none focus:ring-2 focus:ring-yellow-300/50"
             />
           </div>
         </div>
