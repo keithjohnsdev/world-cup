@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, Fragment } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { GROUPS, getTeam } from "@/lib/data";
 import { FlagIcon } from "@/components/FlagIcon";
 
@@ -308,25 +308,15 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
                     const isCutoff = posIdx === 2;
 
                     return (
-                      <Fragment key={stage}>
-                      {isCutoff && (
-                        <div
-                          className="flex items-center justify-center px-4 py-1"
-                          style={{
-                            background: "rgba(234,179,8,0.10)",
-                            borderTop: "2px solid rgba(234,179,8,0.55)",
-                          }}
-                        >
-                          <span className="text-yellow-300/80 text-[9px] font-black uppercase tracking-[0.18em]">
-                            ↑ Advance · +2 bonus
-                          </span>
-                        </div>
-                      )}
                       <div
+                        key={stage}
                         className="flex items-center gap-3 px-4 py-2.5"
                         style={{
                           background: rowBg || undefined,
-                          borderTop: isCutoff ? "none" : "1px solid rgba(255,255,255,0.05)",
+                          borderTop: isCutoff
+                            ? "2px solid rgba(234,179,8,0.55)"
+                            : "1px solid rgba(255,255,255,0.05)",
+                          boxShadow: isCutoff ? "0 -3px 8px -4px rgba(234,179,8,0.45)" : undefined,
                         }}
                       >
                         <div className="w-7 shrink-0 text-center text-[11px] font-black text-white/30 tabular-nums">
@@ -393,7 +383,6 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
                           </div>
                         )}
                       </div>
-                      </Fragment>
                     );
                   })}
                 </div>
