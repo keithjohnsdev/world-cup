@@ -1065,7 +1065,7 @@ export default function BracketPage() {
                 {t === "news" ? (
                   <span className="relative inline-block">
                     📰 News
-                    <span className="absolute -top-1.5 -right-3 rounded-full bg-red-500 px-1.5 py-px text-[8px] font-black uppercase tracking-tight text-white shadow-md animate-pulse">
+                    <span className="absolute -top-2.5 -right-6 rounded-full bg-red-500 px-1.5 py-px text-[8px] font-black uppercase tracking-tight text-white shadow-md animate-pulse">
                       New!
                     </span>
                   </span>
