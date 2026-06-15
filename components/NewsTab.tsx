@@ -43,33 +43,49 @@ function CountryFlags({ ids, className }: { ids: string[]; className?: string })
 // In-app reader: shows our own Claude-generated recap of the story (kept on-site,
 // ad-free) with attribution and a link to the original. Recaps are cached, so the
 // model runs at most once per story.
-function NewsReaderModal({ article, onClose }: { article: Article; onClose: () => void }) {
-  const [recap, setRecap] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [failed, setFailed] = useState(false);
-  const [tone, setTone] = useState<"straight" | "comedic">("straight");
+type Tone = "straight" | "comedic";
+type ToneState = { recap: string | null; status: "loading" | "done" | "failed" };
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setFailed(false);
-    fetch(`/api/news/recap?url=${encodeURIComponent(article.url)}&tone=${tone}`)
+function NewsReaderModal({ article, onClose }: { article: Article; onClose: () => void }) {
+  const [tone, setTone] = useState<Tone>("straight");
+  const [byTone, setByTone] = useState<Record<Tone, ToneState | undefined>>({
+    straight: undefined,
+    comedic: undefined,
+  });
+  // Tones we've already kicked off — recaps are immutable per session, so each is
+  // fetched at most once (prefetch + click can't double-fire it).
+  const started = useRef<Set<Tone>>(new Set());
+
+  function fetchTone(t: Tone) {
+    if (started.current.has(t)) return;
+    started.current.add(t);
+    setByTone((prev) => ({ ...prev, [t]: { recap: null, status: "loading" } }));
+    fetch(`/api/news/recap?url=${encodeURIComponent(article.url)}&tone=${t}`)
       .then((r) => r.json())
-      .then((data: { recap: string | null }) => {
-        if (cancelled) return;
-        if (data.recap) setRecap(data.recap);
-        else setFailed(true); // no recap available — fall back to summary + link
-        setLoading(false);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setFailed(true);
-        setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [article.url, tone]);
+      .then((data: { recap: string | null }) =>
+        setByTone((prev) => ({
+          ...prev,
+          [t]: { recap: data.recap, status: data.recap ? "done" : "failed" },
+        })),
+      )
+      .catch(() =>
+        setByTone((prev) => ({ ...prev, [t]: { recap: null, status: "failed" } })),
+      );
+  }
+
+  // Reset and fetch the straight recap whenever a different story opens.
+  useEffect(() => {
+    started.current = new Set();
+    setByTone({ straight: undefined, comedic: undefined });
+    setTone("straight");
+    fetchTone("straight");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [article.url]);
+
+  const cur = byTone[tone];
+  const loading = !cur || cur.status === "loading";
+  const recap = cur?.status === "done" ? cur.recap : null;
+  const failed = cur?.status === "failed";
 
   return (
     <div
@@ -110,12 +126,15 @@ function NewsReaderModal({ article, onClose }: { article: Article; onClose: () =
             </div>
           )}
 
-          {/* Tone toggle — experiment with the recap voice */}
+          {/* Tone toggle — prefetch on hover/press so the switch feels instant */}
           <div className="flex items-center gap-1 mb-5 rounded-full bg-white/5 p-1 w-fit">
             {(["straight", "comedic"] as const).map((t) => (
               <button
                 key={t}
-                onClick={() => setTone(t)}
+                onClick={() => { fetchTone(t); setTone(t); }}
+                onMouseEnter={() => fetchTone(t)}
+                onFocus={() => fetchTone(t)}
+                onPointerDown={() => fetchTone(t)}
                 className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-[0.1em] transition-all cursor-pointer ${
                   tone === t ? "bg-yellow-300 text-green-950" : "text-white/60 hover:text-white"
                 }`}

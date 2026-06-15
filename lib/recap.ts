@@ -21,8 +21,9 @@ export function isRecapTone(v: string | null | undefined): v is RecapTone {
 const GROUNDING = `Base everything ONLY on the facts present in the provided source text.
 - Paraphrase entirely — never copy sentences verbatim from the source.
 - Never invent scores, names, quotes, dates, or any detail not present in the source.
-- If the source text is thin, write a shorter recap rather than inventing specifics.
-- Write 4 to 6 paragraphs of plain Markdown. No headings, no bullet lists, no preamble.
+- Be thorough and detailed: aim for roughly 6 to 10 paragraphs that tell the full story — what happened, the key moments and specifics, the background and context, any reactions or quotes present in the source, and what it means going forward. Use everything relevant in the source and expand on it rather than just summarizing.
+- If the source text is genuinely thin, write what you legitimately can without padding or inventing — never manufacture detail just to reach a length.
+- Plain Markdown only. No headings, no bullet lists, no preamble.
 - Start directly with the recap. Output only the recap — no "Here is", no meta-commentary.`;
 
 const SYSTEMS: Record<RecapTone, string> = {
@@ -63,8 +64,8 @@ export async function generateRecap(args: {
 
   const res = await client().messages.create({
     model: MODEL,
-    max_tokens: 2048, // room for the longer, more detailed recaps
-    output_config: { effort: "low" }, // grounded summarization; length comes from the prompt
+    max_tokens: 4096, // room for the long, detailed recaps
+    output_config: { effort: "medium" }, // a bit more depth for the longer recaps
     system: SYSTEMS[args.tone],
     messages: [{ role: "user", content: body }],
   });

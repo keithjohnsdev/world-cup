@@ -930,7 +930,9 @@ function ChampionPicker({ picks, onPick, locked = false }: { picks: Picks; onPic
 
 export default function BracketPage() {
   const [picks, setPicks] = useState<Picks>({});
-  const [tab, setTab] = useState<"groups" | "bracket" | "rules" | "world" | "leaderboard" | "news">("rules");
+  // Logged-in users land on the leaderboard by default (an explicit ?tab= in the
+  // URL still wins). Switch this to "bracket" once the knockout stage opens.
+  const [tab, setTab] = useState<"groups" | "bracket" | "rules" | "world" | "leaderboard" | "news">("leaderboard");
   const [userName, setUserName] = useState("");
   const [worldView, setWorldView] = useState<"globe" | "map">("globe");
   const [hoveredTeam, setHoveredTeam] = useState<string | null>(null);

@@ -206,7 +206,9 @@ export default function Home() {
       const data = await res.json();
       localStorage.setItem("wc_token", data.session_token);
       localStorage.setItem("wc_name", data.name);
-      router.push(data.is_new ? "/" : "/?tab=groups");
+      // Land everyone on the app's default tab (leaderboard). Switch to the
+      // bracket tab here once the knockout stage opens.
+      router.push("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
