@@ -19,6 +19,7 @@ const OVERRIDES: Record<string, string> = {
   "democratic republic of congo": "COD",
   "saudi arabia":                 "KSA",
   "cape verde":                   "CPV",
+  "cape verde islands":           "CPV", // football-data.org sends "Cape Verde Islands"
   "czechia":                      "CZE",
   "czech republic":               "CZE",
   "turkey":                       "TUR",
