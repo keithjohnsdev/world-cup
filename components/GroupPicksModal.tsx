@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Fragment } from "react";
 import { GROUPS, getTeam } from "@/lib/data";
 import { FlagIcon } from "@/components/FlagIcon";
 
