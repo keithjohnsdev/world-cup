@@ -40,6 +40,40 @@ function CountryFlags({ ids, className }: { ids: string[]; className?: string })
   );
 }
 
+// A live web-search result card. Google News has no article image, so we show a
+// flag thumbnail: the team named in the headline, else the active country filter.
+function WebResultCard({ a, fallbackCountry }: { a: WebSearchArticle; fallbackCountry: string }) {
+  const flagTeam = getTeam(a.countries[0] || fallbackCountry);
+  return (
+    <a
+      href={a.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex gap-4 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/[0.08] transition-colors p-4"
+    >
+      <div className="flex items-center justify-center w-16 h-16 rounded-lg bg-white/[0.06] flex-shrink-0 overflow-hidden">
+        {flagTeam ? (
+          <FlagIcon cc={flagTeam.cc} name={flagTeam.name} className="w-11 h-7 rounded-[2px] shadow" />
+        ) : (
+          <span className="text-2xl" aria-hidden>📰</span>
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+          <span className="text-[11px] font-black uppercase tracking-[0.1em] text-green-400">{a.source}</span>
+        </div>
+        <h3 className="font-bold text-white leading-snug">{a.title}</h3>
+        {a.summary && <p className="text-white/55 text-sm mt-1 line-clamp-2">{a.summary}</p>}
+        {a.countries.length > 0 && (
+          <div className="flex items-center gap-1.5 mt-2">
+            <CountryFlags ids={a.countries} className="w-5 h-3.5 rounded-[2px]" />
+          </div>
+        )}
+      </div>
+    </a>
+  );
+}
+
 // In-app reader: shows our own Claude-generated recap of the story (kept on-site,
 // ad-free) with attribution and a link to the original. Recaps are cached, so the
 // model runs at most once per story.
@@ -172,7 +206,6 @@ export function NewsTab() {
   const [webArticles, setWebArticles] = useState<WebSearchArticle[]>([]);
   const [webSearching, setWebSearching] = useState(false);
   const [webDone, setWebDone] = useState(false);
-  const [webEnabled, setWebEnabled] = useState(true);
   const [webVia, setWebVia] = useState<string | null>(null);
 
   const sortedTeams = useMemo(
@@ -227,7 +260,6 @@ export function NewsTab() {
         const data: { articles?: WebSearchArticle[]; enabled?: boolean; via?: string | null } = await r.json();
         if (cancelled) return;
         setWebArticles(Array.isArray(data.articles) ? data.articles : []);
-        setWebEnabled(data.enabled !== false);
         setWebVia(data.via ?? null);
       } catch {
         if (!cancelled) setWebArticles([]);
@@ -247,9 +279,10 @@ export function NewsTab() {
         setArticles(list);
         setLastFetched(new Date());
         setLoading(false);
-        // Never serve an empty page: on any miss (string and/or country, or even
-        // a cold feed) fall back to a live web search of the same outlets.
-        if (list.length === 0) {
+        // Top up thin results: run the live web search on an empty feed, or when a
+        // country/search filter turns up fewer than 5 stories from our own feed.
+        const hasFilter = Boolean(query || country);
+        if (list.length === 0 || (hasFilter && list.length < 5)) {
           const countryName = country ? getTeam(country)?.name ?? country : "";
           const term =
             [query, countryName].filter(Boolean).join(" ").trim() || "World Cup 2026 latest";
@@ -280,6 +313,15 @@ export function NewsTab() {
     ? liveTerm
     : `${liveTerm} soccer World Cup`;
   const googleNewsUrl = `https://news.google.com/search?q=${encodeURIComponent(scopedTerm)}`;
+
+  // Web supplement: shown when our feed is empty, or when a country/search filter
+  // returns fewer than 5 of our own stories (top up the rest with live results).
+  const hasFilter = Boolean(query || country);
+  const wantWeb = articles.length === 0 || (hasFilter && articles.length < 5);
+  const dbUrls = new Set(articles.map((a) => a.url));
+  const extraWeb = webArticles.filter((a) => !dbUrls.has(a.url));
+  // When we have our own stories above, the web section gets a labeled divider.
+  const showDivider = articles.length > 0;
 
   return (
     <div className="min-h-screen" style={{ background: "linear-gradient(160deg, #060d1a 0%, #0d2137 60%, #071628 100%)" }}>
@@ -404,123 +446,123 @@ export function NewsTab() {
           <p className="text-center text-white/50 text-sm py-16">Loading the latest…</p>
         ) : error ? (
           <p className="text-center text-white/50 text-sm py-16">Couldn&apos;t load the news right now. Try again shortly.</p>
-        ) : articles.length === 0 ? (
-          // Never serve an empty page: any miss falls back to a live web search.
-          webSearching ? (
-            <p className="text-center text-white/50 text-sm py-16">Searching the web for {searchLabel}&hellip;</p>
-          ) : webArticles.length > 0 ? (
-            <div>
-              <div className="flex items-center justify-center gap-2 mb-4">
-                <span className="text-[10px] font-black uppercase tracking-[0.15em] text-yellow-300">🌐 Live web results</span>
-              </div>
-              <div className="space-y-3">
-                {webArticles.map((a) => {
-                  // Google News carries no article image, so show a flag thumbnail:
-                  // the team named in the headline, else the active country filter.
-                  const flagTeam = getTeam(a.countries[0] || country);
-                  return (
-                    <a
-                      key={a.url}
-                      href={a.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex gap-4 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/[0.08] transition-colors p-4"
-                    >
-                      <div className="flex items-center justify-center w-16 h-16 rounded-lg bg-white/[0.06] flex-shrink-0 overflow-hidden">
-                        {flagTeam ? (
-                          <FlagIcon cc={flagTeam.cc} name={flagTeam.name} className="w-11 h-7 rounded-[2px] shadow" />
-                        ) : (
-                          <span className="text-2xl" aria-hidden>📰</span>
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                          <span className="text-[11px] font-black uppercase tracking-[0.1em] text-green-400">{a.source}</span>
-                        </div>
-                        <h3 className="font-bold text-white leading-snug">{a.title}</h3>
-                        {a.summary && <p className="text-white/55 text-sm mt-1 line-clamp-2">{a.summary}</p>}
-                        {a.countries.length > 0 && (
-                          <div className="flex items-center gap-1.5 mt-2">
-                            <CountryFlags ids={a.countries} className="w-5 h-3.5 rounded-[2px]" />
-                          </div>
-                        )}
-                      </div>
-                    </a>
-                  );
-                })}
-              </div>
-              <p className="text-center text-white/25 text-[11px] mt-4">
-                {webVia === "google" ? "Live from Google News" : "Found live on the web"} &mdash; not from our usual feed.
-              </p>
-              <div className="text-center mt-3">
-                <a
-                  href={googleNewsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[11px] font-black uppercase tracking-wide text-yellow-300/80 hover:text-yellow-200"
-                >
-                  More on Google News ↗
-                </a>
-              </div>
-            </div>
-          ) : webDone ? (
-            <div className="text-center py-16">
-              <p className="text-white/50 text-sm">
-                Couldn&apos;t find anything for {searchLabel} in our feeds right now.
-              </p>
-              <a
-                href={googleNewsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block mt-4 text-xs font-black uppercase tracking-wide text-yellow-300 hover:text-yellow-200"
-              >
-                🔎 Browse {searchLabel} on Google News ↗
-              </a>
-            </div>
-          ) : (
-            <p className="text-center text-white/50 text-sm py-16">Searching the web for {searchLabel}&hellip;</p>
-          )
         ) : (
-          <div className="space-y-3">
-            {articles.map((a) => (
-              <button
-                key={a.url}
-                onClick={() => setOpenArticle(a)}
-                className="w-full flex gap-4 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/[0.08] transition-colors p-4 text-left cursor-pointer"
-              >
-                {a.imageUrl && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={a.imageUrl}
-                    alt=""
-                    className="hidden sm:block w-28 h-20 rounded-lg object-cover flex-shrink-0 bg-white/5"
-                    loading="lazy"
-                  />
-                )}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                    <span className="text-[11px] font-black uppercase tracking-[0.1em] text-green-400">{a.source}</span>
-                    <span className="text-white/30 text-[11px]">·</span>
-                    <span className="text-white/40 text-[11px]">{relativeTime(a.publishedAt)}</span>
-                    {a.sourceCount > 1 && (
-                      <span className="text-[10px] font-black uppercase tracking-wide text-yellow-300 bg-yellow-300/10 rounded-full px-2 py-0.5">
-                        🔥 {a.sourceCount} outlets
-                      </span>
+          <>
+            {/* Our own aggregated feed */}
+            {articles.length > 0 && (
+              <div className="space-y-3">
+                {articles.map((a) => (
+                  <button
+                    key={a.url}
+                    onClick={() => setOpenArticle(a)}
+                    className="w-full flex gap-4 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/[0.08] transition-colors p-4 text-left cursor-pointer"
+                  >
+                    {a.imageUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={a.imageUrl}
+                        alt=""
+                        className="hidden sm:block w-28 h-20 rounded-lg object-cover flex-shrink-0 bg-white/5"
+                        loading="lazy"
+                      />
                     )}
-                  </div>
-                  <h3 className="font-bold text-white leading-snug">{a.title}</h3>
-                  {a.summary && (
-                    <p className="text-white/55 text-sm mt-1 line-clamp-2">{a.summary}</p>
-                  )}
-                  {a.countries.length > 0 && (
-                    <div className="flex items-center gap-1.5 mt-2">
-                      <CountryFlags ids={a.countries} className="w-5 h-3.5 rounded-[2px]" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                        <span className="text-[11px] font-black uppercase tracking-[0.1em] text-green-400">{a.source}</span>
+                        <span className="text-white/30 text-[11px]">·</span>
+                        <span className="text-white/40 text-[11px]">{relativeTime(a.publishedAt)}</span>
+                        {a.sourceCount > 1 && (
+                          <span className="text-[10px] font-black uppercase tracking-wide text-yellow-300 bg-yellow-300/10 rounded-full px-2 py-0.5">
+                            🔥 {a.sourceCount} outlets
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="font-bold text-white leading-snug">{a.title}</h3>
+                      {a.summary && (
+                        <p className="text-white/55 text-sm mt-1 line-clamp-2">{a.summary}</p>
+                      )}
+                      {a.countries.length > 0 && (
+                        <div className="flex items-center gap-1.5 mt-2">
+                          <CountryFlags ids={a.countries} className="w-5 h-3.5 rounded-[2px]" />
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </button>
-            ))}
-          </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Live web supplement: tops up thin filters / fills an empty feed */}
+            {wantWeb && (
+              <div className={articles.length > 0 ? "mt-10" : ""}>
+                {showDivider ? (
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="h-px flex-1 bg-white/10" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.15em] text-yellow-300/80 whitespace-nowrap">More from around the web</span>
+                    <div className="h-px flex-1 bg-white/10" />
+                  </div>
+                ) : articles.length === 0 && extraWeb.length > 0 ? (
+                  <div className="flex items-center justify-center gap-2 mb-4">
+                    <span className="text-[10px] font-black uppercase tracking-[0.15em] text-yellow-300">🌐 Live web results</span>
+                  </div>
+                ) : null}
+
+                {webSearching ? (
+                  <p className="text-center text-white/50 text-sm py-10">Searching the web for {searchLabel}&hellip;</p>
+                ) : extraWeb.length > 0 ? (
+                  <>
+                    <div className="space-y-3">
+                      {extraWeb.map((a) => (
+                        <WebResultCard key={a.url} a={a} fallbackCountry={country} />
+                      ))}
+                    </div>
+                    <p className="text-center text-white/25 text-[11px] mt-4">
+                      {webVia === "google" ? "Live from Google News" : "Found live on the web"} &mdash; not from our usual feed.
+                    </p>
+                    <div className="text-center mt-3">
+                      <a
+                        href={googleNewsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] font-black uppercase tracking-wide text-yellow-300/80 hover:text-yellow-200"
+                      >
+                        More on Google News ↗
+                      </a>
+                    </div>
+                  </>
+                ) : webDone ? (
+                  articles.length === 0 ? (
+                    <div className="text-center py-16">
+                      <p className="text-white/50 text-sm">
+                        Couldn&apos;t find anything for {searchLabel} in our feeds right now.
+                      </p>
+                      <a
+                        href={googleNewsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block mt-4 text-xs font-black uppercase tracking-wide text-yellow-300 hover:text-yellow-200"
+                      >
+                        🔎 Browse {searchLabel} on Google News ↗
+                      </a>
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <a
+                        href={googleNewsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] font-black uppercase tracking-wide text-yellow-300/80 hover:text-yellow-200"
+                      >
+                        Browse more on Google News ↗
+                      </a>
+                    </div>
+                  )
+                ) : (
+                  <p className="text-center text-white/50 text-sm py-10">Searching the web for {searchLabel}&hellip;</p>
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
 
