@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { TEAMS, getTeam } from "@/lib/data";
 import { FlagIcon } from "@/components/FlagIcon";
+import type { WebSearchArticle } from "@/lib/news-search";
 
 interface Article {
   url: string;
@@ -147,6 +148,15 @@ function NewsReaderModal({ article, onClose }: { article: Article; onClose: () =
   );
 }
 
+function timeAgo(d: Date): string {
+  const secs = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (secs < 10) return "just now";
+  if (secs < 60) return `${secs}s ago`;
+  const mins = Math.floor(secs / 60);
+  if (mins < 60) return `${mins}m ago`;
+  return `${Math.floor(mins / 60)}h ago`;
+}
+
 export function NewsTab() {
   const [country, setCountry] = useState<string>(""); // "" = all
   const [search, setSearch] = useState<string>(""); // raw input
@@ -155,11 +165,25 @@ export function NewsTab() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [openArticle, setOpenArticle] = useState<Article | null>(null);
+  const [lastFetched, setLastFetched] = useState<Date | null>(null);
+  const [, setNow] = useState(0); // ticks so "updated … ago" stays live
+
+  // Web-search fallback state: only used when the local feed has no matches.
+  const [webArticles, setWebArticles] = useState<WebSearchArticle[]>([]);
+  const [webSearching, setWebSearching] = useState(false);
+  const [webDone, setWebDone] = useState(false);
+  const [webEnabled, setWebEnabled] = useState(true);
 
   const sortedTeams = useMemo(
     () => [...TEAMS].sort((a, b) => a.name.localeCompare(b.name)),
     [],
   );
+
+  // Re-render every 30s so the "updated … ago" label keeps counting up.
+  useEffect(() => {
+    const id = setInterval(() => setNow((n) => n + 1), 30_000);
+    return () => clearInterval(id);
+  }, []);
 
   // Debounce the free-text search so we don't fetch on every keystroke.
   useEffect(() => {
@@ -171,16 +195,44 @@ export function NewsTab() {
     let cancelled = false;
     setLoading(true);
     setError(false);
+    // Reset any prior web-fallback results for the new query/filter.
+    setWebArticles([]);
+    setWebSearching(false);
+    setWebDone(false);
     const params = new URLSearchParams();
     if (country) params.set("country", country);
     if (query) params.set("q", query);
     const qs = params.toString() ? `?${params.toString()}` : "";
+
+    // When the local feed has nothing for a typed query, ask Claude to search
+    // the same trusted outlets live. Only runs on a miss, so it's off the hot path.
+    async function runWebSearch(q: string) {
+      setWebSearching(true);
+      try {
+        const r = await fetch(`/api/news/search?q=${encodeURIComponent(q)}`);
+        const data: { articles?: WebSearchArticle[]; enabled?: boolean } = await r.json();
+        if (cancelled) return;
+        setWebArticles(Array.isArray(data.articles) ? data.articles : []);
+        setWebEnabled(data.enabled !== false);
+      } catch {
+        if (!cancelled) setWebArticles([]);
+      } finally {
+        if (!cancelled) {
+          setWebSearching(false);
+          setWebDone(true);
+        }
+      }
+    }
+
     fetch(`/api/news${qs}`)
       .then((r) => r.json())
       .then((data: { articles?: Article[] }) => {
         if (cancelled) return;
-        setArticles(Array.isArray(data.articles) ? data.articles : []);
+        const list = Array.isArray(data.articles) ? data.articles : [];
+        setArticles(list);
+        setLastFetched(new Date());
         setLoading(false);
+        if (list.length === 0 && query) runWebSearch(query);
       })
       .catch(() => {
         if (cancelled) return;
@@ -205,9 +257,16 @@ export function NewsTab() {
             <div className="h-px w-10 bg-gradient-to-l from-transparent to-yellow-300/60" />
           </div>
           <p className="text-white/60 text-sm mt-3">
-            Top World Cup stories from across the major outlets &mdash; the most-covered first. <span className="text-white/40">Experimental.</span>
+            Top World Cup stories from across the major outlets &mdash; the most-covered first.
           </p>
         </div>
+
+        {/* Freshness line */}
+        {lastFetched && (
+          <p className="text-center text-white/40 text-[11px] mb-4">
+            Updated {timeAgo(lastFetched)}
+          </p>
+        )}
 
         {/* Filter: host pills + full-country dropdown */}
         <div className="flex flex-wrap items-center justify-center gap-2 mb-8">
@@ -274,11 +333,45 @@ export function NewsTab() {
         ) : error ? (
           <p className="text-center text-white/50 text-sm py-16">Couldn&apos;t load the news right now. Try again shortly.</p>
         ) : articles.length === 0 ? (
-          <p className="text-center text-white/50 text-sm py-16">
-            {query
-              ? `No stories matching “${query}”${country ? ` for ${getTeam(country)?.name ?? "this country"}` : ""}.`
-              : `No stories yet${country ? ` for ${getTeam(country)?.name ?? "this country"}` : ""}. Check back soon.`}
-          </p>
+          query ? (
+            // Local feed had no match for this query → live web fallback via Claude.
+            webSearching ? (
+              <p className="text-center text-white/50 text-sm py-16">Searching the web for &ldquo;{query}&rdquo;&hellip;</p>
+            ) : webArticles.length > 0 ? (
+              <div>
+                <div className="flex items-center justify-center gap-2 mb-4">
+                  <span className="text-[10px] font-black uppercase tracking-[0.15em] text-yellow-300">🌐 Live web results</span>
+                </div>
+                <div className="space-y-3">
+                  {webArticles.map((a) => (
+                    <a
+                      key={a.url}
+                      href={a.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block rounded-2xl border border-white/10 bg-white/5 hover:bg-white/[0.08] transition-colors p-4"
+                    >
+                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                        <span className="text-[11px] font-black uppercase tracking-[0.1em] text-green-400">{a.source}</span>
+                      </div>
+                      <h3 className="font-bold text-white leading-snug">{a.title}</h3>
+                      {a.summary && <p className="text-white/55 text-sm mt-1 line-clamp-2">{a.summary}</p>}
+                    </a>
+                  ))}
+                </div>
+                <p className="text-center text-white/25 text-[11px] mt-4">Found live on the web &mdash; not from our usual feed.</p>
+              </div>
+            ) : (
+              <p className="text-center text-white/50 text-sm py-16">
+                No stories matching &ldquo;{query}&rdquo;{country ? ` for ${getTeam(country)?.name ?? "this country"}` : ""}.
+                {webDone && webEnabled ? " We checked the web too." : ""}
+              </p>
+            )
+          ) : (
+            <p className="text-center text-white/50 text-sm py-16">
+              No stories yet{country ? ` for ${getTeam(country)?.name ?? "this country"}` : ""}. Check back soon.
+            </p>
+          )
         ) : (
           <div className="space-y-3">
             {articles.map((a) => (
