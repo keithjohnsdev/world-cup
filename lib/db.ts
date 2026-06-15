@@ -168,6 +168,12 @@ export async function initDb() {
   await sql`CREATE INDEX IF NOT EXISTS news_published_idx ON news_articles (published_at DESC)`;
   await sql`CREATE INDEX IF NOT EXISTS news_traction_idx ON news_articles (traction DESC)`;
 
+  // In-app reader recap: an original, Claude-generated summary of the story so
+  // readers stay on our site (no ad-stripped republishing of the source). Lazily
+  // generated on first open and cached here, so we pay for it once per story.
+  await sql`ALTER TABLE news_articles ADD COLUMN IF NOT EXISTS recap    TEXT`;
+  await sql`ALTER TABLE news_articles ADD COLUMN IF NOT EXISTS recap_at TIMESTAMPTZ`;
+
   // ── Awards ────────────────────────────────────────────────────────────────────
   // Computed by the admin after the tournament (or after each round for live awards).
   // One row per award, re-runnable (DO UPDATE).

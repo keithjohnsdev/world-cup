@@ -1063,6 +1063,11 @@ export default function BracketPage() {
                 onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = ""; el.style.textShadow = ""; }}
               >
                 {t === "groups" ? "Phase 1 - Groups" : t === "bracket" ? "Phase 2 - Bracket" : t === "world" ? "🌍 The World" : t === "leaderboard" ? "Leaderboard" : t === "news" ? "📰 News" : "The Rules"}
+                {t === "news" && (
+                  <span className="absolute -top-0.5 -right-0.5 rounded-full bg-red-500 px-1.5 py-px text-[8px] font-black uppercase tracking-tight text-white shadow-md animate-pulse">
+                    New!
+                  </span>
+                )}
                 <span className={`absolute bottom-[-1px] inset-x-0 h-[2px] ${tab === t ? "bg-yellow-300" : ""}`} />
               </button>
             ))}

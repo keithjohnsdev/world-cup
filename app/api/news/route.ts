@@ -25,29 +25,37 @@ export async function GET(req: NextRequest) {
   const sql = getSql();
 
   const country = req.nextUrl.searchParams.get("country");
+  const q = (req.nextUrl.searchParams.get("q") ?? "").trim();
   const limitParam = parseInt(req.nextUrl.searchParams.get("limit") ?? "40", 10);
   const limit = Math.min(Math.max(isNaN(limitParam) ? 40 : limitParam, 1), 100);
 
+  // Compose the optional filters into one parameterized query.
+  const conditions: string[] = [];
+  const params: unknown[] = [];
+  if (country) {
+    params.push(JSON.stringify([country]));
+    conditions.push(`countries @> $${params.length}::jsonb`);
+  }
+  if (q) {
+    // Escape LIKE wildcards so a literal % or _ in the query stays literal.
+    const pattern = `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+    params.push(pattern);
+    conditions.push(`(title ILIKE $${params.length} OR summary ILIKE $${params.length})`);
+  }
+  const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+
   // Over-fetch so cluster dedupe still leaves a full page.
   const fetchLimit = limit * 4;
-  const rows = (
-    country
-      ? await sql`
-          SELECT url, title, source, summary, image_url, published_at,
-                 countries, cluster_id, source_count, traction
-          FROM news_articles
-          WHERE countries @> ${JSON.stringify([country])}::jsonb
-          ORDER BY traction DESC, published_at DESC
-          LIMIT ${fetchLimit}
-        `
-      : await sql`
-          SELECT url, title, source, summary, image_url, published_at,
-                 countries, cluster_id, source_count, traction
-          FROM news_articles
-          ORDER BY traction DESC, published_at DESC
-          LIMIT ${fetchLimit}
-        `
-  ) as NewsRow[];
+  params.push(fetchLimit);
+  const rows = (await sql.query(
+    `SELECT url, title, source, summary, image_url, published_at,
+            countries, cluster_id, source_count, traction
+     FROM news_articles
+     ${where}
+     ORDER BY traction DESC, published_at DESC
+     LIMIT $${params.length}`,
+    params,
+  )) as NewsRow[];
 
   // One card per story: collapse clusters to their top-traction representative.
   const seen = new Set<string>();
