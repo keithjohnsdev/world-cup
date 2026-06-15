@@ -173,6 +173,7 @@ export function NewsTab() {
   const [webSearching, setWebSearching] = useState(false);
   const [webDone, setWebDone] = useState(false);
   const [webEnabled, setWebEnabled] = useState(true);
+  const [webVia, setWebVia] = useState<string | null>(null);
 
   const sortedTeams = useMemo(
     () => [...TEAMS].sort((a, b) => a.name.localeCompare(b.name)),
@@ -223,10 +224,11 @@ export function NewsTab() {
       setWebSearching(true);
       try {
         const r = await fetch(`/api/news/search?q=${encodeURIComponent(q)}`);
-        const data: { articles?: WebSearchArticle[]; enabled?: boolean } = await r.json();
+        const data: { articles?: WebSearchArticle[]; enabled?: boolean; via?: string | null } = await r.json();
         if (cancelled) return;
         setWebArticles(Array.isArray(data.articles) ? data.articles : []);
         setWebEnabled(data.enabled !== false);
+        setWebVia(data.via ?? null);
       } catch {
         if (!cancelled) setWebArticles([]);
       } finally {
@@ -271,6 +273,9 @@ export function NewsTab() {
     : selectedTeam
       ? selectedTeam.name
       : "World Cup news";
+  // Always-available "browse more" escape hatch — a plain Google News search.
+  const liveTerm = [query, selectedTeam?.name].filter(Boolean).join(" ").trim() || "World Cup 2026";
+  const googleNewsUrl = `https://news.google.com/search?q=${encodeURIComponent(liveTerm)}`;
 
   return (
     <div className="min-h-screen" style={{ background: "linear-gradient(160deg, #060d1a 0%, #0d2137 60%, #071628 100%)" }}>
@@ -421,13 +426,34 @@ export function NewsTab() {
                   </a>
                 ))}
               </div>
-              <p className="text-center text-white/25 text-[11px] mt-4">Found live on the web &mdash; not from our usual feed.</p>
+              <p className="text-center text-white/25 text-[11px] mt-4">
+                {webVia === "google" ? "Live from Google News" : "Found live on the web"} &mdash; not from our usual feed.
+              </p>
+              <div className="text-center mt-3">
+                <a
+                  href={googleNewsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[11px] font-black uppercase tracking-wide text-yellow-300/80 hover:text-yellow-200"
+                >
+                  More on Google News ↗
+                </a>
+              </div>
             </div>
           ) : webDone ? (
-            <p className="text-center text-white/50 text-sm py-16">
-              Couldn&apos;t find anything for {searchLabel} right now.
-              {webEnabled ? " Check back soon." : ""}
-            </p>
+            <div className="text-center py-16">
+              <p className="text-white/50 text-sm">
+                Couldn&apos;t find anything for {searchLabel} in our feeds right now.
+              </p>
+              <a
+                href={googleNewsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block mt-4 text-xs font-black uppercase tracking-wide text-yellow-300 hover:text-yellow-200"
+              >
+                🔎 Browse {searchLabel} on Google News ↗
+              </a>
+            </div>
           ) : (
             <p className="text-center text-white/50 text-sm py-16">Searching the web for {searchLabel}&hellip;</p>
           )
