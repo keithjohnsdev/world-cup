@@ -410,21 +410,40 @@ export function NewsTab() {
                 <span className="text-[10px] font-black uppercase tracking-[0.15em] text-yellow-300">🌐 Live web results</span>
               </div>
               <div className="space-y-3">
-                {webArticles.map((a) => (
-                  <a
-                    key={a.url}
-                    href={a.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block rounded-2xl border border-white/10 bg-white/5 hover:bg-white/[0.08] transition-colors p-4"
-                  >
-                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                      <span className="text-[11px] font-black uppercase tracking-[0.1em] text-green-400">{a.source}</span>
-                    </div>
-                    <h3 className="font-bold text-white leading-snug">{a.title}</h3>
-                    {a.summary && <p className="text-white/55 text-sm mt-1 line-clamp-2">{a.summary}</p>}
-                  </a>
-                ))}
+                {webArticles.map((a) => {
+                  // Google News carries no article image, so show a flag thumbnail:
+                  // the team named in the headline, else the active country filter.
+                  const flagTeam = getTeam(a.countries[0] || country);
+                  return (
+                    <a
+                      key={a.url}
+                      href={a.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex gap-4 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/[0.08] transition-colors p-4"
+                    >
+                      <div className="flex items-center justify-center w-16 h-16 rounded-lg bg-white/[0.06] flex-shrink-0 overflow-hidden">
+                        {flagTeam ? (
+                          <FlagIcon cc={flagTeam.cc} name={flagTeam.name} className="w-11 h-7 rounded-[2px] shadow" />
+                        ) : (
+                          <span className="text-2xl" aria-hidden>📰</span>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                          <span className="text-[11px] font-black uppercase tracking-[0.1em] text-green-400">{a.source}</span>
+                        </div>
+                        <h3 className="font-bold text-white leading-snug">{a.title}</h3>
+                        {a.summary && <p className="text-white/55 text-sm mt-1 line-clamp-2">{a.summary}</p>}
+                        {a.countries.length > 0 && (
+                          <div className="flex items-center gap-1.5 mt-2">
+                            <CountryFlags ids={a.countries} className="w-5 h-3.5 rounded-[2px]" />
+                          </div>
+                        )}
+                      </div>
+                    </a>
+                  );
+                })}
               </div>
               <p className="text-center text-white/25 text-[11px] mt-4">
                 {webVia === "google" ? "Live from Google News" : "Found live on the web"} &mdash; not from our usual feed.

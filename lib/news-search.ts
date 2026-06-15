@@ -6,6 +6,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { TRUSTED_NEWS_DOMAINS } from "@/lib/news-sources";
+import { matchCountries } from "@/lib/news";
 
 const MODEL = process.env.NEWS_SEARCH_MODEL || "claude-opus-4-8";
 const MAX_RESULTS = 8;
@@ -15,6 +16,7 @@ export interface WebSearchArticle {
   title: string;
   source: string;
   summary: string | null;
+  countries: string[]; // World Cup team ids detected in the headline (for flags)
 }
 
 let _client: Anthropic | undefined;
@@ -91,11 +93,13 @@ export async function searchNewsViaClaude(query: string): Promise<WebSearchArtic
     if (typeof url !== "string" || typeof title !== "string") continue;
     if (!/^https?:\/\//i.test(url) || seen.has(url)) continue;
     seen.add(url);
+    const summaryText = typeof summary === "string" && summary.trim() ? summary : null;
     articles.push({
       url,
       title,
       source: typeof source === "string" && source.trim() ? source : "Web",
-      summary: typeof summary === "string" && summary.trim() ? summary : null,
+      summary: summaryText,
+      countries: matchCountries(`${title} ${summaryText ?? ""}`),
     });
     if (articles.length >= MAX_RESULTS) break;
   }

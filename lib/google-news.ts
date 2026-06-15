@@ -4,6 +4,7 @@
 // aggregated feed has no match; Claude web search is reserved for the rare miss.
 
 import type { WebSearchArticle } from "@/lib/news-search";
+import { matchCountries } from "@/lib/news";
 
 const TIMEOUT_MS = 6000;
 const MAX_RESULTS = 10;
@@ -77,6 +78,7 @@ export async function fetchGoogleNews(query: string): Promise<WebSearchArticle[]
       title,
       source: source || "Google News",
       summary: null, // Google's RSS "description" is a link blob, not a usable summary
+      countries: matchCountries(title),
     });
     if (out.length >= MAX_RESULTS) break;
   }
