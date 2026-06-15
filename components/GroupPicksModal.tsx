@@ -314,9 +314,8 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
                         style={{
                           background: rowBg || undefined,
                           borderTop: isCutoff
-                            ? "2px solid rgba(234,179,8,0.55)"
+                            ? "1px solid rgba(234,179,8,0.55)"
                             : "1px solid rgba(255,255,255,0.05)",
-                          boxShadow: isCutoff ? "0 -3px 8px -4px rgba(234,179,8,0.45)" : undefined,
                         }}
                       >
                         <div className="w-7 shrink-0 text-center text-[11px] font-black text-white/30 tabular-nums">
