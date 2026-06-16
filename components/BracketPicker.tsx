@@ -33,6 +33,13 @@ function decodeCode(code: string): string {
   return `group:${code}`;
 }
 
+// Human-readable qualifier + group letter for a BRACKET_PAIRS code.
+function decodeSlotLabel(code: string): { qualifier: string; letter: string } {
+  if (code.startsWith("3")) return { qualifier: "3rd place", letter: code.slice(1) };
+  if (code.startsWith("2")) return { qualifier: "Runner-up", letter: code.slice(1) };
+  return { qualifier: "Winner", letter: code };
+}
+
 function buildBracket(results: ResultEntry[], picks: Picks) {
   const rm = new Map(results.map(r => [`${r.stage}:${r.slot}`, r.team_id]));
 
