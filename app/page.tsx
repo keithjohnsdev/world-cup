@@ -1103,12 +1103,19 @@ export default function BracketPage() {
                   <span className="relative inline-block">
                     Groups
                     {phase1Locked && (
-                      <span
-                        className="absolute -top-2 -right-3.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-green-500 text-[8px] font-black leading-none text-white shadow-[0_0_6px_rgba(74,222,128,0.9)]"
-                        title="Picks locked"
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="absolute -top-2 -right-3.5 h-3.5 w-3.5 text-green-400 drop-shadow-[0_0_4px_rgba(74,222,128,0.8)]"
+                        aria-label="Picks locked"
                       >
-                        ✓
-                      </span>
+                        <circle cx="12" cy="12" r="9" />
+                        <path d="m8.5 12 2.5 2.5 4.5-5" />
+                      </svg>
                     )}
                   </span>
                 ) : t === "bracket" ? "Phase 2 - Bracket" : t === "world" ? "🌍 The World" : t === "leaderboard" ? "Leaderboard" : t === "stats" ? "📊 Stats" : "The Rules"}
