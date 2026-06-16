@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSql, initDb } from "@/lib/db";
-import { randomBytes } from "crypto";
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,12 +18,12 @@ export async function POST(req: NextRequest) {
 
     if (existing.length) return NextResponse.json({ ...existing[0], is_new: false });
 
-    const token = randomBytes(32).toString("hex");
-    const rows = (await sql`
-      INSERT INTO users (name, session_token) VALUES (${trimmed}, ${token})
-      RETURNING id, name, session_token
-    `) as { id: number; name: string; session_token: string }[];
-    return NextResponse.json({ ...rows[0], is_new: true });
+    // Signups are locked now that the tournament has started: only existing
+    // players (case-insensitive name match above) may sign in. No new accounts.
+    return NextResponse.json(
+      { error: "no current player with this name, try again" },
+      { status: 403 }
+    );
   } catch (err) {
     console.error("[POST /api/users]", err);
     return NextResponse.json(
