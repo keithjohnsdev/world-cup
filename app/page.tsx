@@ -14,6 +14,7 @@ import { Card } from "@/components/ui/Card";
 import { GroupPicksModal, type ScoreBreakdownProps } from "@/components/GroupPicksModal";
 import { BracketPicker } from "@/components/BracketPicker";
 import { NewsTab } from "@/components/NewsTab";
+import { StatsTab } from "@/components/StatsTab";
 
 const GlobeView = dynamic(() => import("@/components/GlobeView"), { ssr: false });
 const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
@@ -941,7 +942,7 @@ export default function BracketPage() {
   const [picks, setPicks] = useState<Picks>({});
   // Logged-in users land on the leaderboard by default (an explicit ?tab= in the
   // URL still wins). Switch this to "bracket" once the knockout stage opens.
-  const [tab, setTab] = useState<"groups" | "bracket" | "rules" | "world" | "leaderboard" | "news">("leaderboard");
+  const [tab, setTab] = useState<"groups" | "bracket" | "rules" | "world" | "leaderboard" | "news" | "stats">("leaderboard");
   const [userName, setUserName] = useState("");
   const [worldView, setWorldView] = useState<"globe" | "map">("globe");
   const [hoveredTeam, setHoveredTeam] = useState<string | null>(null);
@@ -1079,7 +1080,7 @@ export default function BracketPage() {
         }
         center={
           <div className="flex h-full">
-            {(["rules", "groups", "bracket", "leaderboard", "news", "world"] as const).map((t) => (
+            {(["rules", "groups", "bracket", "leaderboard", "stats", "news", "world"] as const).map((t) => (
               <button
                 key={t}
                 onClick={e => { (e.currentTarget as HTMLElement).style.color = ""; (e.currentTarget as HTMLElement).style.textShadow = ""; setTab(t); history.replaceState(null, "", `?tab=${t}`); }}
@@ -1098,7 +1099,7 @@ export default function BracketPage() {
                       New!
                     </span>
                   </span>
-                ) : t === "groups" ? "Phase 1 - Groups" : t === "bracket" ? "Phase 2 - Bracket" : t === "world" ? "🌍 The World" : t === "leaderboard" ? "Leaderboard" : "The Rules"}
+                ) : t === "groups" ? "Phase 1 - Groups" : t === "bracket" ? "Phase 2 - Bracket" : t === "world" ? "🌍 The World" : t === "leaderboard" ? "Leaderboard" : t === "stats" ? "📊 Stats" : "The Rules"}
                 <span className={`absolute bottom-[-1px] inset-x-0 h-[2px] ${tab === t ? "bg-yellow-300" : ""}`} />
               </button>
             ))}
@@ -1216,6 +1217,7 @@ export default function BracketPage() {
       {/* Rules tab */}
       {tab === "rules" && <RulesTab />}
       {tab === "leaderboard" && <LeaderboardTab />}
+      {tab === "stats" && <StatsTab />}
       {tab === "news" && <NewsTab />}
 
       {/* World tab */}

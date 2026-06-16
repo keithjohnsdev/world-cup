@@ -3,19 +3,34 @@
 // Keeping it here ensures both paths run identical logic.
 
 import { initDb, getSql } from "@/lib/db";
-import { fetchCompletedMatchesForDate, fetchMatchesWindow, type MatchWindowEntry } from "@/lib/api-football";
+import { fetchCompletedMatchesForDate, fetchMatchesWindow, fetchAllMatches, type MatchWindowEntry } from "@/lib/api-football";
 import { processMatches } from "@/lib/process-matches";
 import { syncGroupPoints } from "@/lib/sync-standings";
 import { rebuildPointsHistory } from "@/lib/points-history";
+import { rebuildStats } from "@/lib/stats";
 
-// Rebuild the points-history table after results change. Non-fatal: a failure
-// here must never lose a processed result. Skips when nothing new landed.
-async function rebuildHistoryIfChanged(processed: number) {
+// Rebuild the derived points-history and stats snapshots after results change.
+// Both consume the full match list, so we fetch it ONCE and share it — no extra
+// API call. Each rebuild is non-fatal: a failure here must never lose a
+// processed result. Skips entirely when nothing new landed.
+async function rebuildDerivedIfChanged(processed: number) {
   if (processed <= 0) return;
+  let matches;
   try {
-    await rebuildPointsHistory(getSql());
+    matches = await fetchAllMatches();
+  } catch (err) {
+    console.warn("[results-sync] fetchAllMatches for derived rebuild failed:", err);
+    return;
+  }
+  try {
+    await rebuildPointsHistory(getSql(), matches);
   } catch (err) {
     console.warn("[results-sync] points-history rebuild failed:", err);
+  }
+  try {
+    await rebuildStats(matches, getSql());
+  } catch (err) {
+    console.warn("[results-sync] stats rebuild failed:", err);
   }
 }
 
@@ -69,7 +84,7 @@ export async function runResultsSyncIfActive() {
     console.warn("[results-sync] group points sync failed:", err);
   }
 
-  await rebuildHistoryIfChanged(result.done.length);
+  await rebuildDerivedIfChanged(result.done.length);
 
   return { idle: false as const, dateFrom, dateTo, pointsSynced, ...result };
 }
@@ -96,7 +111,7 @@ export async function runResultsSync() {
     console.warn("[results-sync] group points sync failed:", err);
   }
 
-  await rebuildHistoryIfChanged(result.done.length);
+  await rebuildDerivedIfChanged(result.done.length);
 
   return { dateFrom: yesterday, dateTo: today, pointsSynced, ...result };
 }

@@ -87,8 +87,10 @@ interface HistoryRow {
 }
 
 // Recompute the whole points_history table from scratch. Idempotent.
-export async function rebuildPointsHistory(sql: Sql): Promise<{ games: number; rows: number }> {
-  const all = await fetchAllMatches();
+// Accepts pre-fetched matches so callers (e.g. the cron) can share one
+// fetchAllMatches() call across consumers; fetches itself when omitted.
+export async function rebuildPointsHistory(sql: Sql, matches?: RawMatch[]): Promise<{ games: number; rows: number }> {
+  const all = matches ?? await fetchAllMatches();
   const finished = all
     .filter((m) => m.status === "FINISHED" && m.hasResult !== false)
     .sort((a, b) =>

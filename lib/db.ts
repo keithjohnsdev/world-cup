@@ -163,6 +163,27 @@ export async function initDb() {
     )
   `;
 
+  // ── Stats / fun facts ───────────────────────────────────────────────────────
+  // Single materialised snapshot of all computed tournament + pool stats, rebuilt
+  // by rebuildStats() (lib/stats.ts) whenever results change. One row (id=1).
+  await sql`
+    CREATE TABLE IF NOT EXISTS stats_snapshot (
+      id          INTEGER     PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+      data        JSONB       NOT NULL,
+      computed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+  // Lazy LLM headline cache keyed by a stat's value-signature, so a punchy
+  // "did you know" line is generated at most once per distinct value (mirrors
+  // the news recap cache). Populated on demand by /api/stats/flavor.
+  await sql`
+    CREATE TABLE IF NOT EXISTS stats_flavor (
+      signature  TEXT PRIMARY KEY,
+      headline   TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+
   // ── News ──────────────────────────────────────────────────────────────────────
   // Aggregated World Cup stories pulled from reputable RSS feeds by the cron.
   // url is the primary key, giving natural idempotency across runs (a story keeps
