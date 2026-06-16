@@ -231,6 +231,123 @@ function Divider() {
   );
 }
 
+// One half of a live R32 matchup: the source slot (e.g. "Winner · Group A")
+// plus the team currently occupying it, or a placeholder while it forms.
+function LiveSlot({ code, teamId }: { code: string; teamId?: string }) {
+  const team = teamId ? getTeam(teamId) : undefined;
+  const { qualifier, letter } = decodeSlotLabel(code);
+
+  return (
+    <div className="flex items-center gap-2.5 px-2.5 py-2">
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-white/[0.06] text-[10px] font-black text-white/45">
+        {letter}
+      </span>
+      {team ? (
+        <>
+          <FlagIcon cc={team.cc} name={team.name} className="w-6 h-[17px] rounded-sm shrink-0" />
+          <div className="min-w-0 flex-1">
+            <span className="block truncate text-xs font-semibold leading-tight text-white/85">{team.name}</span>
+            <span className="block text-[9px] font-bold uppercase tracking-wider leading-tight text-green-400/70">{qualifier}</span>
+          </div>
+        </>
+      ) : (
+        <div className="min-w-0 flex-1">
+          <span className="block text-[11px] italic leading-tight text-white/25">Awaiting results</span>
+          <span className="block text-[9px] font-bold uppercase tracking-wider leading-tight text-white/20">{qualifier} · Group {letter}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Read-only, live-updating projection of the Round of 32, built from the current
+// group standings. Shown during Phase 1 in place of the "coming soon" card so the
+// bracket page feels alive while the group stage plays out.
+function LiveRoundOf32({ results }: { results: ResultEntry[] }) {
+  const rm = new Map(results.map(r => [`${r.stage}:${r.slot}`, r.team_id]));
+  const matches = BRACKET_PAIRS.map(([code1, code2], i) => ({
+    slot: `m${i + 1}`,
+    code1,
+    code2,
+    team1: rm.get(decodeCode(code1)),
+    team2: rm.get(decodeCode(code2)),
+  }));
+
+  const placed = matches.flatMap(m => [m.team1, m.team2]).filter(Boolean).length;
+  const formed = matches.filter(m => m.team1 && m.team2).length;
+  const pct = Math.round((placed / 32) * 100);
+
+  return (
+    <div
+      className="min-h-screen"
+      style={{ background: "linear-gradient(160deg, #060d1a 0%, #0d2137 60%, #071628 100%)" }}
+    >
+      <div className="max-w-2xl mx-auto px-4 pt-10 pb-24">
+
+        {/* Header */}
+        <div className="mb-8 text-center">
+          <div className="inline-flex items-center gap-2 mb-4 rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-widest"
+            style={{ background: "rgba(74,222,128,0.1)", border: "1px solid rgba(74,222,128,0.35)", color: "#4ade80" }}>
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75 animate-ping" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-green-400" />
+            </span>
+            Live Projection
+          </div>
+          <p className="font-black uppercase leading-none text-white mb-1" style={{ fontSize: "clamp(1.9rem, 6vw, 2.6rem)", letterSpacing: "-0.02em" }}>Round of</p>
+          <div className="flex items-center justify-center gap-3">
+            <div className="h-px w-10 bg-gradient-to-r from-transparent to-yellow-300/60" />
+            <h2 className="font-black uppercase leading-none text-yellow-300" style={{ fontSize: "clamp(1.9rem, 6vw, 2.6rem)", letterSpacing: "-0.02em" }}>
+              32
+            </h2>
+            <div className="h-px w-10 bg-gradient-to-l from-transparent to-yellow-300/60" />
+          </div>
+          <p className="text-white/55 text-sm mt-3 max-w-md mx-auto leading-relaxed">
+            Who&apos;d play whom if the group stage ended right now. This updates live as results come in — the real bracket opens for picks once the groups wrap.
+          </p>
+        </div>
+
+        {/* Progress */}
+        <div className="mb-8 text-center">
+          <p className="text-sm font-bold mb-2.5 text-white">
+            <span className="text-green-400 tabular-nums">{placed}</span> of 32 teams in position
+            <span className="text-white/35 font-medium"> · {formed}/16 matchups set</span>
+          </p>
+          <div className="h-1.5 rounded-full overflow-hidden max-w-xs mx-auto" style={{ background: "rgba(255,255,255,0.08)" }}>
+            <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: "#4ade80" }} />
+          </div>
+        </div>
+
+        {/* Live matchups */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          {matches.map((m, i) => {
+            const ready = !!(m.team1 && m.team2);
+            return (
+              <div
+                key={m.slot}
+                className="rounded-xl overflow-hidden transition-colors"
+                style={{
+                  background: "rgba(255,255,255,0.04)",
+                  border: ready ? "1px solid rgba(74,222,128,0.2)" : "1px solid rgba(255,255,255,0.07)",
+                }}
+              >
+                <div className="flex items-center justify-between px-2.5 pt-1.5">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-white/25">Match {i + 1}</span>
+                  {ready && <span className="text-[9px] font-black uppercase tracking-widest text-green-400/60">Set</span>}
+                </div>
+                <LiveSlot code={m.code1} teamId={m.team1} />
+                <div className="mx-2.5 h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
+                <LiveSlot code={m.code2} teamId={m.team2} />
+              </div>
+            );
+          })}
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
 export function BracketPicker({ picks, results, phase, preview, onPick }: Props) {
   const canPick = phase === "phase2_open";
   const { r32, r16, qf, sf, finalMatch } = buildBracket(results, picks);
@@ -238,15 +355,7 @@ export function BracketPicker({ picks, results, phase, preview, onPick }: Props)
   const championTeam = champion ? getTeam(champion) : undefined;
 
   if (phase === "phase1_open" || phase === "phase1_locked") {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center">
-        <div className="text-5xl mb-6 opacity-30">🏆</div>
-        <h3 className="text-white font-black text-2xl uppercase tracking-tight mb-3">Phase 2 — Coming Soon</h3>
-        <p className="text-white/35 text-sm max-w-sm leading-relaxed">
-          Once the group stage is complete, the full knockout bracket opens. You&apos;ll pick every match — Round of 32 through the Final.
-        </p>
-      </div>
-    );
+    return <LiveRoundOf32 results={results} />;
   }
 
   return (
