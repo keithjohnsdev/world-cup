@@ -21,6 +21,7 @@ export function StatsTab() {
   const [computedAt, setComputedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [view, setView] = useState<"johnsies" | "worldcup">("johnsies");
   const flavorRequested = useRef(false);
 
   useEffect(() => {
@@ -64,8 +65,10 @@ export function StatsTab() {
       .catch(() => {});
   }, [stats]);
 
+  // "Johnsies" = our pool's stats; "World Cup" = the actual tournament records.
   const tournament = stats.filter((s) => s.category === "tournament");
   const pool = stats.filter((s) => s.category === "pool");
+  const active = view === "johnsies" ? pool : tournament;
 
   return (
     <div className="min-h-screen" style={{ background: "linear-gradient(160deg, #060d1a 0%, #0d2137 60%, #071628 100%)" }}>
@@ -92,21 +95,32 @@ export function StatsTab() {
           </p>
         ) : (
           <>
-            {tournament.length > 0 && <Section label="Tournament Records" stats={tournament} />}
-            {pool.length > 0 && <Section label="The Pool" stats={pool} />}
+            <div className="flex justify-center mb-6">
+              <div className="inline-flex items-center gap-1 rounded-full bg-black/30 p-1 backdrop-blur-sm">
+                {([["johnsies", "Johnsies"], ["worldcup", "World Cup"]] as const).map(([v, label]) => (
+                  <button
+                    key={v}
+                    onClick={() => setView(v)}
+                    className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-[0.12em] transition-all cursor-pointer ${
+                      view === v ? "bg-yellow-300 text-green-950" : "text-white/60 hover:text-white"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {active.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {active.map((s) => <StatCard key={s.key} stat={s} />)}
+              </div>
+            ) : (
+              <p className="text-center text-white/40 text-sm py-10">
+                {view === "johnsies" ? "Pool stats appear as picks meet results." : "Tournament records fill up as games are played."}
+              </p>
+            )}
           </>
         )}
-      </div>
-    </div>
-  );
-}
-
-function Section({ label, stats }: { label: string; stats: Stat[] }) {
-  return (
-    <div className="mb-8">
-      <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-white/40 mb-3 px-1">{label}</h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {stats.map((s) => <StatCard key={s.key} stat={s} />)}
       </div>
     </div>
   );
