@@ -51,10 +51,15 @@ function mk(s: Omit<Stat, "signature">): Stat {
 }
 
 interface FM {
-  id: number; round: string; matchday: number | null;
+  id: number; round: string; matchday: number | null; date: string;
   homeId: string; awayId: string; homeName: string; awayName: string;
   hg: number; ag: number; total: number; margin: number;
   winnerId: string | null; loserId: string | null; wasShootout: boolean;
+}
+
+function monthDay(isoDate: string): string {
+  const d = new Date(`${isoDate}T12:00:00Z`);
+  return isNaN(d.getTime()) ? isoDate : d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 }
 
 export async function computeStats(matches: RawMatch[], sql: Sql): Promise<Stat[]> {
@@ -69,7 +74,7 @@ export async function computeStats(matches: RawMatch[], sql: Sql): Promise<Stat[
     const winnerId = m.winnerName ? apiNameToTeamId(m.winnerName) : null;
     const loserId = winnerId ? (winnerId === homeId ? awayId : homeId) : null;
     fms.push({
-      id: m.id, round: m.round, matchday: m.matchday,
+      id: m.id, round: m.round, matchday: m.matchday, date: (m.utcDate ?? "").slice(0, 10),
       homeId, awayId, homeName: TEAM_BY_ID.get(homeId)?.name ?? m.homeTeamName,
       awayName: TEAM_BY_ID.get(awayId)?.name ?? m.awayTeamName,
       hg: m.homeGoals, ag: m.awayGoals, total: m.homeGoals + m.awayGoals,
