@@ -1104,10 +1104,10 @@ export default function BracketPage() {
                     Groups
                     {phase1Locked && (
                       <span
-                        className="absolute -top-2 -right-3.5 text-[9px] leading-none"
+                        className="absolute -top-1.5 -right-2.5 flex h-3 w-3 items-center justify-center rounded-full bg-green-500 text-[7px] font-black leading-none text-white shadow-sm"
                         title="Picks locked"
                       >
-                        🔒
+                        ✓
                       </span>
                     )}
                   </span>

@@ -11,6 +11,7 @@ interface Stat {
   title: string;
   value: string;
   detail?: string;
+  explanation?: string;
   teamIds?: string[];
   signature: string;
   headline?: string | null;
@@ -22,6 +23,7 @@ export function StatsTab() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [view, setView] = useState<"johnsies" | "worldcup">("johnsies");
+  const [selected, setSelected] = useState<Stat | null>(null);
   const flavorRequested = useRef(false);
 
   useEffect(() => {
