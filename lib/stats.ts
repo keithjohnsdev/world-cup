@@ -357,6 +357,241 @@ export async function computeStats(matches: RawMatch[], sql: Sql): Promise<Stat[
     }
   }
 
+  // ── More tournament records ──────────────────────────────────────────────────
+
+  // Goal Rush — the single calendar day with the most goals.
+  {
+    const byDay = new Map<string, { goals: number; matches: number }>();
+    for (const m of fms) {
+      if (!m.date) continue;
+      const d = byDay.get(m.date) ?? { goals: 0, matches: 0 };
+      d.goals += m.total; d.matches += 1;
+      byDay.set(m.date, d);
+    }
+    const top = [...byDay.entries()].sort((a, b) => b[1].goals - a[1].goals)[0];
+    if (top && top[1].goals > 0) {
+      const label = monthDay(top[0]);
+      stats.push(mk({
+        key: "goal_rush", category: "tournament", emoji: "📅",
+        title: "Goal Rush",
+        value: `${top[1].goals} goals on ${label}`,
+        detail: `across ${top[1].matches} ${top[1].matches === 1 ? "match" : "matches"}`,
+        explanation: `${label} has been the busiest day of the tournament so far — ${top[1].goals} goals across ${top[1].matches} ${top[1].matches === 1 ? "match" : "matches"}.`,
+      }));
+    }
+  }
+
+  // Brick Wall — fewest goals conceded (favouring teams that have played more).
+  {
+    const conceded = new Map<string, number>();
+    const games = new Map<string, number>();
+    for (const m of fms) {
+      conceded.set(m.homeId, (conceded.get(m.homeId) ?? 0) + m.ag);
+      conceded.set(m.awayId, (conceded.get(m.awayId) ?? 0) + m.hg);
+      games.set(m.homeId, (games.get(m.homeId) ?? 0) + 1);
+      games.set(m.awayId, (games.get(m.awayId) ?? 0) + 1);
+    }
+    const best = [...conceded.entries()].sort((a, b) => a[1] - b[1] || (games.get(b[0]) ?? 0) - (games.get(a[0]) ?? 0))[0];
+    if (best && (games.get(best[0]) ?? 0) >= 2) {
+      const tName = TEAM_BY_ID.get(best[0])?.name ?? best[0];
+      const g = games.get(best[0]) ?? 0;
+      stats.push(mk({
+        key: "brick_wall", category: "tournament", emoji: "🧱",
+        title: "Brick Wall",
+        value: `${tName} — ${best[1]} conceded`,
+        detail: `in ${g} matches`,
+        teamIds: [best[0]],
+        explanation: `${tName} have the meanest defense so far, conceding just ${best[1]} ${best[1] === 1 ? "goal" : "goals"} across ${g} matches.`,
+      }));
+    }
+  }
+
+  // Group of Goals — the group whose matches have produced the most goals.
+  {
+    const groupGoals = new Map<string, { goals: number; matches: number }>();
+    for (const m of fms) {
+      if (m.round !== "group stage") continue;
+      const grp = TEAM_BY_ID.get(m.homeId)?.group;
+      if (!grp) continue;
+      const g = groupGoals.get(grp) ?? { goals: 0, matches: 0 };
+      g.goals += m.total; g.matches += 1;
+      groupGoals.set(grp, g);
+    }
+    const top = [...groupGoals.entries()].sort((a, b) => b[1].goals - a[1].goals)[0];
+    if (top && top[1].goals > 0) {
+      stats.push(mk({
+        key: "goal_heavy_group", category: "tournament", emoji: "⚔️",
+        title: "Group of Goals",
+        value: `Group ${top[0]} — ${top[1].goals} goals`,
+        detail: `in ${top[1].matches} ${top[1].matches === 1 ? "match" : "matches"} so far`,
+        explanation: `Group ${top[0]} has been the most entertaining pool so far, producing ${top[1].goals} goals across its ${top[1].matches} ${top[1].matches === 1 ? "match" : "matches"}.`,
+      }));
+    }
+  }
+
+  // Favorite Flop — a pre-tournament heavyweight currently in the bottom two.
+  {
+    let flop: { teamId: string; group: string; pos: string; seed: number } | null = null;
+    for (const [group, slots] of standings) {
+      for (const [stage, pos] of [["third", "3rd"], ["fourth", "4th"]] as const) {
+        const teamId = slots[stage];
+        const seed = teamId ? TEAM_BY_ID.get(teamId)?.seed : undefined;
+        if (teamId && seed != null && (!flop || seed < flop.seed)) flop = { teamId, group, pos, seed };
+      }
+    }
+    if (flop && flop.seed <= 12) {
+      const tName = TEAM_BY_ID.get(flop.teamId)?.name ?? flop.teamId;
+      stats.push(mk({
+        key: "favorite_flop", category: "tournament", emoji: "😬",
+        title: "Favorite Flop",
+        value: `${tName} (seed ${flop.seed}) sits ${flop.pos} in Group ${flop.group}`,
+        detail: "A pre-tournament favorite in danger of going out",
+        teamIds: [flop.teamId],
+        explanation: `${tName} were one of the strongest seeds in the field (seed ${flop.seed}), but they currently sit ${flop.pos} in Group ${flop.group} — outside the qualification places and at risk of an early exit.`,
+      }));
+    }
+  }
+
+  // ── More pool stats ──────────────────────────────────────────────────────────
+
+  // Sharpest Forecaster — most exact group finishing positions called correctly.
+  if (N > 0 && standings.size > 0) {
+    const positions = ["group", "runner", "third", "fourth"] as const;
+    let totalActuals = 0;
+    for (const [, slots] of standings) for (const s of positions) if (slots[s]) totalActuals++;
+    let best: { userId: number; correct: number } | null = null;
+    for (const u of userRows) {
+      let correct = 0;
+      for (const [group, slots] of standings) {
+        for (const stage of positions) {
+          if (!slots[stage]) continue;
+          const pick = pickRows.find((p) => p.user_id === u.id && p.stage === stage && p.slot === group);
+          if (pick && pick.team_id === slots[stage]) correct++;
+        }
+      }
+      if (!best || correct > best.correct) best = { userId: u.id, correct };
+    }
+    if (best && best.correct > 0) {
+      const pName = nameById.get(best.userId) ?? "Someone";
+      stats.push(mk({
+        key: "sharpest_forecaster", category: "pool", emoji: "🔮",
+        title: "Sharpest Forecaster",
+        value: `${pName} has nailed ${best.correct} group finishes`,
+        detail: `${best.correct} of ${totalActuals} positions exactly right so far`,
+        explanation: `Across every group's finishing positions decided so far, ${pName} has the sharpest crystal ball — ${best.correct} of ${totalActuals} exact positions called correctly.`,
+      }));
+    }
+  }
+
+  // Free Fall — the player who has dropped the most leaderboard spots.
+  if (phRows.length > 0) {
+    const indices = [...new Set(phRows.map((r) => r.game_index))].sort((a, b) => a - b);
+    if (indices.length >= 2) {
+      const rankAt = (idx: number) => {
+        const rows = phRows.filter((r) => r.game_index === idx).sort((a, b) => b.total - a.total);
+        const m = new Map<number, number>();
+        rows.forEach((r, i) => m.set(r.user_id, i + 1));
+        return m;
+      };
+      const first = rankAt(indices[0]);
+      const last = rankAt(indices[indices.length - 1]);
+      let worst: { userId: number; from: number; to: number; drop: number } | null = null;
+      for (const [userId, toRank] of last) {
+        const fromRank = first.get(userId);
+        if (fromRank == null) continue;
+        const drop = toRank - fromRank; // positive ⇒ fell
+        if (drop > 0 && (!worst || drop > worst.drop)) worst = { userId, from: fromRank, to: toRank, drop };
+      }
+      if (worst) {
+        const pName = nameById.get(worst.userId) ?? "Someone";
+        stats.push(mk({
+          key: "free_fall", category: "pool", emoji: "📉",
+          title: "Free Fall",
+          value: `${pName} slid ${worst.drop} ${worst.drop === 1 ? "spot" : "spots"}`,
+          detail: `From ${ordinal(worst.from)} to ${ordinal(worst.to)} on the leaderboard`,
+          explanation: `Not everyone's trending up: ${pName} has tumbled the furthest, dropping ${worst.drop} ${worst.drop === 1 ? "spot" : "spots"} from ${ordinal(worst.from)} to ${ordinal(worst.to)}.`,
+        }));
+      }
+    }
+  }
+
+  // Down To The Wire — the gap at the very top of the leaderboard right now.
+  if (phRows.length > 0 && N >= 2) {
+    const lastIdx = Math.max(...phRows.map((r) => r.game_index));
+    const totals = phRows.filter((r) => r.game_index === lastIdx).sort((a, b) => b.total - a.total);
+    if (totals.length >= 2) {
+      const gap = totals[0].total - totals[1].total;
+      const leader = nameById.get(totals[0].user_id) ?? "Someone";
+      const second = nameById.get(totals[1].user_id) ?? "Someone";
+      stats.push(mk({
+        key: "tightest_race", category: "pool", emoji: "🏁",
+        title: "Down To The Wire",
+        value: gap === 0 ? `${leader} & ${second} are dead level on top` : `Just ${gap} ${gap === 1 ? "point" : "points"} between 1st and 2nd`,
+        detail: gap === 0 ? "Tied for the lead" : `${leader} leads ${second}`,
+        explanation: gap === 0
+          ? `It could not be tighter at the top: ${leader} and ${second} are tied on points, sharing the lead.`
+          : `The race for first is on a knife edge — ${leader} leads ${second} by just ${gap} ${gap === 1 ? "point" : "points"}.`,
+      }));
+    }
+  }
+
+  // Great Minds — the pair of players whose brackets overlap the most.
+  if (userRows.length >= 2) {
+    const slotsByUser = new Map<number, Map<string, string>>();
+    for (const u of userRows) slotsByUser.set(u.id, new Map());
+    for (const p of pickRows) slotsByUser.get(p.user_id)?.set(`${p.stage}:${p.slot}`, p.team_id);
+    let best: { a: number; b: number; matches: number; common: number } | null = null;
+    for (let i = 0; i < userRows.length; i++) {
+      for (let j = i + 1; j < userRows.length; j++) {
+        const A = slotsByUser.get(userRows[i].id)!;
+        const B = slotsByUser.get(userRows[j].id)!;
+        let matches = 0, common = 0;
+        for (const [k, v] of A) if (B.has(k)) { common++; if (B.get(k) === v) matches++; }
+        if (common >= 12 && (!best || matches > best.matches)) best = { a: userRows[i].id, b: userRows[j].id, matches, common };
+      }
+    }
+    if (best && best.matches > 0) {
+      const aN = nameById.get(best.a) ?? "Someone";
+      const bN = nameById.get(best.b) ?? "Someone";
+      const pct = Math.round((best.matches / best.common) * 100);
+      stats.push(mk({
+        key: "great_minds", category: "pool", emoji: "👯",
+        title: "Great Minds",
+        value: `${aN} & ${bN} agree on ${best.matches} of ${best.common} picks`,
+        detail: `${pct}% identical brackets`,
+        explanation: `${aN} and ${bN} think alike — their brackets match on ${best.matches} of ${best.common} shared picks (${pct}%), the most of any pair in the pool.`,
+      }));
+    }
+  }
+
+  // Bandwagon Bust — the most-backed team that's currently NOT advancing.
+  if (N > 0 && standings.size > 0) {
+    const backers = (group: string, teamId: string) => {
+      const set = new Set<number>();
+      for (const p of pickRows) if ((p.stage === "group" || p.stage === "runner") && p.slot === group && p.team_id === teamId) set.add(p.user_id);
+      return set.size;
+    };
+    let bust: { teamId: string; group: string; pos: string; count: number } | null = null;
+    for (const [group, slots] of standings) {
+      for (const [stage, pos] of [["third", "3rd"], ["fourth", "4th"]] as const) {
+        const teamId = slots[stage];
+        if (!teamId) continue;
+        const count = backers(group, teamId);
+        if (count > 0 && (!bust || count > bust.count)) bust = { teamId, group, pos, count };
+      }
+    }
+    if (bust && bust.count >= Math.max(2, Math.ceil(N / 3))) {
+      const tName = TEAM_BY_ID.get(bust.teamId)?.name ?? bust.teamId;
+      stats.push(mk({
+        key: "bandwagon_bust", category: "pool", emoji: "🐂",
+        title: "Bandwagon Bust",
+        value: `${bust.count} of ${N} backed ${tName} to advance — they're ${bust.pos}`,
+        teamIds: [bust.teamId],
+        explanation: `The pool piled onto ${tName}: ${bust.count} of ${N} players had them advancing from Group ${bust.group}. Right now they sit ${bust.pos} — on the wrong side of the line.`,
+      }));
+    }
+  }
+
   return stats;
 }
 
