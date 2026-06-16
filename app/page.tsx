@@ -1099,7 +1099,19 @@ export default function BracketPage() {
                       New!
                     </span>
                   </span>
-                ) : t === "groups" ? "Phase 1 - Groups" : t === "bracket" ? "Phase 2 - Bracket" : t === "world" ? "🌍 The World" : t === "leaderboard" ? "Leaderboard" : t === "stats" ? "📊 Stats" : "The Rules"}
+                ) : t === "groups" ? (
+                  <span className="relative inline-block">
+                    Groups
+                    {phase1Locked && (
+                      <span
+                        className="absolute -top-2 -right-3.5 text-[9px] leading-none"
+                        title="Picks locked"
+                      >
+                        🔒
+                      </span>
+                    )}
+                  </span>
+                ) : t === "bracket" ? "Phase 2 - Bracket" : t === "world" ? "🌍 The World" : t === "leaderboard" ? "Leaderboard" : t === "stats" ? "📊 Stats" : "The Rules"}
                 <span className={`absolute bottom-[-1px] inset-x-0 h-[2px] ${tab === t ? "bg-yellow-300" : ""}`} />
               </button>
             ))}
