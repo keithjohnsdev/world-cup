@@ -136,13 +136,63 @@ export function StatsTab() {
         )}
       </div>
     </div>
+
+    {selected && <StatModal stat={selected} onClose={() => setSelected(null)} />}
+    </>
   );
 }
 
-function StatCard({ stat }: { stat: Stat }) {
+function StatModal({ stat, onClose }: { stat: Stat; onClose: () => void }) {
   const teams = (stat.teamIds ?? []).map((id) => getTeam(id)).filter(Boolean);
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 flex flex-col gap-1.5">
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+      <div
+        className="w-full max-w-md rounded-2xl border border-white/15 bg-[#0b1c30] p-6 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl leading-none">{stat.emoji}</span>
+            <span className="text-xs font-black uppercase tracking-[0.12em] text-green-400">{stat.title}</span>
+          </div>
+          <button onClick={onClose} aria-label="Close" className="text-white/50 hover:text-white transition-colors -mt-1 -mr-1 p-1">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+        </div>
+        {stat.headline && <p className="text-yellow-300 font-bold leading-snug mb-1">{stat.headline}</p>}
+        <p className="text-white font-bold text-lg leading-snug">{stat.value}</p>
+        {stat.detail && <p className="text-white/50 text-sm mt-0.5">{stat.detail}</p>}
+        {teams.length > 0 && (
+          <div className="flex items-center gap-2 mt-3">
+            {teams.map((t) => t && (
+              <span key={t.id} className="flex items-center gap-1.5">
+                <FlagIcon cc={t.cc} name={t.name} className="w-7 h-5" />
+                <span className="text-white/70 text-sm">{t.name}</span>
+              </span>
+            ))}
+          </div>
+        )}
+        {stat.explanation && (
+          <>
+            <div className="h-px bg-white/10 my-4" />
+            <p className="text-white/70 text-sm leading-relaxed">{stat.explanation}</p>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ stat, onSelect }: { stat: Stat; onSelect: (s: Stat) => void }) {
+  const teams = (stat.teamIds ?? []).map((id) => getTeam(id)).filter(Boolean);
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(stat)}
+      className="text-left rounded-2xl border border-white/10 bg-white/5 hover:bg-white/[0.08] hover:border-white/20 transition-colors p-4 flex flex-col gap-1.5 cursor-pointer"
+    >
       <div className="flex items-center gap-2">
         <span className="text-lg leading-none">{stat.emoji}</span>
         <span className="text-[11px] font-black uppercase tracking-[0.12em] text-green-400">{stat.title}</span>
@@ -157,7 +207,7 @@ function StatCard({ stat }: { stat: Stat }) {
           {teams.map((t) => t && <FlagIcon key={t.id} cc={t.cc} name={t.name} className="w-6 h-4" />)}
         </div>
       )}
-    </div>
+    </button>
   );
 }
 
