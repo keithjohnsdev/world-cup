@@ -1104,7 +1104,7 @@ export default function BracketPage() {
                     Groups
                     {phase1Locked && (
                       <span
-                        className="absolute -top-1.5 -right-2.5 flex h-3 w-3 items-center justify-center rounded-full bg-green-500 text-[7px] font-black leading-none text-white shadow-sm"
+                        className="absolute -top-1.5 -right-2.5 text-[10px] font-black leading-none text-green-400"
                         title="Picks locked"
                       >
                         ✓

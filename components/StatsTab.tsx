@@ -67,12 +67,23 @@ export function StatsTab() {
       .catch(() => {});
   }, [stats]);
 
+  // Close the detail popup on Escape; lock body scroll while it's open.
+  useEffect(() => {
+    if (!selected) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setSelected(null); };
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.removeEventListener("keydown", onKey); document.body.style.overflow = prev; };
+  }, [selected]);
+
   // "Johnsies" = our pool's stats; "World Cup" = the actual tournament records.
   const tournament = stats.filter((s) => s.category === "tournament");
   const pool = stats.filter((s) => s.category === "pool");
   const active = view === "johnsies" ? pool : tournament;
 
   return (
+    <>
     <div className="min-h-screen" style={{ background: "linear-gradient(160deg, #060d1a 0%, #0d2137 60%, #071628 100%)" }}>
       <div className="px-4 pt-10 pb-16 max-w-2xl mx-auto">
         <div className="mb-8 text-center">
@@ -114,7 +125,7 @@ export function StatsTab() {
             </div>
             {active.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {active.map((s) => <StatCard key={s.key} stat={s} />)}
+                {active.map((s) => <StatCard key={s.key} stat={s} onSelect={setSelected} />)}
               </div>
             ) : (
               <p className="text-center text-white/40 text-sm py-10">
