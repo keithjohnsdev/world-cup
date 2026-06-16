@@ -6,6 +6,18 @@ import { initDb, getSql } from "@/lib/db";
 import { fetchCompletedMatchesForDate, fetchMatchesWindow, type MatchWindowEntry } from "@/lib/api-football";
 import { processMatches } from "@/lib/process-matches";
 import { syncGroupPoints } from "@/lib/sync-standings";
+import { rebuildPointsHistory } from "@/lib/points-history";
+
+// Rebuild the points-history table after results change. Non-fatal: a failure
+// here must never lose a processed result. Skips when nothing new landed.
+async function rebuildHistoryIfChanged(processed: number) {
+  if (processed <= 0) return;
+  try {
+    await rebuildPointsHistory(getSql());
+  } catch (err) {
+    console.warn("[results-sync] points-history rebuild failed:", err);
+  }
+}
 
 const POST_MATCH_WINDOW_MS = 3 * 60 * 60 * 1000; // keep polling ~3h after kickoff (covers full-time + free-tier delay)
 const WARMUP_MS = 10 * 60 * 1000;                 // start ~10 min before kickoff
@@ -57,6 +69,8 @@ export async function runResultsSyncIfActive() {
     console.warn("[results-sync] group points sync failed:", err);
   }
 
+  await rebuildHistoryIfChanged(result.done.length);
+
   return { idle: false as const, dateFrom, dateTo, pointsSynced, ...result };
 }
 
@@ -81,6 +95,8 @@ export async function runResultsSync() {
   } catch (err) {
     console.warn("[results-sync] group points sync failed:", err);
   }
+
+  await rebuildHistoryIfChanged(result.done.length);
 
   return { dateFrom: yesterday, dateTo: today, pointsSynced, ...result };
 }

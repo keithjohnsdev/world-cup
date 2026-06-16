@@ -17,6 +17,7 @@ import { NewsTab } from "@/components/NewsTab";
 
 const GlobeView = dynamic(() => import("@/components/GlobeView"), { ssr: false });
 const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
+const PointsHistoryChart = dynamic(() => import("@/components/PointsHistoryChart").then((m) => m.PointsHistoryChart), { ssr: false });
 
 type Picks = Record<string, string>; // key: "stage:slot" → teamId
 
@@ -783,6 +784,8 @@ function LeaderboardTab() {
           <p className="text-white/25 text-xs text-center mt-4">Picks are hidden until the group stage begins.</p>
         )}
       </div>
+
+      {!loading && <PointsHistoryChart />}
 
       {selected && (
         <GroupPicksModal

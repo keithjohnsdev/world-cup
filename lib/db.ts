@@ -143,6 +143,26 @@ export async function initDb() {
     )
   `;
 
+  // ── Points history ──────────────────────────────────────────────────────────
+  // One row per (user, finished match): the player's cumulative score as of that
+  // match. Powers the "points over time" line graph below the leaderboard.
+  // Fully rebuilt by rebuildPointsHistory() (lib/points-history.ts) — a clean
+  // chronological replay of every finished match — so it's never partially stale.
+  // game_index is the X-axis ordinal; fixture_id keys the rebuild's upsert.
+  await sql`
+    CREATE TABLE IF NOT EXISTS points_history (
+      user_id       INTEGER     NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      game_index    INTEGER     NOT NULL,
+      fixture_id    INTEGER     NOT NULL,
+      match_utc     TIMESTAMPTZ,
+      label         VARCHAR(80),
+      total         INTEGER     NOT NULL,
+      group_score   INTEGER     NOT NULL DEFAULT 0,
+      bracket_score INTEGER     NOT NULL DEFAULT 0,
+      PRIMARY KEY (user_id, fixture_id)
+    )
+  `;
+
   // ── News ──────────────────────────────────────────────────────────────────────
   // Aggregated World Cup stories pulled from reputable RSS feeds by the cron.
   // url is the primary key, giving natural idempotency across runs (a story keeps

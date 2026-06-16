@@ -38,6 +38,14 @@ export interface MatchWindowEntry extends CompletedMatch {
   utcDate: string; // ISO 8601 kickoff time
 }
 
+// A match with its full-time score — used by the points-history reconstruction
+// to recompute group standings ourselves (the standings endpoint only reports
+// the *current* table, not how it looked after each match).
+export interface RawMatch extends MatchWindowEntry {
+  homeGoals: number | null; // score.fullTime.home
+  awayGoals: number | null; // score.fullTime.away
+}
+
 // ─── Round name normalisation ─────────────────────────────────────────────────
 
 function normaliseRound(stage: string): string {
@@ -109,6 +117,25 @@ export async function fetchMatchesWindow(
     status:  m.status ?? "",
     utcDate: m.utcDate ?? "",
   } satisfies MatchWindowEntry));
+}
+
+// Fetch EVERY World Cup match (any status), with full-time scores + kickoff.
+// One request covers the whole tournament (~104 matches). Used by the
+// points-history reconstruction, which replays finished matches in order.
+export async function fetchAllMatches(): Promise<RawMatch[]> {
+  const res = await fetch(
+    `${BASE}/competitions/${WC}/matches`,
+    { headers: headers() },
+  );
+  if (!res.ok) throw new Error(`football-data.org /matches ${res.status}`);
+  const json = await res.json();
+  return (json.matches ?? []).map((m: any) => ({
+    ...normaliseMatch(m),
+    status:    m.status ?? "",
+    utcDate:   m.utcDate ?? "",
+    homeGoals: m.score?.fullTime?.home ?? null,
+    awayGoals: m.score?.fullTime?.away ?? null,
+  } satisfies RawMatch));
 }
 
 // Fetch group standings — returns map of group letter ("A"…"L") → entries sorted by position.
