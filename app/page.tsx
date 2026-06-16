@@ -1095,7 +1095,7 @@ export default function BracketPage() {
                 {t === "news" ? (
                   <span className="relative inline-block">
                     📰 News
-                    <span className="absolute -top-2.5 -right-6 rounded-full border border-green-400 bg-green-400/10 px-1.5 py-px text-[8px] font-black uppercase tracking-tight text-green-400 drop-shadow-[0_0_4px_rgba(74,222,128,0.8)] animate-pulse">
+                    <span className="absolute -top-1.5 -right-7 rounded-full border border-green-400 bg-green-400/10 px-1 py-px text-[7px] font-black uppercase tracking-tight text-green-400 drop-shadow-[0_0_4px_rgba(74,222,128,0.8)] animate-pulse">
                       New!
                     </span>
                   </span>
@@ -1121,7 +1121,7 @@ export default function BracketPage() {
                 ) : t === "bracket" ? "Phase 2 - Bracket" : t === "world" ? "🌍 The World" : t === "leaderboard" ? "Leaderboard" : t === "stats" ? (
                   <span className="relative inline-block">
                     📊 Stats
-                    <span className="absolute -top-2.5 -right-6 rounded-full border border-green-400 bg-green-400/10 px-1.5 py-px text-[8px] font-black uppercase tracking-tight text-green-400 drop-shadow-[0_0_4px_rgba(74,222,128,0.8)] animate-pulse">
+                    <span className="absolute -top-1.5 -right-7 rounded-full border border-green-400 bg-green-400/10 px-1 py-px text-[7px] font-black uppercase tracking-tight text-green-400 drop-shadow-[0_0_4px_rgba(74,222,128,0.8)] animate-pulse">
                       New!
                     </span>
                   </span>
