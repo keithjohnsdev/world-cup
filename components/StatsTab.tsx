@@ -17,42 +17,71 @@ interface Stat {
   headline?: string | null;
 }
 
+// World Cup 2026 window — bounds the archive calendar.
+const TOURNAMENT_START = "2026-06-11";
+const TOURNAMENT_END = "2026-07-19";
+
+const todayStr = () => new Date().toISOString().slice(0, 10);
+const ymd = (d: Date) => d.toISOString().slice(0, 10);
+
 export function StatsTab() {
   const [stats, setStats] = useState<Stat[]>([]);
   const [computedAt, setComputedAt] = useState<string | null>(null);
+  const [archiveDates, setArchiveDates] = useState<string[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null); // null = today / live
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [view, setView] = useState<"johnsies" | "worldcup">("johnsies");
   const [selected, setSelected] = useState<Stat | null>(null);
   const flavorRequested = useRef(false);
 
+  const today = todayStr();
+
+  // Load the selected day's stats (null = live snapshot). Re-runs on date change.
   useEffect(() => {
     const token = localStorage.getItem("wc_token");
     if (!token) return;
+    let cancelled = false;
+    const url = selectedDate ? `/api/stats?date=${selectedDate}` : "/api/stats";
+    fetch(url, { headers: { "x-session-token": token } })
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data) => {
+        if (cancelled) return;
+        setStats(data.stats ?? []);
+        setComputedAt(data.computedAt ?? null);
+        if (Array.isArray(data.archiveDates)) setArchiveDates(data.archiveDates);
+        setError(false);
+      })
+      .catch(() => { if (!cancelled) setError(true); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [selectedDate]);
 
-    const load = () => {
+  // Auto-refresh the LIVE view ~60s while visible (not when browsing the archive).
+  useEffect(() => {
+    if (selectedDate !== null) return;
+    const token = localStorage.getItem("wc_token");
+    if (!token) return;
+    const reload = () => {
+      if (document.visibilityState !== "visible") return;
       fetch("/api/stats", { headers: { "x-session-token": token } })
         .then((r) => (r.ok ? r.json() : Promise.reject()))
         .then((data) => {
           setStats(data.stats ?? []);
           setComputedAt(data.computedAt ?? null);
-          setError(false);
+          if (Array.isArray(data.archiveDates)) setArchiveDates(data.archiveDates);
         })
-        .catch(() => setError(true))
-        .finally(() => setLoading(false));
+        .catch(() => {});
     };
-    load();
-    const id = setInterval(() => {
-      if (document.visibilityState === "visible") load();
-    }, 60_000);
-    const onVisible = () => { if (document.visibilityState === "visible") load(); };
-    document.addEventListener("visibilitychange", onVisible);
-    return () => { clearInterval(id); document.removeEventListener("visibilitychange", onVisible); };
-  }, []);
+    const id = setInterval(reload, 60_000);
+    document.addEventListener("visibilitychange", reload);
+    return () => { clearInterval(id); document.removeEventListener("visibilitychange", reload); };
+  }, [selectedDate]);
 
-  // After stats land, ask the server to fill in any missing LLM headlines once.
+  // Fill in missing LLM headlines once, for the LIVE view only. Archived days
+  // show whatever headlines are already cached (templated value otherwise).
   useEffect(() => {
-    if (flavorRequested.current) return;
+    if (selectedDate !== null || flavorRequested.current) return;
     if (!stats.length || !stats.some((s) => !s.headline)) return;
     flavorRequested.current = true;
     const token = localStorage.getItem("wc_token");
@@ -65,7 +94,7 @@ export function StatsTab() {
         setStats((prev) => prev.map((s) => (headlines[s.signature] ? { ...s, headline: headlines[s.signature] } : s)));
       })
       .catch(() => {});
-  }, [stats]);
+  }, [stats, selectedDate]);
 
   // Close the detail popup on Escape; lock body scroll while it's open.
   useEffect(() => {
@@ -81,6 +110,7 @@ export function StatsTab() {
   const tournament = stats.filter((s) => s.category === "tournament");
   const pool = stats.filter((s) => s.category === "pool");
   const active = view === "johnsies" ? pool : tournament;
+  const showCalendar = !loading && !error && archiveDates.length > 0;
 
   return (
     <>
@@ -94,7 +124,9 @@ export function StatsTab() {
             <div className="h-px w-10 bg-gradient-to-l from-transparent to-yellow-300/60" />
           </div>
           <p className="text-white/40 text-xs mt-3">
-            {computedAt ? `Updated ${timeAgo(new Date(computedAt))}` : "Surprising records, updated as games finish."}
+            {selectedDate
+              ? `Viewing ${formatDay(selectedDate)}`
+              : computedAt ? `Updated ${timeAgo(new Date(computedAt))}` : "Surprising records, updated as games finish."}
           </p>
         </div>
 
@@ -104,7 +136,7 @@ export function StatsTab() {
           <p className="text-center text-white/40 text-sm py-16">Couldn&apos;t load the stats right now — try again shortly.</p>
         ) : stats.length === 0 ? (
           <p className="text-center text-white/40 text-sm py-16 rounded-2xl border border-white/10">
-            The stat sheet fills up once the first games are played.
+            {selectedDate ? "No stat sheet was saved for this day." : "The stat sheet fills up once the first games are played."}
           </p>
         ) : (
           <>
@@ -134,11 +166,109 @@ export function StatsTab() {
             )}
           </>
         )}
+
+        {showCalendar && (
+          <StatsCalendar
+            archiveDates={archiveDates}
+            selectedDate={selectedDate}
+            today={today}
+            onSelect={setSelectedDate}
+          />
+        )}
       </div>
     </div>
 
     {selected && <StatModal stat={selected} onClose={() => setSelected(null)} />}
     </>
+  );
+}
+
+function StatsCalendar({ archiveDates, selectedDate, today, onSelect }: {
+  archiveDates: string[];
+  selectedDate: string | null;
+  today: string;
+  onSelect: (date: string | null) => void;
+}) {
+  const available = new Set(archiveDates);
+  available.add(today); // today is always browsable (the live sheet)
+
+  const initial = selectedDate ?? today;
+  const [ym, setYm] = useState(() => {
+    const d = new Date(`${initial}T12:00:00Z`);
+    return { y: d.getUTCFullYear(), m: d.getUTCMonth() };
+  });
+
+  const startD = new Date(`${TOURNAMENT_START}T12:00:00Z`);
+  const endD = new Date(`${TOURNAMENT_END}T12:00:00Z`);
+  const minYM = startD.getUTCFullYear() * 12 + startD.getUTCMonth();
+  const maxYM = endD.getUTCFullYear() * 12 + endD.getUTCMonth();
+  const curYM = ym.y * 12 + ym.m;
+
+  const first = new Date(Date.UTC(ym.y, ym.m, 1));
+  const startWeekday = first.getUTCDay();
+  const daysInMonth = new Date(Date.UTC(ym.y, ym.m + 1, 0)).getUTCDate();
+  const monthLabel = first.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+
+  const cells: (string | null)[] = [];
+  for (let i = 0; i < startWeekday; i++) cells.push(null);
+  for (let day = 1; day <= daysInMonth; day++) cells.push(ymd(new Date(Date.UTC(ym.y, ym.m, day))));
+
+  const inWindow = (ds: string) => ds >= TOURNAMENT_START && ds <= TOURNAMENT_END;
+
+  return (
+    <div className="mt-10 rounded-2xl border border-white/10 bg-white/[0.03] p-4 max-w-sm mx-auto">
+      <div className="flex items-center justify-between mb-3">
+        <button
+          aria-label="Previous month"
+          disabled={curYM <= minYM}
+          onClick={() => setYm(({ y, m }) => (m === 0 ? { y: y - 1, m: 11 } : { y, m: m - 1 }))}
+          className="text-white/50 hover:text-white disabled:opacity-20 disabled:cursor-default cursor-pointer p-1"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+        </button>
+        <span className="text-xs font-black uppercase tracking-[0.15em] text-white/70">{monthLabel}</span>
+        <button
+          aria-label="Next month"
+          disabled={curYM >= maxYM}
+          onClick={() => setYm(({ y, m }) => (m === 11 ? { y: y + 1, m: 0 } : { y, m: m + 1 }))}
+          className="text-white/50 hover:text-white disabled:opacity-20 disabled:cursor-default cursor-pointer p-1"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+        </button>
+      </div>
+      <div className="grid grid-cols-7 gap-1 mb-1">
+        {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+          <div key={i} className="text-center text-[10px] font-black text-white/30">{d}</div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {cells.map((ds, i) => {
+          if (!ds) return <div key={i} />;
+          const dayNum = Number(ds.slice(8, 10));
+          const isAvail = inWindow(ds) && available.has(ds);
+          const isToday = ds === today;
+          const isSelected = selectedDate === ds || (selectedDate === null && isToday);
+          return (
+            <button
+              key={i}
+              disabled={!isAvail}
+              onClick={() => onSelect(isToday ? null : ds)}
+              className={`relative aspect-square rounded-lg text-xs font-bold flex items-center justify-center transition-colors ${
+                isSelected
+                  ? "bg-yellow-300 text-green-950"
+                  : isAvail
+                    ? "text-white hover:bg-white/10 cursor-pointer"
+                    : inWindow(ds) ? "text-white/25" : "text-white/10"
+              } ${isToday && !isSelected ? "ring-1 ring-yellow-300/50" : ""}`}
+            >
+              {dayNum}
+              {isAvail && !isSelected && <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-yellow-300/70" />}
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-center text-white/30 text-[10px] mt-3">Tap a highlighted day to see that day&apos;s stat sheet</p>
+    </div>
   );
 }
 
@@ -209,6 +339,12 @@ function StatCard({ stat, onSelect }: { stat: Stat; onSelect: (s: Stat) => void 
       )}
     </button>
   );
+}
+
+function formatDay(dateStr: string) {
+  const d = new Date(`${dateStr}T12:00:00Z`);
+  if (isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
 }
 
 function timeAgo(d: Date) {

@@ -595,13 +595,21 @@ export async function computeStats(matches: RawMatch[], sql: Sql): Promise<Stat[
   return stats;
 }
 
-// Compute and persist the single stats_snapshot row. Idempotent.
+// Compute and persist the live stats_snapshot row plus today's archive row.
+// Idempotent — today's archive row keeps refreshing until midnight (UTC), so it
+// ends up holding the day's final state. Past days accrue one row each.
 export async function rebuildStats(matches: RawMatch[], sql: Sql): Promise<{ count: number }> {
   const stats = await computeStats(matches, sql);
+  const json = JSON.stringify(stats);
   await sql`
     INSERT INTO stats_snapshot (id, data, computed_at)
-    VALUES (1, ${JSON.stringify(stats)}::jsonb, NOW())
+    VALUES (1, ${json}::jsonb, NOW())
     ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, computed_at = NOW()
+  `;
+  await sql`
+    INSERT INTO stats_archive (snapshot_date, data, computed_at)
+    VALUES (CURRENT_DATE, ${json}::jsonb, NOW())
+    ON CONFLICT (snapshot_date) DO UPDATE SET data = EXCLUDED.data, computed_at = NOW()
   `;
   return { count: stats.length };
 }

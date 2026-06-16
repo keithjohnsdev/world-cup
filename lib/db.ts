@@ -183,6 +183,16 @@ export async function initDb() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `;
+  // Daily archive of the stat sheet (one row per UTC calendar day, latest rebuild
+  // of the day wins). Lets the Stats tab's calendar browse how the sheet looked on
+  // past days. Accrues forward — earlier days weren't stored.
+  await sql`
+    CREATE TABLE IF NOT EXISTS stats_archive (
+      snapshot_date DATE        PRIMARY KEY,
+      data          JSONB       NOT NULL,
+      computed_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
 
   // ── News ──────────────────────────────────────────────────────────────────────
   // Aggregated World Cup stories pulled from reputable RSS feeds by the cron.
