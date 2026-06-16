@@ -1110,7 +1110,7 @@ export default function BracketPage() {
                         strokeWidth="2.5"
                         strokeLinecap="round"
                         strokeLinejoin="round"
-                        className="absolute -top-1 -right-[15px] h-3 w-3 text-yellow-300 drop-shadow-[0_0_4px_rgba(253,224,71,0.8)]"
+                        className="absolute -top-1 -right-[9px] h-3 w-3 text-yellow-300 drop-shadow-[0_0_4px_rgba(253,224,71,0.8)]"
                         aria-label="Picks locked"
                       >
                         <rect x="5" y="11" width="14" height="10" rx="2" />
