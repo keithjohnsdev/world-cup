@@ -1106,7 +1106,7 @@ export default function BracketPage() {
                       <svg
                         viewBox="0 0 24 24"
                         fill="currentColor"
-                        className="absolute -top-2 -right-2.5 h-2.5 w-2.5 text-green-400 drop-shadow-[0_0_3px_rgba(74,222,128,0.6)]"
+                        className="absolute -top-2 -right-1.5 h-3 w-3 text-slate-300"
                         aria-label="Picks locked"
                       >
                         <path d="M12 1.5a4.5 4.5 0 0 0-4.5 4.5V9H6.75A1.75 1.75 0 0 0 5 10.75v9A1.75 1.75 0 0 0 6.75 21.5h10.5A1.75 1.75 0 0 0 19 19.75v-9A1.75 1.75 0 0 0 17.25 9H16.5V6A4.5 4.5 0 0 0 12 1.5Zm2.5 7.5h-5V6a2.5 2.5 0 0 1 5 0v3Z" />
