@@ -1110,11 +1110,11 @@ export default function BracketPage() {
                         strokeWidth="2.5"
                         strokeLinecap="round"
                         strokeLinejoin="round"
-                        className="absolute -top-2 -right-3.5 h-3.5 w-3.5 text-green-400 drop-shadow-[0_0_4px_rgba(74,222,128,0.8)]"
+                        className="absolute -top-1 -right-3.5 h-3.5 w-3.5 text-green-400 drop-shadow-[0_0_4px_rgba(74,222,128,0.8)]"
                         aria-label="Picks locked"
                       >
-                        <circle cx="12" cy="12" r="9" />
-                        <path d="m8.5 12 2.5 2.5 4.5-5" />
+                        <rect x="5" y="11" width="14" height="10" rx="2" />
+                        <path d="M8 11V7a4 4 0 0 1 8 0v4" />
                       </svg>
                     )}
                   </span>
