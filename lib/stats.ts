@@ -1,15 +1,17 @@
-// Stats / fun-facts engine. Computes a set of interesting & surprising records
-// about World Cup 2026 so far — both tournament facts (goals, upsets, blowouts)
-// and pool facts (our players' picks vs reality). All derived for FREE from data
-// we already have: match scores (fetchAllMatches), team seeds, and the picks /
-// standings / points-history tables. Rebuilt by the results cron when results
-// change; materialised into the single stats_snapshot row.
+// Stats / fun-facts engine. Builds the Stat Sheet from two sources:
+//   • Tournament ("World Cup" tab) — curated "interesting facts about World Cup
+//     2026" from lib/wc-facts.ts, a couple of which fold in live goal/match counts.
+//   • Pool ("Johnsies" tab) — facts about our players' picks vs reality, derived
+//     for FREE from the picks / standings / points-history tables.
+// Rebuilt by the results cron when results change; materialised into the single
+// stats_snapshot row.
 
 import { createHash } from "crypto";
 import { getSql } from "@/lib/db";
 import { type RawMatch } from "@/lib/api-football";
 import { apiNameToTeamId } from "@/lib/team-mapping";
 import { TEAMS } from "@/lib/data";
+import { buildWcFacts } from "@/lib/wc-facts";
 
 type Sql = ReturnType<typeof getSql>;
 
@@ -32,17 +34,6 @@ const ordinal = (n: number) => {
   return `${n}${s[(v - 20) % 10] || s[v] || s[0]}`;
 };
 
-function roundLabel(round: string): string {
-  const r = round.toLowerCase();
-  if (r === "group stage") return "Group Stage";
-  if (r.includes("round of 32")) return "Round of 32";
-  if (r.includes("round of 16")) return "Round of 16";
-  if (r.includes("quarter")) return "Quarter-final";
-  if (r.includes("semi")) return "Semi-final";
-  if (r === "final") return "Final";
-  return round;
-}
-
 function sig(key: string, value: string, detail?: string): string {
   return createHash("sha1").update(`${key}|${value}|${detail ?? ""}`).digest("hex").slice(0, 16);
 }
@@ -55,11 +46,6 @@ interface FM {
   homeId: string; awayId: string; homeName: string; awayName: string;
   hg: number; ag: number; total: number; margin: number;
   winnerId: string | null; loserId: string | null; wasShootout: boolean;
-}
-
-function monthDay(isoDate: string): string {
-  const d = new Date(`${isoDate}T12:00:00Z`);
-  return isNaN(d.getTime()) ? isoDate : d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 }
 
 export async function computeStats(matches: RawMatch[], sql: Sql): Promise<Stat[]> {
@@ -86,111 +72,13 @@ export async function computeStats(matches: RawMatch[], sql: Sql): Promise<Stat[
   const stats: Stat[] = [];
   if (fms.length === 0) return stats; // nothing played yet
 
-  const scoreline = (m: FM) => `${m.homeName} ${m.hg}–${m.ag} ${m.awayName}`;
-  const winnerName = (m: FM) => (m.hg > m.ag ? m.homeName : m.awayName);
-  const loserName = (m: FM) => (m.hg > m.ag ? m.awayName : m.homeName);
-
-  // ── Tournament: goals overview ───────────────────────────────────────────────
+  // ── Tournament tab: curated "interesting facts about World Cup 2026" ──────────
+  // Hand-curated evergreen facts (format, hosts, debutants, milestones) plus a
+  // couple that fold in live numbers from the matches we already have on hand.
+  // See lib/wc-facts.ts. Wrapped through mk() so they share the snapshot / flavor
+  // (LLM headline) / archive pipeline with the pool facts below.
   const totalGoals = fms.reduce((s, m) => s + m.total, 0);
-  const avg = totalGoals / fms.length;
-  stats.push(mk({
-    key: "goals_overview", category: "tournament", emoji: "⚽",
-    title: "Goals So Far",
-    value: `${totalGoals} goals in ${fms.length} ${fms.length === 1 ? "match" : "matches"}`,
-    detail: `${avg.toFixed(2)} per game`,
-    explanation: `${totalGoals} goals have been scored across the ${fms.length} ${fms.length === 1 ? "match" : "matches"} completed so far, an average of ${avg.toFixed(2)} per game. This counts goals from open play and regulation time only.`,
-  }));
-
-  // ── Highest-scoring match vs biggest blowout ─────────────────────────────────
-  // Both pick the single TRUE record. When the same match is both (e.g. a 7–1),
-  // collapse into one combined card rather than inventing a lesser second one.
-  const hi = [...fms].sort((a, b) => b.total - a.total || b.margin - a.margin)[0];
-  const blow = [...fms].sort((a, b) => b.margin - a.margin || b.total - a.total)[0];
-
-  if (hi.id === blow.id && hi.total > 0) {
-    const m = hi;
-    stats.push(mk({
-      key: "goal_fest", category: "tournament", emoji: "🔥",
-      title: "Goal Fest",
-      value: scoreline(m),
-      detail: `${m.total} goals · ${m.margin}-goal margin · ${roundLabel(m.round)}`,
-      teamIds: [m.homeId, m.awayId],
-      explanation: `${scoreline(m)} in the ${roundLabel(m.round)} is the standout result so far — both the most goals in a single match (${m.total}) and the widest winning margin (${m.margin}). ${winnerName(m)} ran riot against ${loserName(m)}.`,
-    }));
-  } else {
-    if (hi.total > 0) {
-      stats.push(mk({
-        key: "goal_fest", category: "tournament", emoji: "🔥",
-        title: "Goal Fest",
-        value: scoreline(hi),
-        detail: `${hi.total} goals · ${roundLabel(hi.round)}`,
-        teamIds: [hi.homeId, hi.awayId],
-        explanation: `The most goals in a single match so far: ${scoreline(hi)} in the ${roundLabel(hi.round)}, ${hi.total} goals combined.`,
-      }));
-    }
-    if (blow.margin >= 2) {
-      stats.push(mk({
-        key: "biggest_blowout", category: "tournament", emoji: "💪",
-        title: "Biggest Blowout",
-        value: scoreline(blow),
-        detail: `${blow.margin}-goal margin · ${roundLabel(blow.round)}`,
-        teamIds: [blow.homeId, blow.awayId],
-        explanation: `The widest winning margin so far: ${winnerName(blow)} beat ${loserName(blow)} by ${blow.margin} goals (${scoreline(blow)}) in the ${roundLabel(blow.round)}.`,
-      }));
-    }
-  }
-
-  // ── Biggest upset (weaker seed beats stronger) ───────────────────────────────
-  let upset: { fm: FM; ws: number; ls: number; gap: number } | null = null;
-  for (const m of fms) {
-    if (!m.winnerId || !m.loserId) continue;
-    const ws = TEAM_BY_ID.get(m.winnerId)?.seed;
-    const ls = TEAM_BY_ID.get(m.loserId)?.seed;
-    if (ws == null || ls == null) continue;
-    const gap = ws - ls; // positive ⇒ weaker (higher seed number) beat stronger
-    if (gap > 0 && (!upset || gap > upset.gap)) upset = { fm: m, ws, ls, gap };
-  }
-  if (upset) {
-    const wName = TEAM_BY_ID.get(upset.fm.winnerId!)?.name ?? upset.fm.winnerId;
-    const lName = TEAM_BY_ID.get(upset.fm.loserId!)?.name ?? upset.fm.loserId;
-    stats.push(mk({
-      key: "biggest_upset", category: "tournament", emoji: "😱",
-      title: "Biggest Upset",
-      value: `${wName} (seed ${upset.ws}) beat ${lName} (seed ${upset.ls})`,
-      detail: `${upset.gap} seeds apart · ${roundLabel(upset.fm.round)}`,
-      teamIds: [upset.fm.winnerId!, upset.fm.loserId!],
-      explanation: `Teams are seeded 1 (strongest) to 48 (weakest). ${wName} were seeded ${upset.ws} and ${lName} ${upset.ls} — a ${upset.gap}-seed gap, the biggest upset by seeding so far, in the ${roundLabel(upset.fm.round)}.`,
-    }));
-  }
-
-  // ── Penalty shootouts ────────────────────────────────────────────────────────
-  const shootouts = fms.filter((m) => m.wasShootout).length;
-  if (shootouts > 0) {
-    stats.push(mk({
-      key: "shootouts", category: "tournament", emoji: "🎯",
-      title: "Penalty Drama",
-      value: `${shootouts} ${shootouts === 1 ? "match" : "matches"} decided on penalties`,
-      explanation: `${shootouts} knockout ${shootouts === 1 ? "match has" : "matches have"} finished level and been settled from the penalty spot so far.`,
-    }));
-  }
-
-  // ── Sharpest shooters (most goals scored) ────────────────────────────────────
-  const scored = new Map<string, number>();
-  for (const m of fms) {
-    scored.set(m.homeId, (scored.get(m.homeId) ?? 0) + m.hg);
-    scored.set(m.awayId, (scored.get(m.awayId) ?? 0) + m.ag);
-  }
-  const topScorer = [...scored.entries()].sort((a, b) => b[1] - a[1])[0];
-  if (topScorer && topScorer[1] > 0) {
-    const tName = TEAM_BY_ID.get(topScorer[0])?.name ?? topScorer[0];
-    stats.push(mk({
-      key: "top_scoring_team", category: "tournament", emoji: "🚀",
-      title: "Sharpest Shooters",
-      value: `${tName} — ${topScorer[1]} goals`,
-      teamIds: [topScorer[0]],
-      explanation: `${tName} have found the net ${topScorer[1]} times so far — more than any other team in the tournament.`,
-    }));
-  }
+  stats.push(...buildWcFacts({ matchesPlayed: fms.length, totalGoals }).map(mk));
 
   // ── DB-backed bits: standings, picks, users, points history ──────────────────
   const [standRows, pickRows, userRows, phRows] = (await Promise.all([
@@ -213,29 +101,6 @@ export async function computeStats(matches: RawMatch[], sql: Sql): Promise<Stat[
   for (const r of standRows) {
     if (!standings.has(r.slot)) standings.set(r.slot, {});
     standings.get(r.slot)![r.stage] = r.team_id;
-  }
-
-  // ── Cinderella: lowest-seeded team currently top-2 of its group ──────────────
-  let cinderella: { teamId: string; group: string; pos: string; seed: number } | null = null;
-  for (const [group, slots] of standings) {
-    for (const [stage, pos] of [["group", "1st"], ["runner", "2nd"]] as const) {
-      const teamId = slots[stage];
-      const seed = teamId ? TEAM_BY_ID.get(teamId)?.seed : undefined;
-      if (teamId && seed != null && (!cinderella || seed > cinderella.seed)) {
-        cinderella = { teamId, group, pos, seed };
-      }
-    }
-  }
-  if (cinderella && cinderella.seed >= 25) {
-    const cName = TEAM_BY_ID.get(cinderella.teamId)?.name ?? cinderella.teamId;
-    stats.push(mk({
-      key: "cinderella", category: "tournament", emoji: "🌟",
-      title: "Cinderella Story",
-      value: `${cName} (seed ${cinderella.seed}) sits ${cinderella.pos} in Group ${cinderella.group}`,
-      detail: "One of the weakest seeds, punching above their weight",
-      teamIds: [cinderella.teamId],
-      explanation: `Seeds run 1–48; ${cName} were seeded ${cinderella.seed}, among the weakest in the field. Yet they currently sit ${cinderella.pos} in Group ${cinderella.group} and would advance if the group ended today.`,
-    }));
   }
 
   // ── Pool: "Nobody saw it coming" ─────────────────────────────────────────────
@@ -354,101 +219,6 @@ export async function computeStats(matches: RawMatch[], sql: Sql): Promise<Stat[
           explanation: `Tracking each player's leaderboard rank game-by-game, ${pName} has surged the most — climbing ${best.gain} ${best.gain === 1 ? "spot" : "spots"}, from ${ordinal(best.from)} to ${ordinal(best.to)}.`,
         }));
       }
-    }
-  }
-
-  // ── More tournament records ──────────────────────────────────────────────────
-
-  // Goal Rush — the single calendar day with the most goals.
-  {
-    const byDay = new Map<string, { goals: number; matches: number }>();
-    for (const m of fms) {
-      if (!m.date) continue;
-      const d = byDay.get(m.date) ?? { goals: 0, matches: 0 };
-      d.goals += m.total; d.matches += 1;
-      byDay.set(m.date, d);
-    }
-    const top = [...byDay.entries()].sort((a, b) => b[1].goals - a[1].goals)[0];
-    if (top && top[1].goals > 0) {
-      const label = monthDay(top[0]);
-      stats.push(mk({
-        key: "goal_rush", category: "tournament", emoji: "📅",
-        title: "Goal Rush",
-        value: `${top[1].goals} goals on ${label}`,
-        detail: `across ${top[1].matches} ${top[1].matches === 1 ? "match" : "matches"}`,
-        explanation: `${label} has been the busiest day of the tournament so far — ${top[1].goals} goals across ${top[1].matches} ${top[1].matches === 1 ? "match" : "matches"}.`,
-      }));
-    }
-  }
-
-  // Brick Wall — fewest goals conceded (favouring teams that have played more).
-  {
-    const conceded = new Map<string, number>();
-    const games = new Map<string, number>();
-    for (const m of fms) {
-      conceded.set(m.homeId, (conceded.get(m.homeId) ?? 0) + m.ag);
-      conceded.set(m.awayId, (conceded.get(m.awayId) ?? 0) + m.hg);
-      games.set(m.homeId, (games.get(m.homeId) ?? 0) + 1);
-      games.set(m.awayId, (games.get(m.awayId) ?? 0) + 1);
-    }
-    const best = [...conceded.entries()].sort((a, b) => a[1] - b[1] || (games.get(b[0]) ?? 0) - (games.get(a[0]) ?? 0))[0];
-    if (best && (games.get(best[0]) ?? 0) >= 2) {
-      const tName = TEAM_BY_ID.get(best[0])?.name ?? best[0];
-      const g = games.get(best[0]) ?? 0;
-      stats.push(mk({
-        key: "brick_wall", category: "tournament", emoji: "🧱",
-        title: "Brick Wall",
-        value: `${tName} — ${best[1]} conceded`,
-        detail: `in ${g} matches`,
-        teamIds: [best[0]],
-        explanation: `${tName} have the meanest defense so far, conceding just ${best[1]} ${best[1] === 1 ? "goal" : "goals"} across ${g} matches.`,
-      }));
-    }
-  }
-
-  // Group of Goals — the group whose matches have produced the most goals.
-  {
-    const groupGoals = new Map<string, { goals: number; matches: number }>();
-    for (const m of fms) {
-      if (m.round !== "group stage") continue;
-      const grp = TEAM_BY_ID.get(m.homeId)?.group;
-      if (!grp) continue;
-      const g = groupGoals.get(grp) ?? { goals: 0, matches: 0 };
-      g.goals += m.total; g.matches += 1;
-      groupGoals.set(grp, g);
-    }
-    const top = [...groupGoals.entries()].sort((a, b) => b[1].goals - a[1].goals)[0];
-    if (top && top[1].goals > 0) {
-      stats.push(mk({
-        key: "goal_heavy_group", category: "tournament", emoji: "⚔️",
-        title: "Group of Goals",
-        value: `Group ${top[0]} — ${top[1].goals} goals`,
-        detail: `in ${top[1].matches} ${top[1].matches === 1 ? "match" : "matches"} so far`,
-        explanation: `Group ${top[0]} has been the most entertaining pool so far, producing ${top[1].goals} goals across its ${top[1].matches} ${top[1].matches === 1 ? "match" : "matches"}.`,
-      }));
-    }
-  }
-
-  // Favorite Flop — a pre-tournament heavyweight currently in the bottom two.
-  {
-    let flop: { teamId: string; group: string; pos: string; seed: number } | null = null;
-    for (const [group, slots] of standings) {
-      for (const [stage, pos] of [["third", "3rd"], ["fourth", "4th"]] as const) {
-        const teamId = slots[stage];
-        const seed = teamId ? TEAM_BY_ID.get(teamId)?.seed : undefined;
-        if (teamId && seed != null && (!flop || seed < flop.seed)) flop = { teamId, group, pos, seed };
-      }
-    }
-    if (flop && flop.seed <= 12) {
-      const tName = TEAM_BY_ID.get(flop.teamId)?.name ?? flop.teamId;
-      stats.push(mk({
-        key: "favorite_flop", category: "tournament", emoji: "😬",
-        title: "Favorite Flop",
-        value: `${tName} (seed ${flop.seed}) sits ${flop.pos} in Group ${flop.group}`,
-        detail: "A pre-tournament favorite in danger of going out",
-        teamIds: [flop.teamId],
-        explanation: `${tName} were one of the strongest seeds in the field (seed ${flop.seed}), but they currently sit ${flop.pos} in Group ${flop.group} — outside the qualification places and at risk of an early exit.`,
-      }));
     }
   }
 
