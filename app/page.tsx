@@ -1092,14 +1092,7 @@ export default function BracketPage() {
                 onMouseEnter={e => { if (tab !== t) { const el = e.currentTarget as HTMLElement; el.style.color = "#ffffff"; el.style.textShadow = "0 0 10px rgba(255,255,255,0.5)"; }}}
                 onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = ""; el.style.textShadow = ""; }}
               >
-                {t === "news" ? (
-                  <span className="relative inline-block">
-                    📰 News
-                    <span className="absolute -top-[6px] -right-[23px] rounded-full border border-green-400 bg-green-400/10 px-1 py-px text-[7px] font-black uppercase tracking-tight text-green-400 drop-shadow-[0_0_4px_rgba(74,222,128,0.8)] animate-pulse">
-                      New!
-                    </span>
-                  </span>
-                ) : t === "groups" ? (
+                {t === "news" ? "News" : t === "groups" ? (
                   <span className="relative inline-block">
                     Groups
                     {phase1Locked && (
@@ -1118,14 +1111,7 @@ export default function BracketPage() {
                       </svg>
                     )}
                   </span>
-                ) : t === "bracket" ? "Phase 2 - Bracket" : t === "world" ? "🌍 The World" : t === "leaderboard" ? "Leaderboard" : t === "stats" ? (
-                  <span className="relative inline-block">
-                    📊 Stats
-                    <span className="absolute -top-[6px] -right-[23px] rounded-full border border-green-400 bg-green-400/10 px-1 py-px text-[7px] font-black uppercase tracking-tight text-green-400 drop-shadow-[0_0_4px_rgba(74,222,128,0.8)] animate-pulse">
-                      New!
-                    </span>
-                  </span>
-                ) : "The Rules"}
+                ) : t === "bracket" ? "Phase 2 - Bracket" : t === "world" ? "The World" : t === "leaderboard" ? "Leaderboard" : t === "stats" ? "Stats" : "The Rules"}
                 <span className={`absolute bottom-[-1px] inset-x-0 h-[2px] ${tab === t ? "bg-yellow-300" : ""}`} />
               </button>
             ))}
@@ -1136,7 +1122,7 @@ export default function BracketPage() {
                 onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.textShadow = "0 0 10px rgba(251,191,36,0.5)"; }}
                 onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.textShadow = ""; }}
               >
-                🏆 Awards
+                Awards
                 <span className="absolute bottom-[-1px] inset-x-0 h-[2px]" />
               </a>
             )}
