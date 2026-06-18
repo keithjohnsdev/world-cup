@@ -225,7 +225,7 @@ export function MessageBoardTab() {
                       ) : null}
                       <span className="text-white/30 text-[11px] shrink-0 ml-auto">{relativeTime(m.created_at)}</span>
                     </div>
-                    <p className={`text-sm leading-relaxed whitespace-pre-wrap break-words ${announcer ? "text-amber-50/90 font-medium" : "text-white/85"}`}>{m.body}</p>
+                    <p className={`text-sm leading-relaxed whitespace-pre-wrap break-words ${announcer ? "text-amber-50/90 font-medium italic" : "text-white/85"}`}>{m.body}</p>
                   </div>
                   {canDelete && (
                     <button
