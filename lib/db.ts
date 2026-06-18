@@ -225,6 +225,21 @@ export async function initDb() {
   await sql`ALTER TABLE news_articles ADD COLUMN IF NOT EXISTS recap    TEXT`;
   await sql`ALTER TABLE news_articles ADD COLUMN IF NOT EXISTS recap_at TIMESTAMPTZ`;
 
+  // ── Message board ─────────────────────────────────────────────────────────────
+  // Family chatter — one row per posted message. user_name is denormalised (like
+  // the awards table) so a message keeps its author label even if the user row is
+  // later removed; the FK is ON DELETE CASCADE so deleting a player clears theirs.
+  await sql`
+    CREATE TABLE IF NOT EXISTS messages (
+      id         SERIAL      PRIMARY KEY,
+      user_id    INTEGER     REFERENCES users(id) ON DELETE CASCADE,
+      user_name  VARCHAR(100) NOT NULL,
+      body       TEXT        NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS messages_created_idx ON messages (created_at DESC)`;
+
   // ── Awards ────────────────────────────────────────────────────────────────────
   // Computed by the admin after the tournament (or after each round for live awards).
   // One row per award, re-runnable (DO UPDATE).

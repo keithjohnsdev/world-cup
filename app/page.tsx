@@ -15,6 +15,7 @@ import { GroupPicksModal, type ScoreBreakdownProps } from "@/components/GroupPic
 import { BracketPicker } from "@/components/BracketPicker";
 import { NewsTab } from "@/components/NewsTab";
 import { StatsTab } from "@/components/StatsTab";
+import { MessageBoardTab } from "@/components/MessageBoardTab";
 
 const GlobeView = dynamic(() => import("@/components/GlobeView"), { ssr: false });
 const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
@@ -942,7 +943,7 @@ export default function BracketPage() {
   const [picks, setPicks] = useState<Picks>({});
   // Logged-in users land on the leaderboard by default (an explicit ?tab= in the
   // URL still wins). Switch this to "bracket" once the knockout stage opens.
-  const [tab, setTab] = useState<"groups" | "bracket" | "rules" | "world" | "leaderboard" | "news" | "stats">("leaderboard");
+  const [tab, setTab] = useState<"groups" | "bracket" | "rules" | "world" | "leaderboard" | "news" | "stats" | "board">("leaderboard");
   const [userName, setUserName] = useState("");
   const [worldView, setWorldView] = useState<"globe" | "map">("globe");
   const [hoveredTeam, setHoveredTeam] = useState<string | null>(null);
@@ -979,8 +980,8 @@ export default function BracketPage() {
     if (!token) { router.replace("/landing"); return; }
     setUserName(name || "");
 
-    const urlTab = new URLSearchParams(window.location.search).get("tab") as "rules" | "groups" | "bracket" | "world" | "leaderboard" | "news" | null;
-    if (urlTab && ["rules", "groups", "bracket", "world", "leaderboard", "news"].includes(urlTab)) setTab(urlTab);
+    const urlTab = new URLSearchParams(window.location.search).get("tab") as "rules" | "groups" | "bracket" | "world" | "leaderboard" | "news" | "board" | null;
+    if (urlTab && ["rules", "groups", "bracket", "world", "leaderboard", "news", "board"].includes(urlTab)) setTab(urlTab);
 
     fetch("/api/picks", { headers: { "x-session-token": token } })
       .then((r) => r.json())
@@ -1080,7 +1081,7 @@ export default function BracketPage() {
         }
         center={
           <div className="flex h-full">
-            {(["rules", "groups", "bracket", "leaderboard", "stats", "news", "world"] as const).map((t) => (
+            {(["rules", "groups", "bracket", "leaderboard", "stats", "news", "board", "world"] as const).map((t) => (
               <button
                 key={t}
                 onClick={e => { (e.currentTarget as HTMLElement).style.color = ""; (e.currentTarget as HTMLElement).style.textShadow = ""; setTab(t); history.replaceState(null, "", `?tab=${t}`); }}
@@ -1111,7 +1112,7 @@ export default function BracketPage() {
                       </svg>
                     )}
                   </span>
-                ) : t === "bracket" ? "Phase 2 - Bracket" : t === "world" ? "The World" : t === "leaderboard" ? "Leaderboard" : t === "stats" ? "Stats" : "The Rules"}
+                ) : t === "bracket" ? "Phase 2 - Bracket" : t === "world" ? "The World" : t === "leaderboard" ? "Leaderboard" : t === "stats" ? "Stats" : t === "board" ? "Board" : "The Rules"}
                 <span className={`absolute bottom-[-1px] inset-x-0 h-[2px] ${tab === t ? "bg-yellow-300" : ""}`} />
               </button>
             ))}
@@ -1231,6 +1232,7 @@ export default function BracketPage() {
       {tab === "leaderboard" && <LeaderboardTab />}
       {tab === "stats" && <StatsTab />}
       {tab === "news" && <NewsTab />}
+      {tab === "board" && <MessageBoardTab />}
 
       {/* World tab */}
       {tab === "world" && (
