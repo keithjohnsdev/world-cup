@@ -351,9 +351,14 @@ function LiveRoundOf32({ results, standings }: { results: ResultEntry[]; standin
   const champion = picks["final:m1"];
   const championTeam = champion ? getTeam(champion) : undefined;
 
-  const placed = r32resolved.flatMap(m => [m.team1, m.team2]).filter(Boolean).length;
-  const formed = r32resolved.filter(m => m.team1 && m.team2).length;
-  const pct = Math.round((placed / 32) * 100);
+  // Overall pick progress across the whole bracket: 16 + 8 + 4 + 2 + 1 = 31 picks.
+  const TOTAL_PICKS = 31;
+  const madePicks = ["r32", "r16", "qf", "sf", "final"].reduce(
+    (n, st) => n + Object.keys(picks).filter((k) => k.startsWith(`${st}:`)).length,
+    0,
+  );
+  const pickPct = Math.round((madePicks / TOTAL_PICKS) * 100);
+  const bracketComplete = !!picks["final:m1"];
   const hasPractice = Object.keys(practice).length > 0;
 
   return (
@@ -386,14 +391,18 @@ function LiveRoundOf32({ results, standings }: { results: ResultEntry[]; standin
           </p>
         </div>
 
-        {/* Progress */}
+        {/* Progress — overall bracket completion */}
         <div className="mb-8 text-center">
-          <p className="text-sm font-bold mb-2.5 text-white">
-            <span className="text-green-400 tabular-nums">{placed}</span> of 32 teams in position
-            <span className="text-white/35 font-medium"> · {formed}/16 R32 matchups set</span>
+          <p className={`text-sm font-bold mb-2.5 ${bracketComplete ? "text-green-400" : "text-white"}`}>
+            {bracketComplete
+              ? "🏆 Bracket complete — champion crowned!"
+              : <>
+                  <span className="text-green-400 tabular-nums">{madePicks}</span>
+                  <span className="text-white/60"> of {TOTAL_PICKS} picks made</span>
+                </>}
           </p>
           <div className="h-1.5 rounded-full overflow-hidden max-w-xs mx-auto" style={{ background: "rgba(255,255,255,0.08)" }}>
-            <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: "#4ade80" }} />
+            <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pickPct}%`, background: bracketComplete ? "#4ade80" : "#fbbf24" }} />
           </div>
           {!thirdAssign ? (
             <p className="text-white/35 text-[11px] mt-2">Third-placed qualifiers appear once every group has kicked off.</p>
