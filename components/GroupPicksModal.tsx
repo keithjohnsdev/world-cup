@@ -373,7 +373,7 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
                                 )}
                                 {actualId != null && liveSet.has(actualId) && (
                                   <span
-                                    className="absolute right-0 top-1/2 -translate-y-[calc(50%+2px)] flex h-2 w-2"
+                                    className="absolute right-0 top-1/2 -translate-y-[calc(50%+1px)] flex h-2 w-2"
                                     aria-label="Match in progress"
                                     title="Match in progress"
                                   >
