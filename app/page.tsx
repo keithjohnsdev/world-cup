@@ -1077,14 +1077,14 @@ export default function BracketPage() {
                 ) : t === "bracket" ? (
                   <span className="inline-flex items-center gap-1.5">
                     Bracket
-                    <span className="rounded-full bg-green-600 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide text-white">
+                    <span className="relative -top-px rounded-full bg-green-600 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide text-white">
                       New!
                     </span>
                   </span>
                 ) : t === "world" ? "The World" : t === "leaderboard" ? "Leaderboard" : t === "stats" ? "Stats" : t === "board" ? (
                   <span className="inline-flex items-center gap-1.5">
                     Board
-                    <span className="rounded-full bg-green-600 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide text-white">
+                    <span className="relative -top-px rounded-full bg-green-600 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide text-white">
                       New!
                     </span>
                   </span>
