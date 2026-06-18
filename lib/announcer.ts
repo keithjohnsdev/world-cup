@@ -19,6 +19,7 @@ import { apiNameToTeamId } from "@/lib/team-mapping";
 import { getTeam } from "@/lib/data";
 import { scoreUser, type UserRow, type PickRow, type ResultRow } from "@/lib/scoring";
 import { kabooseRoundsForUser, type SnapshotRow } from "@/lib/snapshots";
+import { voiceGaffer } from "@/lib/gaffer-voice";
 
 type Sql = ReturnType<typeof getSql>;
 
@@ -42,7 +43,18 @@ const ADVANCES_TO: Record<string, string> = {
 
 // Insert one announcer message, ignoring it if its event was already announced.
 // Returns true only when a new row was actually written.
-async function announce(sql: Sql, eventKey: string, body: string): Promise<boolean> {
+//
+// `plain` carries the correct facts; for genuinely new events we hand it to The
+// Gaffer's voice (lib/gaffer-voice.ts) to be restyled in persona. We check for an
+// existing row FIRST so the every-few-minutes cron never pays for an LLM call on
+// an event it already announced; the ON CONFLICT remains a race guard.
+async function announce(sql: Sql, eventKey: string, plain: string): Promise<boolean> {
+  const existing = (await sql`
+    SELECT 1 FROM messages WHERE event_key = ${eventKey} LIMIT 1
+  `) as unknown[];
+  if (existing.length > 0) return false;
+
+  const body = await voiceGaffer(plain);
   const rows = (await sql`
     INSERT INTO messages (user_id, user_name, body, is_announcer, event_key)
     VALUES (NULL, ${ANNOUNCER_NAME}, ${body}, true, ${eventKey})
