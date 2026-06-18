@@ -48,3 +48,17 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ── Mobile readability ──────────────────────────────────────────────────────
+   Bump the smallest text up ~1px on phones so it stays comfortable for older
+   eyes. Scoped under Tailwind's sm breakpoint (640px), so web sizing is
+   unchanged. These unlayered rules override Tailwind's layered text utilities
+   without needing !important; line-height is a ratio so it scales along. */
+@media (max-width: 639.98px) {
+  .text-sm       { font-size: 0.9375rem; } /* 14 → 15px */
+  .text-xs       { font-size: 0.8125rem; } /* 12 → 13px */
+  .text-\[11px\] { font-size: 12px; }
+  .text-\[10px\] { font-size: 11px; }
+  .text-\[9px\]  { font-size: 10px; }
+  .text-\[8px\]  { font-size: 9px; }
+}
