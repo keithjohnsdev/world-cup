@@ -235,6 +235,7 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
               const predicted = pickMap[group.id] ?? [];
               const actual = resultMap[group.id] ?? [];
               const groupHasResult = actual.some(Boolean);
+              const groupHasLive = actual.some((id) => id != null && liveSet.has(id));
               const groupPts = STAGES.reduce((s, _, i) => {
                 const pid = predicted[i] ?? null;
                 return s + scorePosition(pid, i, actual, pid != null && playedSet.has(pid));
@@ -270,7 +271,15 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
                       style={{ borderTop: "1px solid rgba(255,255,255,0.05)", background: "rgba(0,0,0,0.18)" }}
                     >
                       <div className="w-7 shrink-0" />
-                      <div className="flex-1 text-white/30 text-[9px] font-black uppercase tracking-[0.18em]">Your Pick</div>
+                      <div className="flex-1 flex items-center justify-between gap-2 text-white/30 text-[9px] font-black uppercase tracking-[0.18em]">
+                        <span>Your Pick</span>
+                        {groupHasLive && (
+                          <span className="inline-flex items-center gap-1 text-green-400/90">
+                            <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-400" />
+                            Live
+                          </span>
+                        )}
+                      </div>
                       <div className="w-[4.5rem] shrink-0 text-center text-white/30 text-[9px] font-black uppercase tracking-[0.18em]">
                         {groupStageComplete ? "Final" : "Actual"}
                       </div>
