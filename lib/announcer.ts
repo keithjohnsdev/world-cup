@@ -290,3 +290,15 @@ export async function announcePhaseChange(sql: Sql, phase: string): Promise<bool
   if (!body) return false;
   return announce(sql, `phase:${phase}`, body);
 }
+
+// Post a one-off, manually-triggered announcement in The Gaffer's voice — for
+// moments that aren't auto-detected from results (e.g. a feature going live).
+// `plain` carries the correct facts; it's restyled in persona and deduped by
+// `eventKey`, so re-running is safe (it won't post twice).
+export async function postGafferAnnouncement(
+  sql: Sql,
+  eventKey: string,
+  plain: string,
+): Promise<boolean> {
+  return announce(sql, eventKey, plain);
+}
