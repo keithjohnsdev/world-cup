@@ -5,8 +5,10 @@
 // Env vars: FOOTBALL_DATA_KEY, CRON_SECRET
 
 import { NextRequest, NextResponse } from "next/server";
+import { getSql, initDb } from "@/lib/db";
 import { runNewsSync } from "@/lib/run-news-sync";
 import { runResultsSync } from "@/lib/run-results-sync";
+import { runScheduledAnnouncements } from "@/lib/announcer";
 
 function authorized(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
@@ -36,9 +38,20 @@ async function handler(req: NextRequest) {
     console.error("[cron/news] results backstop failed:", results.reason);
   }
 
+  // Recurring time-based announcements (e.g. the Bama bit). Self-gated, so this is a
+  // cheap no-op most ticks. Best-effort — never let it fail the cron response.
+  let scheduled = 0;
+  try {
+    await initDb();
+    scheduled = await runScheduledAnnouncements(getSql());
+  } catch (err) {
+    console.error("[cron/news] scheduled announcements failed:", err);
+  }
+
   return NextResponse.json({
     news: news.status === "fulfilled" ? news.value : { error: String(news.reason) },
     results: results.status === "fulfilled" ? results.value : { error: String(results.reason) },
+    scheduled,
   });
 }
 

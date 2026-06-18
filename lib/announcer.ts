@@ -16,7 +16,7 @@
 import { getSql } from "@/lib/db";
 import type { RawMatch } from "@/lib/api-football";
 import { apiNameToTeamId } from "@/lib/team-mapping";
-import { getTeam } from "@/lib/data";
+import { getTeam, GROUPS } from "@/lib/data";
 import { scoreUser, type UserRow, type PickRow, type ResultRow } from "@/lib/scoring";
 import { kabooseRoundsForUser, type SnapshotRow } from "@/lib/snapshots";
 import { voiceGaffer } from "@/lib/gaffer-voice";
@@ -66,6 +66,13 @@ async function announce(sql: Sql, eventKey: string, plain: string): Promise<bool
 
 function teamName(id: string | null, fallback: string): string {
   return (id ? getTeam(id)?.name : null) ?? fallback;
+}
+
+// 1 → "1st", 2 → "2nd", 3 → "3rd", 4 → "4th", 11 → "11th", …
+function ordinal(n: number): string {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return `${n}${s[(v - 20) % 10] ?? s[v] ?? s[0]}`;
 }
 
 // "Mia" · "Mia and Sam" · "Mia, Sam and Alex"
@@ -159,23 +166,23 @@ const PODIUM = [
   { emoji: "🥉", label: "3rd" },
 ] as const;
 
-async function announceLeaderboardMoves(sql: Sql): Promise<number> {
-  const [rawUsers, rawPicks, rawResults, rawSnapshots, rawPlayed, rankRows] =
-    (await Promise.all([
-      sql`SELECT id, name, is_kid, chargeup_active, heart_pick_team_id FROM users`,
-      sql`SELECT user_id, stage, slot, team_id, is_star_power FROM picks`,
-      sql`SELECT stage, slot, team_id, was_shootout FROM results`,
-      sql`SELECT round, user_id, rank, total_score, group_score, bracket_score FROM standings_snapshots`,
-      sql`SELECT team_id FROM teams_played`,
-      sql`SELECT value FROM tournament_settings WHERE key = 'announced_ranks' LIMIT 1`,
-    ])) as [
-      UserRow[],
-      (PickRow & { user_id: number })[],
-      ResultRow[],
-      SnapshotRow[],
-      { team_id: string }[],
-      { value: string }[],
-    ];
+// Recompute the leaderboard ranking exactly like /api/leaderboard (total desc, then
+// name) — array index + 1 is the rank players see. Shared by the move detector and
+// the recurring Bama bit.
+async function rankPlayers(sql: Sql): Promise<{ id: number; name: string; total: number }[]> {
+  const [rawUsers, rawPicks, rawResults, rawSnapshots, rawPlayed] = (await Promise.all([
+    sql`SELECT id, name, is_kid, chargeup_active, heart_pick_team_id FROM users`,
+    sql`SELECT user_id, stage, slot, team_id, is_star_power FROM picks`,
+    sql`SELECT stage, slot, team_id, was_shootout FROM results`,
+    sql`SELECT round, user_id, rank, total_score, group_score, bracket_score FROM standings_snapshots`,
+    sql`SELECT team_id FROM teams_played`,
+  ])) as [
+    UserRow[],
+    (PickRow & { user_id: number })[],
+    ResultRow[],
+    SnapshotRow[],
+    { team_id: string }[],
+  ];
 
   const playedTeams = new Set(rawPlayed.map((r) => r.team_id));
   const picksByUser = new Map<number, PickRow[]>();
@@ -185,15 +192,20 @@ async function announceLeaderboardMoves(sql: Sql): Promise<number> {
     picksByUser.get(user_id)!.push(pick as PickRow);
   }
 
-  // Rank exactly as the leaderboard does (total desc, then name) — array index +1
-  // is the rank, matching what players see on the board.
-  const ranked = rawUsers
+  return rawUsers
     .map((user) => {
       const kaboose = kabooseRoundsForUser(user.id, rawSnapshots);
       const b = scoreUser(user, picksByUser.get(user.id) ?? [], rawResults, kaboose, playedTeams);
       return { id: user.id, name: user.name, total: b.total };
     })
     .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+}
+
+async function announceLeaderboardMoves(sql: Sql): Promise<number> {
+  const ranked = await rankPlayers(sql);
+  const rankRows = (await sql`
+    SELECT value FROM tournament_settings WHERE key = 'announced_ranks' LIMIT 1
+  `) as { value: string }[];
 
   if (ranked.length === 0 || ranked[0].total <= 0) return 0; // nobody on the board yet
 
@@ -239,6 +251,25 @@ async function announceLeaderboardMoves(sql: Sql): Promise<number> {
       body = `${emoji} ${r.name} surges into ${label} place with ${r.total} pts!`;
     }
     if (body && (await announce(sql, `rank:${r.id}:${cur}:${r.total}`, body))) posted++;
+  }
+
+  // Big movers anywhere in the table — more than 3 spots since the last update.
+  // Surges that land OUTSIDE the podium (podium entries are already shouted above),
+  // and any sizeable drop (never otherwise announced — a leader sliding is great
+  // chatter). The score in the event_key lets a later move re-fire.
+  for (let i = 0; i < ranked.length; i++) {
+    const r = ranked[i];
+    const cur = i + 1;
+    const prev = prevRanks[String(r.id)];
+    if (prev == null) continue; // no baseline for this player yet
+    const climb = prev - cur; // positive = moved up the table
+    if (climb >= 4 && cur > 3 && r.total > 0) {
+      const body = `📈 ${r.name} is on the charge — up ${climb} spots to ${ordinal(cur)} with ${r.total} pts!`;
+      if (await announce(sql, `surge:${r.id}:${cur}:${r.total}`, body)) posted++;
+    } else if (climb <= -4) {
+      const body = `📉 Ouch — ${r.name} slides ${-climb} spots down to ${ordinal(cur)} on the table.`;
+      if (await announce(sql, `drop:${r.id}:${cur}:${r.total}`, body)) posted++;
+    }
   }
   return posted;
 }
@@ -301,4 +332,99 @@ export async function postGafferAnnouncement(
   plain: string,
 ): Promise<boolean> {
   return announce(sql, eventKey, plain);
+}
+
+// ── Recurring, time-based announcements ──────────────────────────────────────
+// Not triggered by results — run from the 15-min news cron, self-gated on a stored
+// timestamp. Currently just the Bama bit: every few days, a fresh fact about our
+// darling for The Gaffer to lavish (or mock-mourn) over. Always yields a usable line.
+
+const BAMA_NAME = "Bama";
+const BAMA_INTERVAL_MS = 3 * 24 * 60 * 60 * 1000; // ~every 3 days
+
+// Is one of Bama's group-winner picks currently dead last in its group? Returns the
+// team/group if so — prime material for operatic Gaffer despair.
+async function bamaGroupPickInLast(
+  sql: Sql,
+  bamaId: number,
+): Promise<{ team: string; group: string } | null> {
+  const [picks, gp] = (await Promise.all([
+    sql`SELECT team_id FROM picks WHERE user_id = ${bamaId} AND stage = 'group'`,
+    sql`SELECT team_id, points, goal_diff, goals_for, played_games FROM group_points`,
+  ])) as [
+    { team_id: string }[],
+    { team_id: string; points: number; goal_diff: number; goals_for: number; played_games: number }[],
+  ];
+
+  const stat = new Map(gp.map((r) => [r.team_id, r]));
+  for (const { team_id } of picks) {
+    const team = getTeam(team_id);
+    const pickStat = stat.get(team_id);
+    if (!team || !pickStat || pickStat.played_games < 1) continue;
+    // Rank the group by the same tiebreakers the bracket uses.
+    const standings = (GROUPS.find((g) => g.id === team.group)?.teams ?? [])
+      .map((t) => stat.get(t.id))
+      .filter((s): s is NonNullable<typeof s> => s != null)
+      .sort((a, b) => b.points - a.points || b.goal_diff - a.goal_diff || b.goals_for - a.goals_for);
+    if (standings.length === 4 && standings[3].team_id === team_id) {
+      return { team: team.name, group: team.group };
+    }
+  }
+  return null;
+}
+
+// Build a single factual Bama line for The Gaffer to re-voice. Priority: wooden spoon
+// if she's dead last, else a group pick face-planting, else her plain standing.
+async function bamaPlainFact(sql: Sql): Promise<string | null> {
+  const userRows = (await sql`
+    SELECT id FROM users WHERE LOWER(name) = LOWER(${BAMA_NAME}) LIMIT 1
+  `) as { id: number }[];
+  const bamaId = userRows[0]?.id;
+  if (bamaId == null) return null;
+
+  const ranked = await rankPlayers(sql);
+  const idx = ranked.findIndex((r) => r.id === bamaId);
+  if (idx === -1) return null;
+  const bama = ranked[idx];
+  const pos = idx + 1;
+  const n = ranked.length;
+
+  if (n > 1 && pos === n) {
+    return `🥄 Leaderboard check: Bama is dead last of ${n} players with ${bama.total} pts — currently holding the wooden spoon.`;
+  }
+
+  const flop = await bamaGroupPickInLast(sql, bamaId);
+  if (flop) {
+    return `😬 Bama watch: she picked ${flop.team} to win Group ${flop.group}, but they're rock bottom of the group right now.`;
+  }
+
+  if (pos === 1) {
+    return `👑 Bama watch: she's sitting TOP of the leaderboard with ${bama.total} pts.`;
+  }
+  return `📊 Bama watch: she's ${ordinal(pos)} of ${n} on the leaderboard with ${bama.total} pts.`;
+}
+
+// Post the recurring Bama announcement if at least BAMA_INTERVAL_MS has passed since
+// the last one. Self-gated via a stored timestamp; deduped per-day by event_key.
+export async function runScheduledAnnouncements(sql: Sql): Promise<number> {
+  const rows = (await sql`
+    SELECT value FROM tournament_settings WHERE key = 'bama_last_announced' LIMIT 1
+  `) as { value: string }[];
+  const last = rows[0]?.value ? Date.parse(rows[0].value) : 0;
+  if (Number.isFinite(last) && Date.now() - last < BAMA_INTERVAL_MS) return 0;
+
+  const plain = await bamaPlainFact(sql);
+  if (!plain) return 0;
+
+  const dateKey = new Date().toISOString().slice(0, 10);
+  const posted = await announce(sql, `bama:${dateKey}`, plain);
+
+  // Advance the cadence whether or not this exact line was a dup, so we don't retry
+  // every 15 min for the rest of the window.
+  await sql`
+    INSERT INTO tournament_settings (key, value)
+    VALUES ('bama_last_announced', ${new Date().toISOString()})
+    ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
+  `;
+  return posted ? 1 : 0;
 }
