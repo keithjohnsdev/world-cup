@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSql, initDb } from "@/lib/db";
 import { takeStandingsSnapshot } from "@/lib/snapshots";
+import { announcePhaseChange } from "@/lib/announcer";
 
 const VALID_PHASES = ["phase1_open", "phase1_locked", "phase2_open", "phase2_locked", "complete"] as const;
 type Phase = typeof VALID_PHASES[number];
@@ -38,6 +39,11 @@ export async function POST(req: NextRequest) {
       console.warn("[admin/phase] pre_r32 snapshot failed:", e)
     );
   }
+
+  // Let The Gaffer announce the transition on the message board (once per phase).
+  await announcePhaseChange(sql, phase).catch((e) =>
+    console.warn("[admin/phase] phase announcement failed:", e)
+  );
 
   return NextResponse.json({ ok: true, phase });
 }

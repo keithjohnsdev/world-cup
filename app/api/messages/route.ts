@@ -9,6 +9,7 @@ type MessageRow = {
   user_id: number | null;
   user_name: string;
   body: string;
+  is_announcer: boolean;
   created_at: string;
 };
 
@@ -35,7 +36,7 @@ export async function GET(req: NextRequest) {
 
   const sql = getSql();
   const rows = (await sql`
-    SELECT id, user_id, user_name, body, created_at
+    SELECT id, user_id, user_name, body, is_announcer, created_at
     FROM messages
     ORDER BY created_at DESC, id DESC
     LIMIT ${FETCH_LIMIT}
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest) {
   const rows = (await sql`
     INSERT INTO messages (user_id, user_name, body)
     VALUES (${user.id}, ${user.name}, ${text})
-    RETURNING id, user_id, user_name, body, created_at
+    RETURNING id, user_id, user_name, body, is_announcer, created_at
   `) as MessageRow[];
 
   return NextResponse.json({ message: rows[0] });

@@ -229,16 +229,28 @@ export async function initDb() {
   // Family chatter — one row per posted message. user_name is denormalised (like
   // the awards table) so a message keeps its author label even if the user row is
   // later removed; the FK is ON DELETE CASCADE so deleting a player clears theirs.
+  //
+  // The Gaffer (the automated announcer) posts here too: is_announcer = true,
+  // user_id = NULL. event_key is its idempotency guard — each tournament event
+  // (a knockout result, a champion crashing out, a new table-topper) carries a
+  // stable key so the every-few-minutes results cron announces it exactly once.
   await sql`
     CREATE TABLE IF NOT EXISTS messages (
-      id         SERIAL      PRIMARY KEY,
-      user_id    INTEGER     REFERENCES users(id) ON DELETE CASCADE,
-      user_name  VARCHAR(100) NOT NULL,
-      body       TEXT        NOT NULL,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      id           SERIAL      PRIMARY KEY,
+      user_id      INTEGER     REFERENCES users(id) ON DELETE CASCADE,
+      user_name    VARCHAR(100) NOT NULL,
+      body         TEXT        NOT NULL,
+      is_announcer BOOLEAN     NOT NULL DEFAULT false,
+      event_key    TEXT,
+      created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `;
+  await sql`ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_announcer BOOLEAN NOT NULL DEFAULT false`;
+  await sql`ALTER TABLE messages ADD COLUMN IF NOT EXISTS event_key TEXT`;
   await sql`CREATE INDEX IF NOT EXISTS messages_created_idx ON messages (created_at DESC)`;
+  // Idempotency for announcer posts (NULL for human messages — Postgres allows
+  // many NULLs in a unique index). ON CONFLICT (event_key) targets this.
+  await sql`CREATE UNIQUE INDEX IF NOT EXISTS messages_event_key_idx ON messages (event_key)`;
 
   // ── Awards ────────────────────────────────────────────────────────────────────
   // Computed by the admin after the tournament (or after each round for live awards).

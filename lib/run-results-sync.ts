@@ -8,6 +8,7 @@ import { processMatches } from "@/lib/process-matches";
 import { syncGroupPoints } from "@/lib/sync-standings";
 import { rebuildPointsHistory } from "@/lib/points-history";
 import { rebuildStats } from "@/lib/stats";
+import { runAnnouncer } from "@/lib/announcer";
 
 // Rebuild the derived points-history and stats snapshots after results change.
 // Both consume the full match list, so we fetch it ONCE and share it — no extra
@@ -31,6 +32,13 @@ async function rebuildDerivedIfChanged(processed: number) {
     await rebuildStats(matches, getSql());
   } catch (err) {
     console.warn("[results-sync] stats rebuild failed:", err);
+  }
+  // The Gaffer posts the day's big moments to the message board. Reuses the match
+  // list we already fetched; idempotent via event_key so it's safe to re-run.
+  try {
+    await runAnnouncer(getSql(), matches);
+  } catch (err) {
+    console.warn("[results-sync] announcer failed:", err);
   }
 }
 

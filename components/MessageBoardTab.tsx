@@ -7,6 +7,7 @@ interface Message {
   user_id: number | null;
   user_name: string;
   body: string;
+  is_announcer: boolean;
   created_at: string;
 }
 
@@ -190,28 +191,41 @@ export function MessageBoardTab() {
             {messages.map((m) => {
               const mine = me != null && m.user_id === me.id;
               const canDelete = mine || (me?.isAdmin ?? false);
+              const announcer = m.is_announcer;
               const color = nameColor(m.user_name);
               return (
                 <div
                   key={m.id}
-                  className={`group flex gap-3 rounded-2xl border p-4 ${mine ? "border-yellow-300/25 bg-yellow-300/[0.06]" : "border-white/10 bg-white/5"}`}
+                  className={`group flex gap-3 rounded-2xl border p-4 ${
+                    announcer
+                      ? "border-amber-400/40 bg-gradient-to-r from-amber-400/[0.12] to-amber-400/[0.04]"
+                      : mine
+                        ? "border-yellow-300/25 bg-yellow-300/[0.06]"
+                        : "border-white/10 bg-white/5"
+                  }`}
                 >
                   <div
                     className="flex items-center justify-center w-9 h-9 rounded-full shrink-0 text-[11px] font-black text-green-950"
-                    style={{ background: color }}
+                    style={{ background: announcer ? "#f59e0b" : color }}
                     aria-hidden
                   >
-                    {initials(m.user_name)}
+                    {announcer ? <span className="text-base leading-none">📣</span> : initials(m.user_name)}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline gap-2 mb-0.5">
-                      <span className="font-black text-sm truncate" style={{ color }}>
+                      <span className="font-black text-sm truncate" style={{ color: announcer ? "#fbbf24" : color }}>
                         {m.user_name}
                       </span>
-                      {mine && <span className="text-[10px] font-black uppercase tracking-wide text-yellow-300/70">You</span>}
+                      {announcer ? (
+                        <span className="text-[10px] font-black uppercase tracking-wide text-amber-300/80 bg-amber-400/10 rounded-full px-1.5 py-0.5">
+                          Announcer
+                        </span>
+                      ) : mine ? (
+                        <span className="text-[10px] font-black uppercase tracking-wide text-yellow-300/70">You</span>
+                      ) : null}
                       <span className="text-white/30 text-[11px] shrink-0 ml-auto">{relativeTime(m.created_at)}</span>
                     </div>
-                    <p className="text-white/85 text-sm leading-relaxed whitespace-pre-wrap break-words">{m.body}</p>
+                    <p className={`text-sm leading-relaxed whitespace-pre-wrap break-words ${announcer ? "text-amber-50/90 font-medium" : "text-white/85"}`}>{m.body}</p>
                   </div>
                   {canDelete && (
                     <button
