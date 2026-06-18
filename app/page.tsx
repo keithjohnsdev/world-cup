@@ -1345,7 +1345,7 @@ export default function BracketPage() {
               <div className="text-4xl mb-3">💬</div>
               <h2 className="text-white font-black text-xl mb-2 leading-tight">Say hello to the Message Board</h2>
               <p className="text-white/65 text-sm leading-relaxed">
-                Trash talk, hot takes, and <span className="text-amber-300 font-bold">The Gaffer</span> calling every big moment — full-time results, upsets, and shake-ups at the top of the table. It&apos;s up in the menu — come join the chatter!
+                Trash talk, hot takes, and <span className="text-amber-300 font-bold">The Gaffer</span>{" "}calling every big moment — full-time results, upsets, and shake-ups at the top of the table. It&apos;s up in the menu — come join the chatter!
               </p>
             </div>
             <div className="px-6 pb-6 flex flex-col gap-2">
