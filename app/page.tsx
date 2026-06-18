@@ -1066,7 +1066,7 @@ export default function BracketPage() {
                         strokeWidth="2.5"
                         strokeLinecap="round"
                         strokeLinejoin="round"
-                        className="h-3 w-3 text-yellow-300 drop-shadow-[0_0_4px_rgba(253,224,71,0.8)]"
+                        className="relative -top-px sm:top-0 h-3 w-3 text-yellow-300 drop-shadow-[0_0_4px_rgba(253,224,71,0.8)]"
                         aria-label="Picks locked"
                       >
                         <rect x="5" y="11" width="14" height="10" rx="2" />
@@ -1077,14 +1077,14 @@ export default function BracketPage() {
                 ) : t === "bracket" ? (
                   <span className="inline-flex items-center gap-1.5">
                     Bracket
-                    <span className="relative -top-px rounded-full bg-green-600 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide text-white">
+                    <span className="relative -top-px sm:top-0 rounded-full bg-green-600 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide text-white">
                       New!
                     </span>
                   </span>
                 ) : t === "world" ? "The World" : t === "leaderboard" ? "Leaderboard" : t === "stats" ? "Stats" : t === "board" ? (
                   <span className="inline-flex items-center gap-1.5">
                     Board
-                    <span className="relative -top-px rounded-full bg-green-600 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide text-white">
+                    <span className="relative -top-px sm:top-0 rounded-full bg-green-600 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide text-white">
                       New!
                     </span>
                   </span>
