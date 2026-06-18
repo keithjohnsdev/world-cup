@@ -10,7 +10,7 @@
 // Events:
 //   • Knockout results        — "FULL TIME — Brazil beat Serbia 2–1 to reach …"
 //   • Champion crashes out    — "Heartbreak for Mia — Brazil were her pick to win it all…"
-//   • New leaderboard leader  — "New table-topper! Dad has taken over first place…"
+//   • Leaderboard moves       — "Aria takes the lead!", "Emerson surges into 3rd place!"
 //   • Phase changes           — kickoff, bracket opening, tournament complete
 
 import { getSql } from "@/lib/db";
@@ -135,18 +135,27 @@ async function announceChampionOut(
   return announce(sql, `champ-out:${m.id}`, body);
 }
 
-// A new player at the top of the leaderboard. Recomputes the table exactly like
-// /api/leaderboard, then compares against the last-announced leader (stored in
-// tournament_settings) so we only shout when first place actually changes hands.
-async function announceLeadChange(sql: Sql): Promise<boolean> {
-  const [rawUsers, rawPicks, rawResults, rawSnapshots, rawPlayed, leaderRows] =
+// Notable upward moves on the leaderboard. Recomputes the table exactly like
+// /api/leaderboard, then diffs it against the last-announced ranking (a userId→rank
+// map stored in tournament_settings) so we shout only when someone climbs into a
+// spot worth shouting about:
+//   • into 1st  — "Aria takes the lead with 84 pts!"
+//   • into the podium (2nd/3rd, from outside the top 3) — "Emerson surges into 3rd place!"
+// Internal podium shuffles (2nd⇄3rd) stay quiet to keep the feed signal-heavy.
+const PODIUM = [
+  { emoji: "🥈", label: "2nd" },
+  { emoji: "🥉", label: "3rd" },
+] as const;
+
+async function announceLeaderboardMoves(sql: Sql): Promise<number> {
+  const [rawUsers, rawPicks, rawResults, rawSnapshots, rawPlayed, rankRows] =
     (await Promise.all([
       sql`SELECT id, name, is_kid, chargeup_active, heart_pick_team_id FROM users`,
       sql`SELECT user_id, stage, slot, team_id, is_star_power FROM picks`,
       sql`SELECT stage, slot, team_id, was_shootout FROM results`,
       sql`SELECT round, user_id, rank, total_score, group_score, bracket_score FROM standings_snapshots`,
       sql`SELECT team_id FROM teams_played`,
-      sql`SELECT value FROM tournament_settings WHERE key = 'announced_leader' LIMIT 1`,
+      sql`SELECT value FROM tournament_settings WHERE key = 'announced_ranks' LIMIT 1`,
     ])) as [
       UserRow[],
       (PickRow & { user_id: number })[],
@@ -164,6 +173,8 @@ async function announceLeadChange(sql: Sql): Promise<boolean> {
     picksByUser.get(user_id)!.push(pick as PickRow);
   }
 
+  // Rank exactly as the leaderboard does (total desc, then name) — array index +1
+  // is the rank, matching what players see on the board.
   const ranked = rawUsers
     .map((user) => {
       const kaboose = kabooseRoundsForUser(user.id, rawSnapshots);
@@ -172,23 +183,52 @@ async function announceLeadChange(sql: Sql): Promise<boolean> {
     })
     .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
 
-  const top = ranked[0];
-  if (!top || top.total <= 0) return false; // nobody's on the board yet
+  if (ranked.length === 0 || ranked[0].total <= 0) return 0; // nobody on the board yet
 
-  const prev = leaderRows[0]?.value ?? null;
-  if (prev === String(top.id)) return false; // same leader — nothing to announce
+  // Previous ranking we last announced from.
+  let prevRanks: Record<string, number> = {};
+  try {
+    if (rankRows[0]?.value) prevRanks = JSON.parse(rankRows[0].value) as Record<string, number>;
+  } catch { /* corrupt/empty — treat as no history */ }
+  const hadHistory = Object.keys(prevRanks).length > 0;
 
-  // Record the new leader first so a failed/duplicate post never re-fires.
+  // Persist the new baseline first so a failed/duplicate post never re-fires.
+  const newRanks: Record<string, number> = {};
+  ranked.forEach((r, i) => { newRanks[String(r.id)] = i + 1; });
   await sql`
     INSERT INTO tournament_settings (key, value)
-    VALUES ('announced_leader', ${String(top.id)})
+    VALUES ('announced_ranks', ${JSON.stringify(newRanks)})
     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
   `;
 
-  const body = prev
-    ? `👑 New table-topper! ${top.name} has surged into first place with ${top.total} pts.`
-    : `👑 ${top.name} is out in front with ${top.total} pts — first to lead the table!`;
-  return announce(sql, `lead:${top.id}:${top.total}`, body);
+  // First time we ever have scores: greet the inaugural leader, but don't
+  // retro-announce everyone's starting position.
+  if (!hadHistory) {
+    const top = ranked[0];
+    const body = `👑 ${top.name} is out in front with ${top.total} pts — first to lead the table!`;
+    return (await announce(sql, `lead:${top.id}:${top.total}`, body)) ? 1 : 0;
+  }
+
+  // Diff the top three for upward moves (score is monotonic, so :total in the
+  // event_key lets a re-entry to the same spot later fire again).
+  let posted = 0;
+  for (let i = 0; i < ranked.length && i < 3; i++) {
+    const r = ranked[i];
+    if (r.total <= 0) break;
+    const cur = i + 1;
+    const prev = prevRanks[String(r.id)] ?? Infinity; // unseen player counts as "outside"
+    if (cur >= prev) continue; // no improvement
+
+    let body: string | null = null;
+    if (cur === 1) {
+      body = `👑 ${r.name} takes the lead with ${r.total} pts!`;
+    } else if (prev > 3) {
+      const { emoji, label } = PODIUM[cur - 2];
+      body = `${emoji} ${r.name} surges into ${label} place with ${r.total} pts!`;
+    }
+    if (body && (await announce(sql, `rank:${r.id}:${cur}:${r.total}`, body))) posted++;
+  }
+  return posted;
 }
 
 // Main entry point — called from the results-sync pipeline after results change.
@@ -214,9 +254,9 @@ export async function runAnnouncer(sql: Sql, matches: RawMatch[]): Promise<numbe
   }
 
   try {
-    if (await announceLeadChange(sql)) posted++;
+    posted += await announceLeaderboardMoves(sql);
   } catch (err) {
-    console.warn("[announcer] lead-change check failed:", err);
+    console.warn("[announcer] leaderboard-move check failed:", err);
   }
 
   return posted;
