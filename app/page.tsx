@@ -953,6 +953,8 @@ export default function BracketPage() {
   const [bracketPhase, setBracketPhase] = useState("phase1_open");
   const [bracketPreview, setBracketPreview] = useState(false);
   const [awardsVisible, setAwardsVisible] = useState(false);
+  // One-time intro spotlight for the new Message Board tab (per-player, server-backed).
+  const [boardSpotlight, setBoardSpotlight] = useState(false);
   const router = useRouter();
 
   const picksRef = useRef<Picks>({});
@@ -992,6 +994,21 @@ export default function BracketPage() {
           setPicks(loaded);
         }
       });
+
+    // Show the Message Board intro once per player. If they deep-linked straight
+    // to the board, there's nothing to point them to — just mark it seen.
+    const startedOnBoard = urlTab === "board";
+    fetch("/api/seen-board", { headers: { "x-session-token": token } })
+      .then((r) => r.json())
+      .then((d: { seen?: boolean }) => {
+        if (d?.seen) return;
+        if (startedOnBoard) {
+          fetch("/api/seen-board", { method: "POST", headers: { "x-session-token": token } }).catch(() => {});
+        } else {
+          setBoardSpotlight(true);
+        }
+      })
+      .catch(() => {});
 
     fetchResults();
   }, [router, fetchResults]);
@@ -1059,6 +1076,16 @@ export default function BracketPage() {
   const handleGlobeHover = useCallback((teamId: string | null) => setHoveredTeam(teamId), []);
   const handleGlobeClick = useCallback((teamId: string) => router.push(`/learn/${teamId}`), [router]);
 
+  // Dismiss the Message Board intro and remember it server-side (per player) so it
+  // never shows again. Idempotent — safe to call on every board visit.
+  const markBoardSeen = useCallback(() => {
+    setBoardSpotlight(false);
+    const token = localStorage.getItem("wc_token");
+    if (token) {
+      fetch("/api/seen-board", { method: "POST", headers: { "x-session-token": token } }).catch(() => {});
+    }
+  }, []);
+
   function signOut() {
     localStorage.removeItem("wc_token");
     localStorage.removeItem("wc_name");
@@ -1084,7 +1111,7 @@ export default function BracketPage() {
             {(["rules", "groups", "bracket", "leaderboard", "stats", "news", "board", "world"] as const).map((t) => (
               <button
                 key={t}
-                onClick={e => { (e.currentTarget as HTMLElement).style.color = ""; (e.currentTarget as HTMLElement).style.textShadow = ""; setTab(t); history.replaceState(null, "", `?tab=${t}`); }}
+                onClick={e => { (e.currentTarget as HTMLElement).style.color = ""; (e.currentTarget as HTMLElement).style.textShadow = ""; setTab(t); history.replaceState(null, "", `?tab=${t}`); if (t === "board" && boardSpotlight) markBoardSeen(); }}
                 className={`relative flex items-center h-full px-4 text-xs font-black uppercase tracking-[0.15em] whitespace-nowrap transition-all cursor-pointer ${
                   tab === t
                     ? "text-yellow-300"
@@ -1300,6 +1327,44 @@ export default function BracketPage() {
       )}
 
       {modalTeamId && <TeamModal teamId={modalTeamId} onClose={() => setModalTeamId(null)} />}
+
+      {/* One-time intro spotlight for the new Message Board tab */}
+      {boardSpotlight && (
+        <div
+          className="fixed inset-0 z-[60] flex items-start justify-center p-4 pt-24"
+          style={{ background: "rgba(0,0,0,0.72)" }}
+          onClick={markBoardSeen}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl"
+            style={{ background: "#0d2137", border: "1px solid rgba(255,255,255,0.12)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-6 pt-6 pb-5 text-center">
+              <span className="inline-block rounded-full bg-green-600 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white mb-4">New!</span>
+              <div className="text-4xl mb-3">💬</div>
+              <h2 className="text-white font-black text-xl mb-2 leading-tight">Say hello to the Message Board</h2>
+              <p className="text-white/65 text-sm leading-relaxed">
+                Trash talk, hot takes, and <span className="text-amber-300 font-bold">The Gaffer</span> calling every big moment — full-time results, upsets, and shake-ups at the top of the table. It&apos;s up in the menu — come join the chatter!
+              </p>
+            </div>
+            <div className="px-6 pb-6 flex flex-col gap-2">
+              <button
+                onClick={() => { setTab("board"); history.replaceState(null, "", "?tab=board"); markBoardSeen(); }}
+                className="w-full rounded-xl bg-yellow-300 hover:bg-yellow-200 text-green-950 font-black text-sm uppercase tracking-wide py-3 transition-colors cursor-pointer"
+              >
+                Take me there →
+              </button>
+              <button
+                onClick={markBoardSeen}
+                className="w-full text-white/40 hover:text-white/70 text-xs font-bold py-1.5 transition-colors cursor-pointer"
+              >
+                Maybe later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Bracket tab */}
       {tab === "bracket" && (

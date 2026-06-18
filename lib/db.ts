@@ -35,6 +35,9 @@ export async function initDb() {
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_kid             BOOLEAN  DEFAULT false`;
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS heart_pick_team_id VARCHAR(10)`;
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS chargeup_active    BOOLEAN  DEFAULT false`;
+  // One-time spotlight flag: set once a player has been shown the new Message
+  // Board tab, so the intro overlay only appears until they've acknowledged it.
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS seen_board         BOOLEAN  DEFAULT false`;
 
   // All user selections — group picks, bracket picks, and meta (champion, star, etc.)
   // stage ∈ {group, runner, third, fourth, champion, meta, heart, r32, r16, qf, sf, final}
