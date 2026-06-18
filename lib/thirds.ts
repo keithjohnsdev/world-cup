@@ -31,11 +31,16 @@ export function rankThirds(entries: ThirdEntry[]): ThirdEntry[] {
 
 // Resolve which third-placed GROUP each of the 8 relevant group winners faces in
 // the Round of 32. Returns a map of winner-group → third-group (e.g. { A: "E", ... }),
-// or null when it can't be determined yet — i.e. fewer than 12 thirds known, or the
-// group stage isn't complete (a team plays 3 group games), so the ranking isn't final.
-export function resolveThirdAssignment(entries: ThirdEntry[]): Record<string, string> | null {
+// or null when it can't be determined yet.
+//
+// Needs a third-placed team known for all 12 groups (to pick the best 8 via the
+// combination table). By default it also waits for the group stage to be complete
+// (every team has played its 3 games) so the ranking is final — used by the scoring
+// paths. Pass `provisional` to resolve from the current standings instead, for the
+// practice bracket, where the qualifiers can still shift as more results come in.
+export function resolveThirdAssignment(entries: ThirdEntry[], provisional = false): Record<string, string> | null {
   if (entries.length < 12) return null;
-  if (!entries.every((e) => e.playedGames >= 3)) return null;
+  if (!provisional && !entries.every((e) => e.playedGames >= 3)) return null;
 
   const best8 = rankThirds(entries)
     .slice(0, 8)

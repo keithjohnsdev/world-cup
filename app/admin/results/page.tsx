@@ -248,7 +248,7 @@ export default function AdminResultsPage() {
       .then(r => r.json())
       .then(d => { if (Array.isArray(d?.standings)) setStandings(d.standings); })
       .catch(() => {});
-  }, [router]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [router]);
 
   function setResult(stage: string, slot: string, teamId: string) {
     const key = `${stage}:${slot}`;
@@ -331,7 +331,7 @@ export default function AdminResultsPage() {
       const s = teamId ? stat.get(teamId) : undefined;
       if (teamId && s) entries.push({ group: g, teamId, points: s.points, goalDiff: s.goal_diff, goalsFor: s.goals_for, playedGames: s.played_games });
     }
-    return resolveThirdAssignment(entries);
+    return resolveThirdAssignment(entries, true);
   }, [standings, results]);
 
   // Build bracket from entered group results + the third assignment.

@@ -60,7 +60,17 @@ function computeThirdAssign(results: ResultEntry[], standings: StandingRow[]): R
       playedGames: st.played_games,
     });
   }
-  return resolveThirdAssignment(entries);
+  // Provisional: resolve from the current standings so the practice bracket is
+  // playable before the group stage ends (the qualifiers shift as results land).
+  return resolveThirdAssignment(entries, true);
+}
+
+// Whether every group has finished (all 12 thirds known and played all 3 games),
+// so the third-placed qualifiers are final rather than provisional.
+function groupStageComplete(results: ResultEntry[], standings: StandingRow[]): boolean {
+  const played = new Map(standings.map((s) => [s.team_id, s.played_games]));
+  const thirds = results.filter((r) => r.stage === "third");
+  return thirds.length >= 12 && thirds.every((r) => (played.get(r.team_id) ?? 0) >= 3);
 }
 
 // Build the full bracket. R32 comes from the live standings + third assignment;
@@ -322,6 +332,7 @@ function sanitizePractice(r32: MatchData[], raw: Picks): Picks {
 function LiveRoundOf32({ results, standings }: { results: ResultEntry[]; standings: StandingRow[] }) {
   const [practice, setPractice] = useState<Picks>({});
   const thirdAssign = useMemo(() => computeThirdAssign(results, standings), [results, standings]);
+  const complete = useMemo(() => groupStageComplete(results, standings), [results, standings]);
 
   // Resolve R32 once (depends on results + third assignment) for sanitizing + render.
   const r32resolved = useMemo(() => {
@@ -371,7 +382,7 @@ function LiveRoundOf32({ results, standings }: { results: ResultEntry[]; standin
             <div className="h-px w-10 bg-gradient-to-l from-transparent to-yellow-300/60" />
           </div>
           <p className="text-white/55 text-sm mt-3 max-w-md mx-auto leading-relaxed">
-            The Round of 32 is built live from the current group standings — the official 2026 layout, with the eight best third-placed teams slotted in once the group stage ends. Click teams to play out the whole bracket. Nothing here is saved.
+            The Round of 32 is built live from the current group standings — the official 2026 layout, with the eight best third-placed teams slotted in (provisional until the group stage ends). Click teams to play out the whole bracket. Nothing here is saved.
           </p>
         </div>
 
@@ -384,9 +395,11 @@ function LiveRoundOf32({ results, standings }: { results: ResultEntry[]; standin
           <div className="h-1.5 rounded-full overflow-hidden max-w-xs mx-auto" style={{ background: "rgba(255,255,255,0.08)" }}>
             <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: "#4ade80" }} />
           </div>
-          {!thirdAssign && (
-            <p className="text-white/35 text-[11px] mt-2">Third-placed qualifiers are set once all groups finish.</p>
-          )}
+          {!thirdAssign ? (
+            <p className="text-white/35 text-[11px] mt-2">Third-placed qualifiers appear once every group has kicked off.</p>
+          ) : !complete ? (
+            <p className="text-white/35 text-[11px] mt-2">Third-placed qualifiers are provisional — they&apos;ll shift as group results come in.</p>
+          ) : null}
           {hasPractice && (
             <button
               onClick={() => setPractice({})}
