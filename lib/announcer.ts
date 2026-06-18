@@ -41,6 +41,23 @@ const ADVANCES_TO: Record<string, string> = {
   "semi-finals": "the Final",
 };
 
+// A win counts as an upset when the winner is seeded this many places BELOW (weaker
+// than) the team they beat. Lower seed number = stronger, so gap = winnerSeed - loserSeed.
+const UPSET_SEED_GAP = 15;
+
+// Point milestones worth a shout as players cross them (highest crossed fires once).
+const POINT_MILESTONES = [50, 100, 150, 200, 250, 300, 400, 500];
+
+// Match-based triggers only fire for matches that kicked off within this window. This
+// is the anti-backfill guard: deploying mid-tournament must not replay every past
+// result. A match's result lands within ~15 min of full time, so this is ample.
+const RECENT_MATCH_MS = 6 * 60 * 60 * 1000;
+
+function isRecentMatch(m: RawMatch): boolean {
+  const kickoff = m.utcDate ? Date.parse(m.utcDate) : NaN;
+  return Number.isFinite(kickoff) && Date.now() - kickoff <= RECENT_MATCH_MS;
+}
+
 // Insert one announcer message, ignoring it if its event was already announced.
 // Returns true only when a new row was actually written.
 //
@@ -271,7 +288,206 @@ async function announceLeaderboardMoves(sql: Sql): Promise<number> {
       if (await announce(sql, `drop:${r.id}:${cur}:${r.total}`, body)) posted++;
     }
   }
+
+  // Dead heat at the very top.
+  if (ranked.length >= 2 && ranked[0].total > 0 && ranked[0].total === ranked[1].total) {
+    const tied = ranked.filter((r) => r.total === ranked[0].total);
+    const ids = tied.map((t) => t.id).sort((a, b) => a - b).join("-");
+    const body = `🔥 Dead heat at the top — ${joinNames(tied.map((t) => t.name))} tied on ${ranked[0].total} pts!`;
+    if (await announce(sql, `tie-top:${ranked[0].total}:${ids}`, body)) posted++;
+  }
+
+  // Points milestones — fire the highest one each player has newly crossed.
+  for (const r of ranked) {
+    const reached = POINT_MILESTONES.filter((m) => r.total >= m);
+    if (reached.length === 0) continue;
+    const top = reached[reached.length - 1];
+    if (await announce(sql, `milestone:${r.id}:${top}`, `🎯 ${r.name} cracks ${top} pts!`)) posted++;
+  }
+
+  // Wooden-spoon watch — shout when the bottom of the table changes hands.
+  const spoon = ranked[ranked.length - 1];
+  if (spoon && ranked[0].total > 0) {
+    const spoonRows = (await sql`
+      SELECT value FROM tournament_settings WHERE key = 'announced_spoon' LIMIT 1
+    `) as { value: string }[];
+    if (spoonRows[0]?.value !== String(spoon.id)) {
+      await sql`
+        INSERT INTO tournament_settings (key, value)
+        VALUES ('announced_spoon', ${String(spoon.id)})
+        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
+      `;
+      const body = `🥄 ${spoon.name} is now propping up the table — wooden-spoon duty for now.`;
+      if (await announce(sql, `spoon:${spoon.id}:${spoon.total}`, body)) posted++;
+    }
+  }
   return posted;
+}
+
+// Seed-based upset, for ANY finished match (group or knockout): the winner is seeded
+// at least UPSET_SEED_GAP places below the team they beat.
+async function announceUpset(sql: Sql, m: RawMatch): Promise<boolean> {
+  if (m.status !== "FINISHED" || !m.winnerName) return false;
+  const winnerId = apiNameToTeamId(m.winnerName);
+  const homeId = apiNameToTeamId(m.homeTeamName);
+  const awayId = apiNameToTeamId(m.awayTeamName);
+  if (!winnerId || !homeId || !awayId) return false;
+  const loserId = winnerId === homeId ? awayId : homeId;
+  const winner = getTeam(winnerId);
+  const loser = getTeam(loserId);
+  if (!winner || !loser) return false;
+  if (winner.seed - loser.seed < UPSET_SEED_GAP) return false; // not a big enough gap
+
+  let score = "";
+  if (m.homeGoals != null && m.awayGoals != null) {
+    const wg = winnerId === homeId ? m.homeGoals : m.awayGoals;
+    const lg = winnerId === homeId ? m.awayGoals : m.homeGoals;
+    score = m.wasShootout ? ` (${wg}–${lg} on penalties)` : ` ${wg}–${lg}`;
+  }
+  const body = `🚨 UPSET! ${winner.name} (seed ${winner.seed}) stun ${loser.name} (seed ${loser.seed})${score}.`;
+  return announce(sql, `upset:${m.id}`, body);
+}
+
+// A knockout win that keeps someone's champion pick alive (the win-side counterpart to
+// announceChampionOut). The Final win is already covered by the CHAMPIONS message.
+async function announceChampionAdvance(
+  sql: Sql,
+  m: RawMatch,
+  championPicks: { name: string; team_id: string }[],
+): Promise<boolean> {
+  if (m.round === "final" || !m.winnerName) return false;
+  const winnerId = apiNameToTeamId(m.winnerName);
+  if (!winnerId) return false;
+  const fans = championPicks.filter((p) => p.team_id === winnerId);
+  if (fans.length === 0) return false;
+  const team = teamName(winnerId, m.winnerName);
+  const dest = ADVANCES_TO[m.round] ?? "the next round";
+  const body = `🏆 ${joinNames(fans.map((f) => f.name))}'s champion pick ${team} march on into ${dest} — still alive!`;
+  return announce(sql, `champ-advance:${m.id}`, body);
+}
+
+// A kid's heart-pick team won a match (+1 for them). Fires for any round.
+async function announceHeartPickWin(
+  sql: Sql,
+  m: RawMatch,
+  heartFans: { name: string; team_id: string }[],
+): Promise<boolean> {
+  if (m.status !== "FINISHED" || !m.winnerName) return false;
+  const winnerId = apiNameToTeamId(m.winnerName);
+  if (!winnerId) return false;
+  const fans = heartFans.filter((f) => f.team_id === winnerId);
+  if (fans.length === 0) return false;
+  const team = teamName(winnerId, m.winnerName);
+  const body = `❤️ ${joinNames(fans.map((f) => f.name))}'s heart team ${team} win — +1!`;
+  return announce(sql, `heart:${m.id}:${winnerId}`, body);
+}
+
+// "Matchday N is underway" — fires once per group-stage matchday, when its first
+// result lands (we only see results, so it reads as 'underway', not pre-kickoff).
+async function announceMatchdayUnderway(sql: Sql, matchday: number): Promise<boolean> {
+  return announce(sql, `matchday:${matchday}`, `⚽ Matchday ${matchday} is underway — game on, Johnsies!`);
+}
+
+// Star Power resolved: a starred bracket pick whose match now has a result. Hit =
+// double points; miss = it let them down. One shout per starred pick.
+async function announceStarPower(sql: Sql): Promise<number> {
+  const [starPicks, rawResults] = (await Promise.all([
+    sql`SELECT u.id, u.name, p.stage, p.slot, p.team_id
+        FROM picks p JOIN users u ON u.id = p.user_id
+        WHERE p.is_star_power = true`,
+    sql`SELECT stage, slot, team_id FROM results`,
+  ])) as [
+    { id: number; name: string; stage: string; slot: string; team_id: string }[],
+    { stage: string; slot: string; team_id: string }[],
+  ];
+
+  const winners = new Map(rawResults.map((r) => [`${r.stage}:${r.slot}`, r.team_id]));
+  let posted = 0;
+  for (const sp of starPicks) {
+    const winner = winners.get(`${sp.stage}:${sp.slot}`);
+    if (winner == null) continue; // not resolved yet
+    const team = teamName(sp.team_id, sp.team_id);
+    const body =
+      winner === sp.team_id
+        ? `⭐ Star Pick PAYS OFF for ${sp.name} — ${team} deliver double points!`
+        : `⭐ Star Pick goes begging for ${sp.name} — ${team} couldn't get it done.`;
+    if (await announce(sql, `star:${sp.id}:${sp.stage}:${sp.slot}`, body)) posted++;
+  }
+  return posted;
+}
+
+// Which groups are FINAL (all four teams have played their 3 games) and the team in
+// each finishing position, keyed by group letter.
+async function finalGroupPositions(
+  sql: Sql,
+): Promise<Map<string, { actual: (string | null)[] }>> {
+  const [rawResults, gp] = (await Promise.all([
+    sql`SELECT stage, slot, team_id FROM results`,
+    sql`SELECT team_id, played_games FROM group_points`,
+  ])) as [{ stage: string; slot: string; team_id: string }[], { team_id: string; played_games: number }[]];
+
+  const played = new Map(gp.map((r) => [r.team_id, r.played_games]));
+  const positions = ["group", "runner", "third", "fourth"] as const;
+  const out = new Map<string, { actual: (string | null)[] }>();
+  for (const group of GROUPS) {
+    const actual = positions.map(
+      (pos) => rawResults.find((r) => r.stage === pos && r.slot === group.id)?.team_id ?? null,
+    );
+    const complete =
+      actual.every(Boolean) && group.teams.every((t) => (played.get(t.id) ?? 0) >= 3);
+    if (complete) out.set(group.id, { actual });
+  }
+  return out;
+}
+
+// Perfect group: a player nailed all four finishing positions in a now-final group
+// (the maximum 8/8). One shout per player per group.
+async function announcePerfectGroups(sql: Sql): Promise<number> {
+  const finals = await finalGroupPositions(sql);
+  if (finals.size === 0) return 0;
+
+  const [rawPicks, users] = (await Promise.all([
+    sql`SELECT user_id, stage, slot, team_id FROM picks
+        WHERE stage IN ('group','runner','third','fourth')`,
+    sql`SELECT id, name FROM users`,
+  ])) as [
+    { user_id: number; stage: string; slot: string; team_id: string }[],
+    { id: number; name: string }[],
+  ];
+
+  const nameById = new Map(users.map((u) => [u.id, u.name]));
+  const positions = ["group", "runner", "third", "fourth"] as const;
+  let posted = 0;
+  for (const [groupId, { actual }] of finals) {
+    // Group everyone's four picks for this group.
+    const byUser = new Map<number, (string | null)[]>();
+    for (const p of rawPicks) {
+      if (p.slot !== groupId) continue;
+      const idx = positions.indexOf(p.stage as (typeof positions)[number]);
+      if (idx < 0) continue;
+      if (!byUser.has(p.user_id)) byUser.set(p.user_id, [null, null, null, null]);
+      byUser.get(p.user_id)![idx] = p.team_id;
+    }
+    for (const [userId, predicted] of byUser) {
+      if (!predicted.every((id, i) => id != null && id === actual[i])) continue; // not perfect
+      const name = nameById.get(userId);
+      if (!name) continue;
+      const body = `🎯 PERFECT GROUP! ${name} called all four spots in Group ${groupId} — a flawless 8/8.`;
+      if (await announce(sql, `perfect:${userId}:${groupId}`, body)) posted++;
+    }
+  }
+  return posted;
+}
+
+// The whole group stage is done — all 12 groups final. Fires once.
+async function announceGroupStageComplete(sql: Sql): Promise<boolean> {
+  const finals = await finalGroupPositions(sql);
+  if (finals.size < GROUPS.length) return false;
+  return announce(
+    sql,
+    "groups-complete",
+    "🏁 The group stage is DONE — all 32 Round-of-32 places are booked. Knockout football, here we come!",
+  );
 }
 
 // Main entry point — called from the results-sync pipeline after results change.
@@ -280,22 +496,49 @@ async function announceLeaderboardMoves(sql: Sql): Promise<number> {
 export async function runAnnouncer(sql: Sql, matches: RawMatch[]): Promise<number> {
   let posted = 0;
 
-  const championPicks = (await sql`
-    SELECT u.name, p.team_id
-    FROM picks p JOIN users u ON u.id = p.user_id
-    WHERE p.stage = 'champion' AND p.slot = 'pick'
-  `) as { name: string; team_id: string }[];
+  const [championPicks, heartFans] = (await Promise.all([
+    sql`SELECT u.name, p.team_id
+        FROM picks p JOIN users u ON u.id = p.user_id
+        WHERE p.stage = 'champion' AND p.slot = 'pick'`,
+    sql`SELECT name, heart_pick_team_id AS team_id
+        FROM users WHERE is_kid = true AND heart_pick_team_id IS NOT NULL`,
+  ])) as [{ name: string; team_id: string }[], { name: string; team_id: string }[]];
 
   for (const m of matches) {
-    if (!isKnockout(m)) continue;
+    if (m.status !== "FINISHED" || m.hasResult === false) continue;
+    // Recency guard: don't backfill old results when new triggers ship mid-tournament.
+    const recent = isRecentMatch(m);
     try {
-      if (await announceKnockoutResult(sql, m)) posted++;
-      if (await announceChampionOut(sql, m, championPicks)) posted++;
+      if (isKnockout(m)) {
+        if (await announceKnockoutResult(sql, m)) posted++;
+        if (await announceChampionOut(sql, m, championPicks)) posted++;
+        if (recent && (await announceChampionAdvance(sql, m, championPicks))) posted++;
+      }
+      if (recent) {
+        if (await announceUpset(sql, m)) posted++;
+        if (await announceHeartPickWin(sql, m, heartFans)) posted++;
+        if (m.round === "group stage" && m.matchday != null) {
+          if (await announceMatchdayUnderway(sql, m.matchday)) posted++;
+        }
+      }
     } catch (err) {
       console.warn(`[announcer] match ${m.id} failed:`, err);
     }
   }
 
+  // Standings-table-derived checks (don't need the match list). Each is isolated.
+  for (const check of [announceStarPower, announcePerfectGroups]) {
+    try {
+      posted += await check(sql);
+    } catch (err) {
+      console.warn(`[announcer] ${check.name} failed:`, err);
+    }
+  }
+  try {
+    if (await announceGroupStageComplete(sql)) posted++;
+  } catch (err) {
+    console.warn("[announcer] group-stage-complete check failed:", err);
+  }
   try {
     posted += await announceLeaderboardMoves(sql);
   } catch (err) {
@@ -341,6 +584,7 @@ export async function postGafferAnnouncement(
 
 const BAMA_NAME = "Bama";
 const BAMA_INTERVAL_MS = 3 * 24 * 60 * 60 * 1000; // ~every 3 days
+const DIGEST_INTERVAL_MS = 23 * 60 * 60 * 1000;   // ~once a day (under 24h so it can't skip a day)
 
 // Is one of Bama's group-winner picks currently dead last in its group? Returns the
 // team/group if so — prime material for operatic Gaffer despair.
@@ -406,7 +650,7 @@ async function bamaPlainFact(sql: Sql): Promise<string | null> {
 
 // Post the recurring Bama announcement if at least BAMA_INTERVAL_MS has passed since
 // the last one. Self-gated via a stored timestamp; deduped per-day by event_key.
-export async function runScheduledAnnouncements(sql: Sql): Promise<number> {
+async function maybePostBama(sql: Sql): Promise<number> {
   const rows = (await sql`
     SELECT value FROM tournament_settings WHERE key = 'bama_last_announced' LIMIT 1
   `) as { value: string }[];
@@ -427,4 +671,50 @@ export async function runScheduledAnnouncements(sql: Sql): Promise<number> {
     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
   `;
   return posted ? 1 : 0;
+}
+
+// Once-a-day "as it stands" snapshot: the podium plus the wooden spoon. Self-gated;
+// only during live play (nothing to digest before kickoff or after the tournament).
+async function maybePostStandingsDigest(sql: Sql): Promise<number> {
+  const [tsRows, phaseRows] = (await Promise.all([
+    sql`SELECT value FROM tournament_settings WHERE key = 'standings_digest_last' LIMIT 1`,
+    sql`SELECT value FROM tournament_settings WHERE key = 'phase' LIMIT 1`,
+  ])) as [{ value: string }[], { value: string }[]];
+
+  const last = tsRows[0]?.value ? Date.parse(tsRows[0].value) : 0;
+  if (Number.isFinite(last) && Date.now() - last < DIGEST_INTERVAL_MS) return 0;
+
+  const phase = phaseRows[0]?.value ?? "phase1_open";
+  if (phase === "phase1_open" || phase === "complete") return 0; // nothing meaningful yet/anymore
+
+  const ranked = await rankPlayers(sql);
+  if (ranked.length === 0 || ranked[0].total <= 0) return 0;
+
+  const medals = ["🥇", "🥈", "🥉"];
+  const top = ranked.slice(0, 3).map((r, i) => `${medals[i]} ${r.name} (${r.total})`).join("  ");
+  const spoon = ranked[ranked.length - 1];
+  const body = `📋 As it stands: ${top}  …  🥄 ${spoon.name} holds the wooden spoon.`;
+
+  const dateKey = new Date().toISOString().slice(0, 10);
+  const posted = await announce(sql, `digest:${dateKey}`, body);
+  await sql`
+    INSERT INTO tournament_settings (key, value)
+    VALUES ('standings_digest_last', ${new Date().toISOString()})
+    ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
+  `;
+  return posted ? 1 : 0;
+}
+
+// All recurring, time-based announcements. Each self-gates, so this is a cheap no-op
+// most ticks. Isolated so one failing check never blocks the others.
+export async function runScheduledAnnouncements(sql: Sql): Promise<number> {
+  let posted = 0;
+  for (const check of [maybePostBama, maybePostStandingsDigest]) {
+    try {
+      posted += await check(sql);
+    } catch (err) {
+      console.warn(`[announcer] ${check.name} failed:`, err);
+    }
+  }
+  return posted;
 }
