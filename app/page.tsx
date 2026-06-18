@@ -1108,7 +1108,7 @@ export default function BracketPage() {
         }
         center={
           <div className="flex h-full">
-            {(["rules", "groups", "bracket", "leaderboard", "stats", "news", "board", "world"] as const).map((t) => (
+            {(["rules", "groups", "bracket", "leaderboard", "board", "stats", "news", "world"] as const).map((t) => (
               <button
                 key={t}
                 onClick={e => { (e.currentTarget as HTMLElement).style.color = ""; (e.currentTarget as HTMLElement).style.textShadow = ""; setTab(t); history.replaceState(null, "", `?tab=${t}`); if (t === "board" && boardSpotlight) markBoardSeen(); }}
