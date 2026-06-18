@@ -69,26 +69,3 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ message: rows[0] });
 }
-
-export async function DELETE(req: NextRequest) {
-  await initDb();
-  const user = await getUser(req);
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const id = Number(req.nextUrl.searchParams.get("id"));
-  if (!Number.isInteger(id) || id <= 0) {
-    return NextResponse.json({ error: "Invalid id" }, { status: 400 });
-  }
-
-  const sql = getSql();
-  const rows = (await sql`SELECT user_id FROM messages WHERE id = ${id}`) as { user_id: number | null }[];
-  const msg = rows[0];
-  if (!msg) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-  if (msg.user_id !== user.id && !isAdmin(user.name)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  await sql`DELETE FROM messages WHERE id = ${id}`;
-  return NextResponse.json({ ok: true });
-}

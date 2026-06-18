@@ -109,22 +109,6 @@ export function MessageBoardTab() {
     }
   }
 
-  async function remove(id: number) {
-    const token = localStorage.getItem("wc_token");
-    if (!token) return;
-    const prev = messages;
-    setMessages((m) => m.filter((x) => x.id !== id)); // optimistic
-    try {
-      const r = await fetch(`/api/messages?id=${id}`, {
-        method: "DELETE",
-        headers: { "x-session-token": token },
-      });
-      if (!r.ok) setMessages(prev); // restore on failure
-    } catch {
-      setMessages(prev);
-    }
-  }
-
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     // Enter posts; Shift+Enter inserts a newline.
     if (e.key === "Enter" && !e.shiftKey) {
@@ -190,7 +174,6 @@ export function MessageBoardTab() {
           <div className="space-y-3">
             {messages.map((m) => {
               const mine = me != null && m.user_id === me.id;
-              const canDelete = mine || (me?.isAdmin ?? false);
               const announcer = m.is_announcer;
               const color = nameColor(m.user_name);
               return (
@@ -227,17 +210,6 @@ export function MessageBoardTab() {
                     </div>
                     <p className={`text-sm leading-relaxed whitespace-pre-wrap break-words ${announcer ? "text-amber-50/90 font-medium" : "text-white/85"}`}>{m.body}</p>
                   </div>
-                  {canDelete && (
-                    <button
-                      onClick={() => remove(m.id)}
-                      aria-label="Delete message"
-                      className="self-start text-white/20 hover:text-red-400 transition-colors cursor-pointer shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100"
-                    >
-                      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M2.5 4h11M6 4V2.5h4V4M5 4l.5 9h5l.5-9M6.5 6.5v4M9.5 6.5v4" />
-                      </svg>
-                    </button>
-                  )}
                 </div>
               );
             })}
