@@ -213,7 +213,7 @@ export function MessageBoardTab() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline gap-2 mb-0.5">
-                      <span className={`font-black text-sm truncate ${announcer ? "italic" : ""}`} style={{ color: announcer ? "#fbbf24" : color }}>
+                      <span className="font-black text-sm truncate" style={{ color: announcer ? "#fbbf24" : color }}>
                         {m.user_name}
                       </span>
                       {announcer ? (
@@ -225,7 +225,7 @@ export function MessageBoardTab() {
                       ) : null}
                       <span className="text-white/30 text-[11px] shrink-0 ml-auto">{relativeTime(m.created_at)}</span>
                     </div>
-                    <p className={`text-sm leading-relaxed whitespace-pre-wrap break-words ${announcer ? "text-amber-50/90 font-medium italic" : "text-white/85"}`}>{m.body}</p>
+                    <p className={`text-sm leading-relaxed whitespace-pre-wrap break-words ${announcer ? "text-amber-50/90 font-medium" : "text-white/85"}`}>{m.body}</p>
                   </div>
                   {canDelete && (
                     <button
