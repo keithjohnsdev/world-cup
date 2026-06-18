@@ -45,6 +45,52 @@ function initials(name: string): string {
   return (first + second).toUpperCase();
 }
 
+// Windows has no glyphs for flag emoji, so a posted 🇲🇦 falls back to the bare
+// letters "MA" while iPhones show the flag. To render flags everywhere, we swap
+// flag emoji for the same flagcdn images the rest of the app uses (see FlagIcon),
+// leaving all other text and emoji untouched so native rendering is preserved.
+// Matches regional-indicator pairs (🇲🇦) and tag-sequence subdivision flags (🏴󠁧󠁢󠁳󠁣󠁴󠁿).
+const FLAG_RE = /\u{1F3F4}[\u{E0061}-\u{E007A}]+\u{E007F}|[\u{1F1E6}-\u{1F1FF}]{2}/gu;
+
+// Turn a matched flag emoji into a flagcdn 2-letter (or subdivision) country code.
+function flagCc(seq: string): string {
+  const cps = [...seq].map((c) => c.codePointAt(0)!);
+  if (cps[0] === 0x1f3f4) {
+    // Tag sequence: black flag + tag letters + cancel. e.g. gb + sct → "gb-sct".
+    const letters = cps
+      .slice(1, -1)
+      .map((cp) => String.fromCharCode(cp - 0xe0061 + 97))
+      .join("");
+    return letters.length > 2 ? `${letters.slice(0, 2)}-${letters.slice(2)}` : letters;
+  }
+  // Regional-indicator pair: each codepoint maps to a letter A–Z.
+  return cps.map((cp) => String.fromCharCode(cp - 0x1f1e6 + 97)).join("");
+}
+
+function renderWithFlags(text: string): React.ReactNode[] {
+  const nodes: React.ReactNode[] = [];
+  let last = 0;
+  let key = 0;
+  for (const m of text.matchAll(FLAG_RE)) {
+    const start = m.index!;
+    if (start > last) nodes.push(text.slice(last, start));
+    const cc = flagCc(m[0]);
+    nodes.push(
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        key={`f${key++}`}
+        src={`https://flagcdn.com/w40/${cc}.png`}
+        srcSet={`https://flagcdn.com/w80/${cc}.png 2x`}
+        alt={m[0]}
+        className="inline-block h-[1em] w-auto align-[-0.15em] rounded-[2px] mx-[0.06em]"
+      />,
+    );
+    last = start + m[0].length;
+  }
+  if (last < text.length) nodes.push(text.slice(last));
+  return nodes;
+}
+
 export function MessageBoardTab() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [me, setMe] = useState<Me | null>(null);
@@ -208,7 +254,7 @@ export function MessageBoardTab() {
                       ) : null}
                       <span className="text-white/30 text-[11px] shrink-0 ml-auto">{relativeTime(m.created_at)}</span>
                     </div>
-                    <p className={`text-sm leading-relaxed whitespace-pre-wrap break-words ${announcer ? "text-amber-50/90 font-medium" : "text-white/85"}`}>{m.body}</p>
+                    <p className={`text-sm leading-relaxed whitespace-pre-wrap break-words ${announcer ? "text-amber-50/90 font-medium" : "text-white/85"}`}>{renderWithFlags(m.body)}</p>
                   </div>
                 </div>
               );
