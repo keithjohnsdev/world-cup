@@ -46,11 +46,19 @@ export async function GET(req: NextRequest) {
   }
   const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
 
-  // Whitelisted ordering (never interpolate user input directly).
+  // "hot" ranks by a recency-decayed traction computed LIVE at query time, not by
+  // the stored `traction` column. The stored value bakes in the recency weight from
+  // sync time and then freezes once a story drops out of the feed window — which let
+  // 3-day-old stories stay pinned at the top until they were pruned. Recomputing the
+  // decay here (mirrors recencyWeight() in lib/news.ts: exp(-ageHours/18)) means a
+  // story's score keeps falling with age, so yesterday's hot stories roll over for
+  // today's within ~a day. Whitelisted ordering — never interpolate user input.
+  const liveHot =
+    "source_count * exp(-GREATEST(0, EXTRACT(EPOCH FROM (NOW() - published_at)) / 3600.0) / 18.0)";
   const orderBy =
     sort === "new"
       ? "published_at DESC, traction DESC"
-      : "traction DESC, published_at DESC";
+      : `${liveHot} DESC, published_at DESC`;
 
   // Over-fetch so cluster dedupe still leaves a full page.
   const fetchLimit = limit * 4;
