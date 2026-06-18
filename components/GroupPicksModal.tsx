@@ -271,19 +271,22 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
                       style={{ borderTop: "1px solid rgba(255,255,255,0.05)", background: "rgba(0,0,0,0.18)" }}
                     >
                       <div className="w-7 shrink-0" />
-                      <div className="flex-1 flex items-center justify-between gap-2 text-white/30 text-[9px] font-black uppercase tracking-[0.18em]">
-                        <span>Your Pick</span>
-                        {groupHasLive && (
-                          <span className="inline-flex items-center gap-1 text-green-400/90">
-                            <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-400" />
-                            Live
-                          </span>
-                        )}
+                      <div className="flex-1 text-white/30 text-[9px] font-black uppercase tracking-[0.18em]">Your Pick</div>
+                      {/* Actual title + (to its right) the live legend, merged into one
+                          fixed region so the columns stay aligned whether or not it shows. */}
+                      <div className="shrink-0 flex items-center">
+                        <span className="w-[4.5rem] text-center text-white/30 text-[9px] font-black uppercase tracking-[0.18em]">
+                          {groupStageComplete ? "Final" : "Actual"}
+                        </span>
+                        <span className="w-8 ml-3 flex items-center justify-center">
+                          {groupHasLive && (
+                            <span className="inline-flex items-center gap-1 text-green-400/90 text-[9px] font-black uppercase whitespace-nowrap">
+                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-400" />
+                              Live
+                            </span>
+                          )}
+                        </span>
                       </div>
-                      <div className="w-[4.5rem] shrink-0 text-center text-white/30 text-[9px] font-black uppercase tracking-[0.18em]">
-                        {groupStageComplete ? "Final" : "Actual"}
-                      </div>
-                      <div className="w-8 shrink-0" />
                     </div>
                   )}
 
