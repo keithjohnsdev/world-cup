@@ -1056,7 +1056,7 @@ export default function BracketPage() {
                 onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.color = ""; el.style.textShadow = ""; }}
               >
                 {t === "news" ? "News" : t === "groups" ? (
-                  <span className="relative inline-block">
+                  <span className="inline-flex items-center gap-1.5">
                     Groups
                     {phase1Locked && (
                       <svg
@@ -1066,7 +1066,7 @@ export default function BracketPage() {
                         strokeWidth="2.5"
                         strokeLinecap="round"
                         strokeLinejoin="round"
-                        className="absolute -top-1 -right-[11px] h-3 w-3 text-yellow-300 drop-shadow-[0_0_4px_rgba(253,224,71,0.8)]"
+                        className="h-3 w-3 text-yellow-300 drop-shadow-[0_0_4px_rgba(253,224,71,0.8)]"
                         aria-label="Picks locked"
                       >
                         <rect x="5" y="11" width="14" height="10" rx="2" />
