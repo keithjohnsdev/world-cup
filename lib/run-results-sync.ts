@@ -45,17 +45,32 @@ async function rebuildDerivedIfChanged(processed: number) {
 
 const POST_MATCH_WINDOW_MS = 3 * 60 * 60 * 1000; // keep polling ~3h after kickoff (covers full-time + free-tier delay)
 const WARMUP_MS = 10 * 60 * 1000;                 // start ~10 min before kickoff
+const LIVE_WINDOW_MS = 150 * 60 * 1000;           // treat as live from kickoff until ~2.5h later (covers extra time + pens)
 
-// Record which teams are in a live match right now (IN_PLAY/PAUSED) so the score
-// view can show a "playing now" dot. Stored as { ids, at } under one settings key;
-// readers apply a short TTL so the indicator clears itself even if no later sync
-// runs. Written on every active tick — including with an empty list once a match
-// finishes — so the dot turns off promptly. Best-effort: never blocks the sync.
+// Is this match being played right now? We can't trust the API status: the
+// football-data free tier commonly leaves a match "TIMED" all the way through play
+// and only flips to "FINISHED" (with score) afterwards. So treat a match as live if
+// it's explicitly IN_PLAY/PAUSED, OR its kickoff has passed, it isn't FINISHED yet,
+// and we're still inside a plausible match-length window.
+function isLiveMatch(m: MatchWindowEntry, now: number): boolean {
+  if (m.status === "IN_PLAY" || m.status === "PAUSED") return true;
+  if (m.status === "FINISHED") return false;
+  const kickoff = m.utcDate ? new Date(m.utcDate).getTime() : NaN;
+  if (isNaN(kickoff)) return false;
+  return now >= kickoff && now <= kickoff + LIVE_WINDOW_MS;
+}
+
+// Record which teams are in a live match right now so the score view can show a
+// "playing now" dot. Stored as { ids, at } under one settings key; readers apply a
+// short TTL so the indicator clears itself even if no later sync runs. Written on
+// every active tick — including with an empty list once matches finish — so the dot
+// turns off promptly. Best-effort: never blocks the sync.
 async function persistLiveTeams(window: MatchWindowEntry[]): Promise<void> {
+  const now = Date.now();
   const ids = [
     ...new Set(
       window
-        .filter((m) => m.status === "IN_PLAY" || m.status === "PAUSED")
+        .filter((m) => isLiveMatch(m, now))
         .flatMap((m) => [apiNameToTeamId(m.homeTeamName), apiNameToTeamId(m.awayTeamName)])
         .filter((id): id is string => id != null),
     ),
@@ -80,13 +95,15 @@ function ymd(offsetMs: number): string {
 function isWindowActive(matches: MatchWindowEntry[]): boolean {
   const now = Date.now();
   return matches.some((m) => {
-    if (m.status === "IN_PLAY" || m.status === "PAUSED") return true;
+    // In progress (real or clock-inferred) — keep syncing so results land fast and
+    // the live-team list stays fresh while the match is being played.
+    if (isLiveMatch(m, now)) return true;
     const kickoff = m.utcDate ? new Date(m.utcDate).getTime() : NaN;
     if (isNaN(kickoff)) return false;
     if (m.status === "FINISHED") return now <= kickoff + POST_MATCH_WINDOW_MS;
     if (m.status === "TIMED" || m.status === "SCHEDULED") {
       const untilKickoff = kickoff - now;
-      return untilKickoff > 0 && untilKickoff <= WARMUP_MS;
+      return untilKickoff > 0 && untilKickoff <= WARMUP_MS; // about to start
     }
     return false;
   });
