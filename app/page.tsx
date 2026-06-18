@@ -639,6 +639,7 @@ function LeaderboardTab() {
   const [refreshing, setRefreshing] = useState(false);
   const [lastFetched, setLastFetched] = useState<Date | null>(null);
   const [selected, setSelected] = useState<{ id: number; name: string; breakdown: ScoreBreakdownProps } | null>(null);
+  const [liveTeamIds, setLiveTeamIds] = useState<string[]>([]);
 
   const picksVisible = phase !== "phase1_open";
 
@@ -650,6 +651,7 @@ function LeaderboardTab() {
       .then(r => r.json())
       .then(data => {
         if (data?.entries) { setEntries(data.entries); setPhase(data.phase ?? "phase1_open"); }
+        if (Array.isArray(data?.liveTeamIds)) setLiveTeamIds(data.liveTeamIds);
         setLastFetched(new Date());
       })
       .catch(() => {})
@@ -743,6 +745,7 @@ function LeaderboardTab() {
           userName={selected.name}
           breakdown={selected.breakdown}
           groupStageComplete={phase !== "phase1_open" && phase !== "phase1_locked"}
+          liveTeamIds={liveTeamIds}
           onClose={() => setSelected(null)}
         />
       )}

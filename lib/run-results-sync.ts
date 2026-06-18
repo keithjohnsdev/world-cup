@@ -4,6 +4,7 @@
 
 import { initDb, getSql } from "@/lib/db";
 import { fetchCompletedMatchesForDate, fetchMatchesWindow, fetchAllMatches, type MatchWindowEntry } from "@/lib/api-football";
+import { apiNameToTeamId } from "@/lib/team-mapping";
 import { processMatches } from "@/lib/process-matches";
 import { syncGroupPoints } from "@/lib/sync-standings";
 import { rebuildPointsHistory } from "@/lib/points-history";
@@ -45,6 +46,31 @@ async function rebuildDerivedIfChanged(processed: number) {
 const POST_MATCH_WINDOW_MS = 3 * 60 * 60 * 1000; // keep polling ~3h after kickoff (covers full-time + free-tier delay)
 const WARMUP_MS = 10 * 60 * 1000;                 // start ~10 min before kickoff
 
+// Record which teams are in a live match right now (IN_PLAY/PAUSED) so the score
+// view can show a "playing now" dot. Stored as { ids, at } under one settings key;
+// readers apply a short TTL so the indicator clears itself even if no later sync
+// runs. Written on every active tick — including with an empty list once a match
+// finishes — so the dot turns off promptly. Best-effort: never blocks the sync.
+async function persistLiveTeams(window: MatchWindowEntry[]): Promise<void> {
+  const ids = [
+    ...new Set(
+      window
+        .filter((m) => m.status === "IN_PLAY" || m.status === "PAUSED")
+        .flatMap((m) => [apiNameToTeamId(m.homeTeamName), apiNameToTeamId(m.awayTeamName)])
+        .filter((id): id is string => id != null),
+    ),
+  ];
+  try {
+    await getSql()`
+      INSERT INTO tournament_settings (key, value)
+      VALUES ('live_team_ids', ${JSON.stringify({ ids, at: new Date().toISOString() })})
+      ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
+    `;
+  } catch (err) {
+    console.warn("[results-sync] live-team write failed:", err);
+  }
+}
+
 function ymd(offsetMs: number): string {
   return new Date(Date.now() + offsetMs).toISOString().slice(0, 10);
 }
@@ -82,6 +108,7 @@ export async function runResultsSyncIfActive() {
 
   // Active — now do the DB work, reusing the FINISHED matches we already fetched.
   await initDb();
+  await persistLiveTeams(window);
   const finished = window.filter((m) => m.status === "FINISHED");
   const result = await processMatches(getSql(), finished);
 

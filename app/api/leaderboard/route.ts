@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const auth = await sql`SELECT id FROM users WHERE session_token = ${token}` as { id: number }[];
   if (!auth.length) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const [rawUsers, rawPicks, rawResults, phaseRows, rawSnapshots, rawPlayed] = await Promise.all([
+  const [rawUsers, rawPicks, rawResults, phaseRows, rawSnapshots, rawPlayed, liveRows] = await Promise.all([
     sql`SELECT id, name, is_kid, chargeup_active, heart_pick_team_id FROM users`,
     // ── Separate group and bracket picks to avoid accidental cross-stage scoring ──
     // We fetch all picks but the scoring engine already filters by stage via KNOCKOUT_PTS.
@@ -42,10 +42,25 @@ export async function GET(req: NextRequest) {
     sql`SELECT round, user_id, rank, total_score, group_score, bracket_score
         FROM standings_snapshots`,
     sql`SELECT team_id FROM teams_played`,
-  ]) as [UserRow[], (PickRow & { user_id: number })[], ResultRow[], { value: string }[], SnapshotRow[], { team_id: string }[]];
+    // Teams currently in a live match, written by the results sync.
+    sql`SELECT value FROM tournament_settings WHERE key = 'live_team_ids' LIMIT 1`,
+  ]) as [UserRow[], (PickRow & { user_id: number })[], ResultRow[], { value: string }[], SnapshotRow[], { team_id: string }[], { value: string }[]];
 
   const phase = phaseRows[0]?.value ?? "phase1_open";
   const playedTeams = new Set(rawPlayed.map((r) => r.team_id));
+
+  // Live "playing now" team ids, ignored once stale so a stalled sync can't pin the
+  // indicator on (the sync rewrites this every ~2 min while a match window is open).
+  const LIVE_TTL_MS = 5 * 60 * 1000;
+  let liveTeamIds: string[] = [];
+  try {
+    const raw = liveRows[0]?.value;
+    if (raw) {
+      const parsed = JSON.parse(raw) as { ids?: string[]; at?: string };
+      const at = parsed.at ? new Date(parsed.at).getTime() : 0;
+      if (Array.isArray(parsed.ids) && Date.now() - at <= LIVE_TTL_MS) liveTeamIds = parsed.ids;
+    }
+  } catch { /* malformed — treat as no live matches */ }
 
   // Group picks by user_id
   const picksByUser = new Map<number, PickRow[]>();
@@ -83,5 +98,5 @@ export async function GET(req: NextRequest) {
     })
     .sort((a, b) => b.total_score - a.total_score || a.name.localeCompare(b.name));
 
-  return NextResponse.json({ entries, phase });
+  return NextResponse.json({ entries, phase, liveTeamIds });
 }

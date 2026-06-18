@@ -57,10 +57,12 @@ interface Props {
   breakdown: ScoreBreakdownProps;
   // True once the group stage is over (phase2+) — switches "currently in" to "finished".
   groupStageComplete?: boolean;
+  // Team ids currently in a live match — get a pulsing "playing now" dot.
+  liveTeamIds?: string[];
   onClose: () => void;
 }
 
-export function GroupPicksModal({ userId, userName, breakdown, groupStageComplete, onClose }: Props) {
+export function GroupPicksModal({ userId, userName, breakdown, groupStageComplete, liveTeamIds = [], onClose }: Props) {
   const [picks, setPicks] = useState<Entry[]>([]);
   const [results, setResults] = useState<Entry[]>([]);
   const [heartPickTeamId, setHeartPickTeamId] = useState<string | null>(null);
@@ -104,6 +106,7 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
   const pickMap = buildMap(picks);
   const resultMap = buildMap(results);
   const playedSet = new Set(playedTeamIds);
+  const liveSet = new Set(liveTeamIds);
   const hasResults = results.length > 0;
 
   return (
@@ -348,17 +351,29 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
                           <div className="w-[4.5rem] shrink-0 flex items-center justify-center gap-2.5">
                             {actualTeam ? (
                               <>
-                                <FlagIcon
-                                  cc={actualTeam.cc}
-                                  name={actualTeam.name}
-                                  className={`w-8 h-[22px] rounded ${
-                                    isExact
-                                      ? "ring-2 ring-green-400/90 ring-offset-1 ring-offset-[#0d2137] shadow-[0_0_6px_1px_rgba(74,222,128,0.55)]"
-                                      : actualId != null && playedSet.has(actualId)
-                                        ? "opacity-90"
-                                        : "opacity-40" /* provisional — this team hasn't played */
-                                  }`}
-                                />
+                                <span className="relative inline-flex shrink-0">
+                                  <FlagIcon
+                                    cc={actualTeam.cc}
+                                    name={actualTeam.name}
+                                    className={`w-8 h-[22px] rounded ${
+                                      isExact
+                                        ? "ring-2 ring-green-400/90 ring-offset-1 ring-offset-[#0d2137] shadow-[0_0_6px_1px_rgba(74,222,128,0.55)]"
+                                        : actualId != null && playedSet.has(actualId)
+                                          ? "opacity-90"
+                                          : "opacity-40" /* provisional — this team hasn't played */
+                                    }`}
+                                  />
+                                  {actualId != null && liveSet.has(actualId) && (
+                                    <span
+                                      className="absolute -top-1 -right-1 flex h-2 w-2"
+                                      aria-label="Match in progress"
+                                      title="Match in progress"
+                                    >
+                                      <span className="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75 animate-ping" />
+                                      <span className="relative inline-flex h-2 w-2 rounded-full bg-green-400 ring-1 ring-[#0d2137]" />
+                                    </span>
+                                  )}
+                                </span>
                                 {actualId != null && playedSet.has(actualId) ? (
                                   <span className="text-white/55 text-[11px] font-bold tabular-nums leading-none w-4 text-left">
                                     {groupPoints[actualId] ?? 0}
