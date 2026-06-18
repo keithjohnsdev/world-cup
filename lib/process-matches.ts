@@ -5,7 +5,8 @@ import { getSql } from "@/lib/db";
 import { fetchGroupStandings, type CompletedMatch } from "@/lib/api-football";
 import { apiNameToTeamId } from "@/lib/team-mapping";
 import { findKnockoutSlot } from "@/lib/bracket";
-import { GROUPS, TEAMS } from "@/lib/data";
+import { resolveThirdAssignment, type ThirdEntry } from "@/lib/thirds";
+import { TEAMS } from "@/lib/data";
 import { maybeSnapshotAfterStage } from "@/lib/snapshots";
 
 type Sql = ReturnType<typeof getSql>;
@@ -126,11 +127,13 @@ async function handleGroupMatch(
       // Mirror live league points so the score view can show each team's
       // standing next to its "Actual" flag.
       await sql`
-        INSERT INTO group_points (team_id, points, played_games, updated_at)
-        VALUES (${ourId}, ${sorted[i].points}, ${sorted[i].playedGames}, NOW())
+        INSERT INTO group_points (team_id, points, played_games, goal_diff, goals_for, updated_at)
+        VALUES (${ourId}, ${sorted[i].points}, ${sorted[i].playedGames}, ${sorted[i].goalDifference}, ${sorted[i].goalsFor}, NOW())
         ON CONFLICT (team_id) DO UPDATE
           SET points = EXCLUDED.points,
               played_games = EXCLUDED.played_games,
+              goal_diff = EXCLUDED.goal_diff,
+              goals_for = EXCLUDED.goals_for,
               updated_at = NOW()
       `;
       // Record any team that has played a match so its group-stage pick can score.
@@ -144,6 +147,25 @@ async function handleGroupMatch(
   } catch (e) {
     console.warn(`[process-matches] standings update skipped for group ${group}:`, e);
   }
+}
+
+// Rank the third-placed teams from group_points and resolve the official R32
+// assignment (winner group → third group), or null until the group stage is done.
+async function computeThirdAssign(sql: Sql, resultsMap: Map<string, string>): Promise<Record<string, string> | null> {
+  const gp = (await sql`
+    SELECT team_id, points, played_games, goal_diff, goals_for FROM group_points
+  `) as { team_id: string; points: number; played_games: number; goal_diff: number; goals_for: number }[];
+  const stat = new Map(gp.map((r) => [r.team_id, r]));
+
+  const entries: ThirdEntry[] = [];
+  for (const g of "ABCDEFGHIJKL") {
+    const teamId = resultsMap.get(`third:${g}`);
+    if (!teamId) continue;
+    const s = stat.get(teamId);
+    if (!s) continue;
+    entries.push({ group: g, teamId, points: s.points, goalDiff: s.goal_diff, goalsFor: s.goals_for, playedGames: s.played_games });
+  }
+  return resolveThirdAssignment(entries);
 }
 
 async function handleKnockoutMatch(sql: Sql, match: CompletedMatch) {
@@ -161,7 +183,9 @@ async function handleKnockoutMatch(sql: Sql, match: CompletedMatch) {
   }[];
   const resultsMap = new Map(rows.map((r) => [`${r.stage}:${r.slot}`, r.team_id]));
 
-  const mapping = findKnockoutSlot(team1Id, team2Id, match.round, resultsMap);
+  // Resolve which third-placed team faces each group winner (for R32 mapping).
+  const thirdAssign = await computeThirdAssign(sql, resultsMap);
+  const mapping = findKnockoutSlot(team1Id, team2Id, match.round, resultsMap, thirdAssign);
   if (!mapping) {
     throw new Error(
       `Cannot map match ${match.id} (${match.homeTeamName} vs ${match.awayTeamName}) ` +

@@ -3,7 +3,7 @@
 // Each award returns { name, userId, userName, reason } or null if not yet determinable.
 
 import { TEAMS } from "@/lib/data";
-import { BRACKET_PAIRS } from "@/lib/bracket";
+import { resolveR32 } from "@/lib/bracket";
 import type { UserRow, PickRow, ResultRow, ScoreBreakdown } from "@/lib/scoring";
 import type { SnapshotRow } from "@/lib/snapshots";
 
@@ -20,6 +20,8 @@ interface AwardInput {
   results: ResultRow[];
   breakdowns: ScoreBreakdown[];
   snapshots: SnapshotRow[];
+  // Winner-group → third-group assignment for the official R32 (from lib/thirds.ts).
+  thirdAssign?: Record<string, string> | null;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -30,22 +32,18 @@ function resultMap(results: ResultRow[]): Map<string, ResultRow> {
   return m;
 }
 
-// Decode BRACKET_PAIRS group code → results key (e.g. "2B" → "runner:B")
-function decodeCode(code: string): string {
-  if (code.startsWith("3")) return `third:${code.slice(1)}`;
-  if (code.startsWith("2")) return `runner:${code.slice(1)}`;
-  return `group:${code}`;
-}
-
 // Build a map of every knockout match slot → [team1, team2] from results.
-function buildMatchPairs(rm: Map<string, ResultRow>): Map<string, [string, string]> {
+function buildMatchPairs(
+  rm: Map<string, ResultRow>,
+  thirdAssign: Record<string, string> | null | undefined,
+): Map<string, [string, string]> {
   const pairs = new Map<string, [string, string]>();
 
-  // R32 — determined by group results + BRACKET_PAIRS
-  for (let i = 0; i < BRACKET_PAIRS.length; i++) {
-    const t1 = rm.get(decodeCode(BRACKET_PAIRS[i][0]))?.team_id;
-    const t2 = rm.get(decodeCode(BRACKET_PAIRS[i][1]))?.team_id;
-    if (t1 && t2) pairs.set(`r32:m${i + 1}`, [t1, t2]);
+  // R32 — official structure: winners/runners from standings, thirds via Annex C.
+  const teamMap = new Map<string, string>();
+  for (const [k, r] of rm) teamMap.set(k, r.team_id);
+  for (const m of resolveR32(teamMap, thirdAssign)) {
+    if (m.team1 && m.team2) pairs.set(`r32:${m.slot}`, [m.team1, m.team2]);
   }
 
   // R16 — winners of r32 match pairs
@@ -383,9 +381,9 @@ function earlyRetirement({ users, picksByUser, results }: AwardInput): AwardResu
   };
 }
 
-function upsetArtist({ users, picksByUser, results }: AwardInput): AwardResult {
+function upsetArtist({ users, picksByUser, results, thirdAssign }: AwardInput): AwardResult {
   const rm = resultMap(results);
-  const matchPairs = buildMatchPairs(rm);
+  const matchPairs = buildMatchPairs(rm, thirdAssign);
   const teamSeed = new Map(TEAMS.map((t) => [t.id, t.seed]));
 
   const scores = users.map((u) => {
@@ -415,9 +413,9 @@ function upsetArtist({ users, picksByUser, results }: AwardInput): AwardResult {
   };
 }
 
-function theHipster({ users, picksByUser, results }: AwardInput): AwardResult {
+function theHipster({ users, picksByUser, results, thirdAssign }: AwardInput): AwardResult {
   const rm = resultMap(results);
-  const matchPairs = buildMatchPairs(rm);
+  const matchPairs = buildMatchPairs(rm, thirdAssign);
   const teamSeed = new Map(TEAMS.map((t) => [t.id, t.seed]));
 
   // For each user: what's the deepest round reached by the highest-seeded (weakest) team they correctly picked?

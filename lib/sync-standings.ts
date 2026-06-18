@@ -20,11 +20,13 @@ export async function syncGroupPoints(sql: Sql): Promise<{ updated: number }> {
       const teamId = apiNameToTeamId(entry.teamName);
       if (!teamId) continue;
       await sql`
-        INSERT INTO group_points (team_id, points, played_games, updated_at)
-        VALUES (${teamId}, ${entry.points}, ${entry.playedGames}, NOW())
+        INSERT INTO group_points (team_id, points, played_games, goal_diff, goals_for, updated_at)
+        VALUES (${teamId}, ${entry.points}, ${entry.playedGames}, ${entry.goalDifference}, ${entry.goalsFor}, NOW())
         ON CONFLICT (team_id) DO UPDATE
           SET points = EXCLUDED.points,
               played_games = EXCLUDED.played_games,
+              goal_diff = EXCLUDED.goal_diff,
+              goals_for = EXCLUDED.goals_for,
               updated_at = NOW()
       `;
       // Keep teams_played in sync too — a team can appear in standings as played

@@ -29,6 +29,8 @@ export interface StandingEntry {
   teamName: string;
   playedGames: number;
   points: number;
+  goalDifference: number; // for ranking the best third-placed teams
+  goalsFor: number;       // FIFA tiebreaker after points & goal difference
 }
 
 // A match plus its live status/kickoff — used by the match-aware cron gate to
@@ -153,10 +155,12 @@ export async function fetchGroupStandings(): Promise<Map<string, StandingEntry[]
     const letter = (group.group as string)?.replace(/^GROUP[_\s]/i, "").trim();
     if (!letter) continue;
     out.set(letter, (group.table ?? []).map((row: any) => ({
-      position:    row.position as number,
-      teamName:    row.team.name as string,
-      playedGames: row.playedGames as number,
-      points:      (row.points ?? 0) as number,
+      position:       row.position as number,
+      teamName:       row.team.name as string,
+      playedGames:    row.playedGames as number,
+      points:         (row.points ?? 0) as number,
+      goalDifference: (row.goalDifference ?? 0) as number,
+      goalsFor:       (row.goalsFor ?? 0) as number,
     })));
   }
   return out;

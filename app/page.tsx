@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { GROUPS, getTeam, type Team } from "@/lib/data";
-import { BRACKET_PAIRS } from "@/lib/bracket";
 import { COUNTRY_INFO } from "@/lib/countries";
 import { TEAM_STATS } from "@/lib/team-stats";
 import { FlagIcon } from "@/components/FlagIcon";
@@ -407,57 +406,6 @@ function KnockoutRound({
       })}
     </div>
   );
-}
-
-// Decode a BRACKET_PAIRS group code into the picks key prefix
-function decodeSlot(code: string): string {
-  if (code.startsWith("3")) return `third:${code.slice(1)}`;
-  if (code.startsWith("2")) return `runner:${code.slice(1)}`;
-  return `group:${code}`;
-}
-
-// Build R32 matchups from the user's group-stage picks.
-// Matches m1–m12: group 1st vs different group 2nd (zero duplicates).
-// Matches m13–m16: 3rd-place bracket (best-3rd simplified to groups A–H).
-function buildR32Matches(picks: Picks) {
-  return BRACKET_PAIRS.map(([g1, g2], i) => ({
-    slot: `m${i + 1}`,
-    team1: picks[decodeSlot(g1)] || undefined,
-    team2: picks[decodeSlot(g2)] || undefined,
-  }));
-}
-
-function buildR16Matches(r32picks: Picks, r32matches: ReturnType<typeof buildR32Matches>, picks: Picks) {
-  const r16: { slot: string; team1?: string; team2?: string }[] = [];
-  for (let i = 0; i < 16; i += 2) {
-    const m1 = r32matches[i];
-    const m2 = r32matches[i + 1];
-    r16.push({
-      slot: `m${Math.floor(i / 2) + 1}`,
-      team1: r32picks[`r32:${m1.slot}`],
-      team2: r32picks[`r32:${m2.slot}`],
-    });
-  }
-  return r16;
-}
-
-function buildQFMatches(r16matches: { slot: string; team1?: string; team2?: string }[], picks: Picks) {
-  const qf: { slot: string; team1?: string; team2?: string }[] = [];
-  for (let i = 0; i < 8; i += 2) {
-    qf.push({
-      slot: `m${Math.floor(i / 2) + 1}`,
-      team1: picks[`r16:${r16matches[i]?.slot}`],
-      team2: picks[`r16:${r16matches[i + 1]?.slot}`],
-    });
-  }
-  return qf;
-}
-
-function buildSFMatches(qfmatches: { slot: string }[], picks: Picks) {
-  return [
-    { slot: "m1", team1: picks[`qf:${qfmatches[0]?.slot}`], team2: picks[`qf:${qfmatches[1]?.slot}`] },
-    { slot: "m2", team1: picks[`qf:${qfmatches[2]?.slot}`], team2: picks[`qf:${qfmatches[3]?.slot}`] },
-  ];
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -950,6 +898,7 @@ export default function BracketPage() {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [modalTeamId, setModalTeamId] = useState<string | null>(null);
   const [bracketResults, setBracketResults] = useState<{ stage: string; slot: string; team_id: string }[]>([]);
+  const [bracketStandings, setBracketStandings] = useState<{ team_id: string; points: number; played_games: number; goal_diff: number; goals_for: number }[]>([]);
   const [bracketPhase, setBracketPhase] = useState("phase1_open");
   const [bracketPreview, setBracketPreview] = useState(false);
   const [awardsVisible, setAwardsVisible] = useState(false);
@@ -969,6 +918,7 @@ export default function BracketPage() {
       .then(r => r.json())
       .then(data => {
         if (data?.results) setBracketResults(data.results);
+        if (data?.standings) setBracketStandings(data.standings);
         if (data?.phase) setBracketPhase(data.phase);
         if (data?.preview) setBracketPreview(true);
         if (data?.awardsVisible) setAwardsVisible(true);
@@ -1054,21 +1004,6 @@ export default function BracketPage() {
       );
     }, 800);
   }
-
-  const r32matches = buildR32Matches(picks);
-  const r16matches = buildR16Matches(picks, r32matches, picks);
-  const qfmatches = buildQFMatches(r16matches, picks);
-  const sfmatches = buildSFMatches(qfmatches, picks);
-  const finalMatch = {
-    slot: "m1",
-    team1: picks[`sf:${sfmatches[0]?.slot}`],
-    team2: picks[`sf:${sfmatches[1]?.slot}`],
-  };
-  const champion = picks["champion:pick"];
-  const championTeam = champion ? getTeam(champion) : undefined;
-  const finalWinner = picks["final:m1"];
-
-  const groupPickCount = GROUPS.filter((g) => picks[`group:${g.id}`]).length;
 
   // Group-stage picks lock as soon as phase 1 closes (server enforces this too).
   const phase1Locked = bracketPhase !== "phase1_open";
@@ -1178,21 +1113,6 @@ export default function BracketPage() {
           </>
         }
       />
-
-      {/* Champion banner — hidden for now */}
-      {false && championTeam && tab !== "world" && (
-        <div className="py-3 px-4 flex items-center justify-center gap-4" style={{ background: "linear-gradient(90deg, #92400e, #d97706, #fbbf24, #d97706, #92400e)" }}>
-          <span className="text-2xl">🏆</span>
-          <div className="text-center">
-            <div className="text-amber-900 text-xs font-black uppercase tracking-[0.25em] opacity-70">Your Champion</div>
-            <div className="flex items-center gap-2 justify-center mt-0.5">
-              <FlagIcon cc={championTeam!.cc} name={championTeam!.name} className="w-8 h-6 rounded shadow" />
-              <span className="font-black text-amber-900 text-lg leading-tight">{championTeam!.name}</span>
-            </div>
-          </div>
-          <span className="text-2xl">🏆</span>
-        </div>
-      )}
 
 
       {/* Groups tab */}
@@ -1371,6 +1291,7 @@ export default function BracketPage() {
         <BracketPicker
           picks={picks}
           results={bracketResults}
+          standings={bracketStandings}
           phase={bracketPhase}
           preview={bracketPreview}
           onPick={handlePick}

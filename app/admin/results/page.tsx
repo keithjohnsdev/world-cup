@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { GROUPS, getTeam } from "@/lib/data";
-import { BRACKET_PAIRS } from "@/lib/bracket";
+import { resolveR32 } from "@/lib/bracket";
+import { resolveThirdAssignment, type ThirdEntry } from "@/lib/thirds";
 import { FlagIcon } from "@/components/FlagIcon";
 
 type Results = Record<string, string>;   // "stage:slot" → teamId
 type Shootouts = Record<string, boolean>; // "stage:slot" → was_shootout
+type StandingRow = { team_id: string; points: number; played_games: number; goal_diff: number; goals_for: number };
 
 interface MatchData {
   slot: string;
@@ -18,12 +20,6 @@ interface MatchData {
 const POSITIONS = ["group", "runner", "third", "fourth"] as const;
 const POS_LABELS = ["1st", "2nd", "3rd", "4th"];
 const POS_COLORS = ["text-green-400", "text-blue-400", "text-white/60", "text-white/40"];
-
-function decodeCode(code: string): string {
-  if (code.startsWith("3")) return `third:${code.slice(1)}`;
-  if (code.startsWith("2")) return `runner:${code.slice(1)}`;
-  return `group:${code}`;
-}
 
 // ─── Group card ───────────────────────────────────────────────────────────────
 
@@ -222,6 +218,7 @@ function RoundResults({
 export default function AdminResultsPage() {
   const [results, setResults] = useState<Results>({});
   const [shootouts, setShootouts] = useState<Shootouts>({});
+  const [standings, setStandings] = useState<StandingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [recomputing, setRecomputing] = useState(false);
@@ -245,6 +242,12 @@ export default function AdminResultsPage() {
         setShootouts(s);
       })
       .finally(() => setLoading(false));
+
+    // Group standings stats (goal diff / goals for) for ranking the best thirds.
+    fetch("/api/results", { headers: { "x-session-token": token } })
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d?.standings)) setStandings(d.standings); })
+      .catch(() => {});
   }, [router]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function setResult(stage: string, slot: string, teamId: string) {
@@ -319,12 +322,21 @@ export default function AdminResultsPage() {
     }
   }
 
-  // Build bracket from entered group results
-  const r32: MatchData[] = BRACKET_PAIRS.map(([g1, g2], i) => ({
-    slot: `m${i + 1}`,
-    team1: results[decodeCode(g1)],
-    team2: results[decodeCode(g2)],
-  }));
+  // Official R32 third-place assignment, from the live standings (goal stats).
+  const thirdAssign = useMemo(() => {
+    const stat = new Map(standings.map(s => [s.team_id, s]));
+    const entries: ThirdEntry[] = [];
+    for (const g of "ABCDEFGHIJKL") {
+      const teamId = results[`third:${g}`];
+      const s = teamId ? stat.get(teamId) : undefined;
+      if (teamId && s) entries.push({ group: g, teamId, points: s.points, goalDiff: s.goal_diff, goalsFor: s.goals_for, playedGames: s.played_games });
+    }
+    return resolveThirdAssignment(entries);
+  }, [standings, results]);
+
+  // Build bracket from entered group results + the third assignment.
+  const r32: MatchData[] = resolveR32(new Map(Object.entries(results)), thirdAssign)
+    .map(m => ({ slot: m.slot, team1: m.team1, team2: m.team2 }));
   const r16: MatchData[] = Array.from({ length: 8 }, (_, i) => ({
     slot: `m${i + 1}`,
     team1: results[`r32:m${2 * i + 1}`],

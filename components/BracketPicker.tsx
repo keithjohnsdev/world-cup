@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BRACKET_PAIRS } from "@/lib/bracket";
+import { resolveR32, sourceLabel, type ResolvedMatch } from "@/lib/bracket";
+import { resolveThirdAssignment, type ThirdEntry } from "@/lib/thirds";
 import { getTeam } from "@/lib/data";
 import { FlagIcon } from "@/components/FlagIcon";
 
@@ -13,6 +14,14 @@ interface ResultEntry {
   team_id: string;
 }
 
+interface StandingRow {
+  team_id: string;
+  points: number;
+  played_games: number;
+  goal_diff: number;
+  goals_for: number;
+}
+
 interface MatchData {
   slot: string;
   team1?: string;
@@ -22,33 +31,45 @@ interface MatchData {
 interface Props {
   picks: Picks;
   results: ResultEntry[];
+  standings: StandingRow[];
   phase: string;
   preview?: boolean;
   onPick: (stage: string, slot: string, teamId: string) => void;
 }
 
-// Decode a BRACKET_PAIRS group code into the results-map key
-function decodeCode(code: string): string {
-  if (code.startsWith("3")) return `third:${code.slice(1)}`;
-  if (code.startsWith("2")) return `runner:${code.slice(1)}`;
-  return `group:${code}`;
+const GROUP_LETTERS = "ABCDEFGHIJKL".split("");
+
+// Determine which third-placed group each relevant winner faces (or null until the
+// group stage is complete enough to rank the thirds). Pure standings → assignment.
+function computeThirdAssign(results: ResultEntry[], standings: StandingRow[]): Record<string, string> | null {
+  const statByTeam = new Map(standings.map((s) => [s.team_id, s]));
+  const thirdByGroup = new Map(results.filter((r) => r.stage === "third").map((r) => [r.slot, r.team_id]));
+
+  const entries: ThirdEntry[] = [];
+  for (const g of GROUP_LETTERS) {
+    const teamId = thirdByGroup.get(g);
+    if (!teamId) continue;
+    const st = statByTeam.get(teamId);
+    if (!st) continue;
+    entries.push({
+      group: g,
+      teamId,
+      points: st.points,
+      goalDiff: st.goal_diff,
+      goalsFor: st.goals_for,
+      playedGames: st.played_games,
+    });
+  }
+  return resolveThirdAssignment(entries);
 }
 
-// Human-readable qualifier + group letter for a BRACKET_PAIRS code.
-function decodeSlotLabel(code: string): { qualifier: string; letter: string } {
-  if (code.startsWith("3")) return { qualifier: "3rd place", letter: code.slice(1) };
-  if (code.startsWith("2")) return { qualifier: "Runner-up", letter: code.slice(1) };
-  return { qualifier: "Winner", letter: code };
-}
-
-function buildBracket(results: ResultEntry[], picks: Picks) {
-  const rm = new Map(results.map(r => [`${r.stage}:${r.slot}`, r.team_id]));
-
-  const r32: MatchData[] = BRACKET_PAIRS.map(([g1, g2], i) => ({
-    slot: `m${i + 1}`,
-    team1: rm.get(decodeCode(g1)),
-    team2: rm.get(decodeCode(g2)),
-  }));
+// Build the full bracket. R32 comes from the live standings + third assignment;
+// R16 → Final are derived from the player's own picks (sequential pairing reproduces
+// the official tree because R32_STRUCTURE is in bracket order).
+function buildBracket(results: ResultEntry[], picks: Picks, thirdAssign: Record<string, string> | null) {
+  const rm = new Map(results.map((r) => [`${r.stage}:${r.slot}`, r.team_id]));
+  const r32resolved = resolveR32(rm, thirdAssign);
+  const r32: MatchData[] = r32resolved.map((m) => ({ slot: m.slot, team1: m.team1, team2: m.team2 }));
 
   const r16: MatchData[] = Array.from({ length: 8 }, (_, i) => ({
     slot: `m${i + 1}`,
@@ -67,13 +88,9 @@ function buildBracket(results: ResultEntry[], picks: Picks) {
     { slot: "m2", team1: picks["qf:m3"], team2: picks["qf:m4"] },
   ];
 
-  const finalMatch: MatchData = {
-    slot: "m1",
-    team1: picks["sf:m1"],
-    team2: picks["sf:m2"],
-  };
+  const finalMatch: MatchData = { slot: "m1", team1: picks["sf:m1"], team2: picks["sf:m2"] };
 
-  return { r32, r16, qf, sf, finalMatch };
+  return { r32resolved, r32, r16, qf, sf, finalMatch };
 }
 
 function TeamRow({
@@ -232,18 +249,19 @@ function Divider() {
   );
 }
 
-// One half of a live R32 matchup: the source slot (e.g. "Winner · Group A")
-// plus the team currently occupying it, or a placeholder while it forms.
-// Clickable to advance the team in the local practice bracket.
+// One half of a live R32 matchup: the source slot ("Winner · Group A", "3rd · Group
+// E/F/G…") plus the team currently occupying it, or a placeholder while it forms.
 function LiveSlot({
-  code,
+  qualifier,
+  detail,
   teamId,
   isWinner,
   isDimmed,
   canClick,
   onClick,
 }: {
-  code: string;
+  qualifier: string;
+  detail: string;
   teamId?: string;
   isWinner: boolean;
   isDimmed: boolean;
@@ -251,7 +269,6 @@ function LiveSlot({
   onClick: () => void;
 }) {
   const team = teamId ? getTeam(teamId) : undefined;
-  const { qualifier, letter } = decodeSlotLabel(code);
 
   return (
     <button
@@ -260,22 +277,19 @@ function LiveSlot({
       className={`w-full flex items-center gap-2.5 px-2.5 py-2 text-left transition-all ${canClick ? "cursor-pointer hover:bg-white/[0.06]" : "cursor-default"}`}
       style={{ background: isWinner ? "rgba(74,222,128,0.13)" : undefined }}
     >
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-white/[0.06] text-[10px] font-black text-white/45">
-        {letter}
-      </span>
       {team ? (
         <>
           <FlagIcon cc={team.cc} name={team.name} className={`w-6 h-[17px] rounded-sm shrink-0 transition-opacity ${isDimmed ? "opacity-25" : ""}`} />
           <div className="min-w-0 flex-1">
             <span className={`block truncate text-xs font-semibold leading-tight transition-colors ${isWinner ? "text-green-300" : isDimmed ? "text-white/25" : "text-white/85"}`}>{team.name}</span>
-            <span className={`block text-[9px] font-bold uppercase tracking-wider leading-tight ${isDimmed ? "text-white/15" : "text-green-400/70"}`}>{qualifier}</span>
+            <span className={`block text-[9px] font-bold uppercase tracking-wider leading-tight ${isDimmed ? "text-white/15" : "text-green-400/70"}`}>{qualifier} · {detail}</span>
           </div>
           {isWinner && <span className="text-green-400 text-[10px] font-black shrink-0">✓</span>}
         </>
       ) : (
         <div className="min-w-0 flex-1">
           <span className="block text-[11px] italic leading-tight text-white/25">Awaiting results</span>
-          <span className="block text-[9px] font-bold uppercase tracking-wider leading-tight text-white/20">{qualifier} · Group {letter}</span>
+          <span className="block text-[9px] font-bold uppercase tracking-wider leading-tight text-white/20">{qualifier} · {detail}</span>
         </div>
       )}
     </button>
@@ -285,18 +299,14 @@ function LiveSlot({
 // Drop any practice pick whose stored winner is no longer one of the two teams
 // actually in that match — happens when an upstream pick (or the live standings)
 // changes. Walks the rounds in order so a single change cascades downstream.
-function sanitizePractice(results: ResultEntry[], raw: Picks): Picks {
-  const rm = new Map(results.map(r => [`${r.stage}:${r.slot}`, r.team_id]));
+function sanitizePractice(r32: MatchData[], raw: Picks): Picks {
   const p = { ...raw };
   const keep = (key: string, t1?: string, t2?: string) => {
     const w = p[key];
     if (w && w !== t1 && w !== t2) delete p[key];
   };
 
-  for (let i = 0; i < 16; i++) {
-    const [c1, c2] = BRACKET_PAIRS[i];
-    keep(`r32:m${i + 1}`, rm.get(decodeCode(c1)), rm.get(decodeCode(c2)));
-  }
+  for (let i = 0; i < 16; i++) keep(`r32:m${i + 1}`, r32[i]?.team1, r32[i]?.team2);
   for (let i = 0; i < 8; i++) keep(`r16:m${i + 1}`, p[`r32:m${2 * i + 1}`], p[`r32:m${2 * i + 2}`]);
   for (let i = 0; i < 4; i++) keep(`qf:m${i + 1}`, p[`r16:m${2 * i + 1}`], p[`r16:m${2 * i + 2}`]);
   for (let i = 0; i < 2; i++) keep(`sf:m${i + 1}`, p[`qf:m${2 * i + 1}`], p[`qf:m${2 * i + 2}`]);
@@ -305,26 +315,33 @@ function sanitizePractice(results: ResultEntry[], raw: Picks): Picks {
 }
 
 // Interactive practice bracket shown during Phase 1. The Round of 32 is built live
-// from the current group standings; from there players advance teams round by round
-// for fun, to rehearse for when the real bracket opens in Phase 2. Picks are held in
-// local state only — nothing is saved, and the server rejects knockout picks anyway.
-function LiveRoundOf32({ results }: { results: ResultEntry[] }) {
+// from the current group standings (third-placed teams resolved via FIFA's Annex C
+// once the group stage finishes); from there players advance teams round by round
+// for fun. Picks are local only — nothing is saved, and the server rejects knockout
+// picks anyway.
+function LiveRoundOf32({ results, standings }: { results: ResultEntry[]; standings: StandingRow[] }) {
   const [practice, setPractice] = useState<Picks>({});
-  const picks = useMemo(() => sanitizePractice(results, practice), [results, practice]);
+  const thirdAssign = useMemo(() => computeThirdAssign(results, standings), [results, standings]);
+
+  // Resolve R32 once (depends on results + third assignment) for sanitizing + render.
+  const r32resolved = useMemo(() => {
+    const rm = new Map(results.map((r) => [`${r.stage}:${r.slot}`, r.team_id]));
+    return resolveR32(rm, thirdAssign);
+  }, [results, thirdAssign]);
+  const r32data: MatchData[] = r32resolved.map((m) => ({ slot: m.slot, team1: m.team1, team2: m.team2 }));
+
+  const picks = useMemo(() => sanitizePractice(r32data, practice), [r32data, practice]);
 
   const pick = (stage: string, slot: string, teamId: string) => {
-    setPractice(prev => sanitizePractice(results, { ...prev, [`${stage}:${slot}`]: teamId }));
+    setPractice(prev => sanitizePractice(r32data, { ...prev, [`${stage}:${slot}`]: teamId }));
   };
 
-  const { r32, r16, qf, sf, finalMatch } = buildBracket(results, picks);
+  const { r16, qf, sf, finalMatch } = buildBracket(results, picks, thirdAssign);
   const champion = picks["final:m1"];
   const championTeam = champion ? getTeam(champion) : undefined;
 
-  const codeByR32: Record<string, [string, string]> = {};
-  BRACKET_PAIRS.forEach(([c1, c2], i) => { codeByR32[`m${i + 1}`] = [c1, c2]; });
-
-  const placed = r32.flatMap(m => [m.team1, m.team2]).filter(Boolean).length;
-  const formed = r32.filter(m => m.team1 && m.team2).length;
+  const placed = r32resolved.flatMap(m => [m.team1, m.team2]).filter(Boolean).length;
+  const formed = r32resolved.filter(m => m.team1 && m.team2).length;
   const pct = Math.round((placed / 32) * 100);
   const hasPractice = Object.keys(practice).length > 0;
 
@@ -354,7 +371,7 @@ function LiveRoundOf32({ results }: { results: ResultEntry[] }) {
             <div className="h-px w-10 bg-gradient-to-l from-transparent to-yellow-300/60" />
           </div>
           <p className="text-white/55 text-sm mt-3 max-w-md mx-auto leading-relaxed">
-            The Round of 32 is built live from the current group standings. Click teams to advance them and play out the whole bracket — a rehearsal for Phase 2. Nothing here is saved.
+            The Round of 32 is built live from the current group standings — the official 2026 layout, with the eight best third-placed teams slotted in once the group stage ends. Click teams to play out the whole bracket. Nothing here is saved.
           </p>
         </div>
 
@@ -367,6 +384,9 @@ function LiveRoundOf32({ results }: { results: ResultEntry[] }) {
           <div className="h-1.5 rounded-full overflow-hidden max-w-xs mx-auto" style={{ background: "rgba(255,255,255,0.08)" }}>
             <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: "#4ade80" }} />
           </div>
+          {!thirdAssign && (
+            <p className="text-white/35 text-[11px] mt-2">Third-placed qualifiers are set once all groups finish.</p>
+          )}
           {hasPractice && (
             <button
               onClick={() => setPractice({})}
@@ -383,13 +403,14 @@ function LiveRoundOf32({ results }: { results: ResultEntry[] }) {
           <div className="flex items-center gap-3 mb-3">
             <span className="text-xs font-black uppercase tracking-[0.2em] text-green-400">Round of 32</span>
             <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.07)" }} />
-            <span className="text-white/25 text-[11px] font-medium tabular-nums">{r32.filter(m => picks[`r32:${m.slot}`]).length}/16</span>
+            <span className="text-white/25 text-[11px] font-medium tabular-nums">{r32resolved.filter(m => picks[`r32:${m.slot}`]).length}/16</span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {r32.map((m, i) => {
+            {r32resolved.map((m: ResolvedMatch, i) => {
               const ready = !!(m.team1 && m.team2);
               const winner = picks[`r32:${m.slot}`];
-              const [c1, c2] = codeByR32[m.slot];
+              const homeLabel = sourceLabel(m.home, thirdAssign);
+              const awayLabel = sourceLabel(m.away, thirdAssign);
               return (
                 <div
                   key={m.slot}
@@ -403,9 +424,9 @@ function LiveRoundOf32({ results }: { results: ResultEntry[] }) {
                     <span className="text-[9px] font-black uppercase tracking-widest text-white/25">Match {i + 1}</span>
                     {ready && !winner && <span className="text-[9px] font-black uppercase tracking-widest text-white/30">Tap to pick</span>}
                   </div>
-                  <LiveSlot code={c1} teamId={m.team1} isWinner={winner === m.team1} isDimmed={!!(winner && winner !== m.team1)} canClick={ready && !!m.team1} onClick={() => m.team1 && pick("r32", m.slot, m.team1)} />
+                  <LiveSlot qualifier={homeLabel.qualifier} detail={homeLabel.detail} teamId={m.team1} isWinner={winner === m.team1} isDimmed={!!(winner && winner !== m.team1)} canClick={ready && !!m.team1} onClick={() => m.team1 && pick("r32", m.slot, m.team1)} />
                   <div className="mx-2.5 h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
-                  <LiveSlot code={c2} teamId={m.team2} isWinner={winner === m.team2} isDimmed={!!(winner && winner !== m.team2)} canClick={ready && !!m.team2} onClick={() => m.team2 && pick("r32", m.slot, m.team2)} />
+                  <LiveSlot qualifier={awayLabel.qualifier} detail={awayLabel.detail} teamId={m.team2} isWinner={winner === m.team2} isDimmed={!!(winner && winner !== m.team2)} canClick={ready && !!m.team2} onClick={() => m.team2 && pick("r32", m.slot, m.team2)} />
                 </div>
               );
             })}
@@ -445,14 +466,15 @@ function LiveRoundOf32({ results }: { results: ResultEntry[] }) {
   );
 }
 
-export function BracketPicker({ picks, results, phase, preview, onPick }: Props) {
+export function BracketPicker({ picks, results, standings, phase, preview, onPick }: Props) {
   const canPick = phase === "phase2_open";
-  const { r32, r16, qf, sf, finalMatch } = buildBracket(results, picks);
+  const thirdAssign = useMemo(() => computeThirdAssign(results, standings), [results, standings]);
+  const { r32, r16, qf, sf, finalMatch } = buildBracket(results, picks, thirdAssign);
   const champion = picks["final:m1"];
   const championTeam = champion ? getTeam(champion) : undefined;
 
   if (phase === "phase1_open" || phase === "phase1_locked") {
-    return <LiveRoundOf32 results={results} />;
+    return <LiveRoundOf32 results={results} standings={standings} />;
   }
 
   return (

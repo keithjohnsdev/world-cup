@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSql, initDb } from "@/lib/db";
 import { scoreUser, type UserRow, type PickRow, type ResultRow } from "@/lib/scoring";
 import { computeAwards } from "@/lib/awards";
+import { resolveThirdAssignment, type ThirdEntry } from "@/lib/thirds";
 import type { SnapshotRow } from "@/lib/snapshots";
 
 async function requireKeith(req: NextRequest) {
@@ -52,12 +53,24 @@ export async function POST(req: NextRequest) {
 
   const sql = getSql();
 
-  const [rawUsers, rawPicks, rawResults, rawSnapshots] = await Promise.all([
+  const [rawUsers, rawPicks, rawResults, rawSnapshots, rawPoints] = await Promise.all([
     sql`SELECT id, name, is_kid, chargeup_active, heart_pick_team_id FROM users`,
     sql`SELECT user_id, stage, slot, team_id, is_star_power FROM picks`,
     sql`SELECT stage, slot, team_id, was_shootout FROM results`,
     sql`SELECT round, user_id, rank, total_score, group_score, bracket_score FROM standings_snapshots`,
-  ]) as [UserRow[], (PickRow & { user_id: number })[], ResultRow[], SnapshotRow[]];
+    sql`SELECT team_id, points, played_games, goal_diff, goals_for FROM group_points`,
+  ]) as [UserRow[], (PickRow & { user_id: number })[], ResultRow[], SnapshotRow[], { team_id: string; points: number; played_games: number; goal_diff: number; goals_for: number }[]];
+
+  // Resolve the official R32 third-place assignment for the bracket-based awards.
+  const stat = new Map(rawPoints.map((r) => [r.team_id, r]));
+  const thirdByGroup = new Map(rawResults.filter((r) => r.stage === "third").map((r) => [r.slot, r.team_id]));
+  const thirdEntries: ThirdEntry[] = [];
+  for (const g of "ABCDEFGHIJKL") {
+    const teamId = thirdByGroup.get(g);
+    const s = teamId ? stat.get(teamId) : undefined;
+    if (teamId && s) thirdEntries.push({ group: g, teamId, points: s.points, goalDiff: s.goal_diff, goalsFor: s.goals_for, playedGames: s.played_games });
+  }
+  const thirdAssign = resolveThirdAssignment(thirdEntries);
 
   const picksByUser = new Map<number, PickRow[]>();
   for (const row of rawPicks) {
@@ -76,6 +89,7 @@ export async function POST(req: NextRequest) {
     results: rawResults,
     breakdowns,
     snapshots: rawSnapshots,
+    thirdAssign,
   });
 
   // Persist

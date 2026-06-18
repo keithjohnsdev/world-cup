@@ -98,9 +98,15 @@ export async function initDb() {
       team_id      VARCHAR(10) PRIMARY KEY,
       points       INTEGER     NOT NULL DEFAULT 0,
       played_games INTEGER     NOT NULL DEFAULT 0,
+      goal_diff    INTEGER     NOT NULL DEFAULT 0,
+      goals_for    INTEGER     NOT NULL DEFAULT 0,
       updated_at   TIMESTAMP   DEFAULT NOW()
     )
   `;
+  // Goal difference + goals for: FIFA tiebreakers used to rank the best
+  // third-placed teams for the official Round-of-32 bracket. Added after launch.
+  await sql`ALTER TABLE group_points ADD COLUMN IF NOT EXISTS goal_diff INTEGER NOT NULL DEFAULT 0`;
+  await sql`ALTER TABLE group_points ADD COLUMN IF NOT EXISTS goals_for INTEGER NOT NULL DEFAULT 0`;
 
   // Phase FSM: phase1_open → phase1_locked → phase2_open → phase2_locked → complete
   await sql`
