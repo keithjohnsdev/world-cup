@@ -1112,7 +1112,7 @@ export default function BracketPage() {
                       </svg>
                     )}
                   </span>
-                ) : t === "bracket" ? "Phase 2 - Bracket" : t === "world" ? "The World" : t === "leaderboard" ? "Leaderboard" : t === "stats" ? "Stats" : t === "board" ? "Board" : "The Rules"}
+                ) : t === "bracket" ? "Phase 2 - Bracket" : t === "world" ? "The World" : t === "leaderboard" ? "Leaderboard" : t === "stats" ? "Stats" : t === "board" ? "Message Board" : "The Rules"}
                 <span className={`absolute bottom-[-1px] inset-x-0 h-[2px] ${tab === t ? "bg-yellow-300" : ""}`} />
               </button>
             ))}
