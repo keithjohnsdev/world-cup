@@ -46,7 +46,7 @@ const ADVANCES_TO: Record<string, string> = {
 const UPSET_SEED_GAP = 15;
 
 // Point milestones worth a shout as players cross them (highest crossed fires once).
-const POINT_MILESTONES = [50, 100, 150, 200, 250, 300, 400, 500];
+const POINT_MILESTONES = [100, 150, 200, 250, 300, 400, 500];
 
 // Match-based triggers only fire for matches that kicked off within this window. This
 // is the anti-backfill guard: deploying mid-tournament must not replay every past
