@@ -467,7 +467,7 @@ function MessageCard({
 
           {/* Reply composer */}
           {!isReply && replyOpen && (
-            <div className="mt-2 flex items-end gap-2">
+            <div className="mt-2 flex items-center gap-2">
               <textarea
                 value={replyDraft}
                 onChange={(e) => setReplyDraft(e.target.value.slice(0, MAX_BODY))}
