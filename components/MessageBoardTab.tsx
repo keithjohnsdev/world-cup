@@ -441,7 +441,7 @@ function MessageCard({
                 <span className="leading-none ml-0.5">＋</span>
               </button>
               {pickerOpen && (
-                <div className="absolute z-10 bottom-full left-0 mb-1 flex gap-1.5 rounded-full border border-white/15 bg-[#0d2137] px-2.5 py-1.5 shadow-lg shadow-black/40">
+                <div className="absolute z-10 bottom-full left-0 mb-1 flex max-w-[min(16rem,80vw)] flex-wrap gap-1.5 rounded-2xl border border-white/15 bg-[#0d2137] px-2.5 py-1.5 shadow-lg shadow-black/40">
                   {REACTIONS.map((e) => (
                     <button
                       key={e}
