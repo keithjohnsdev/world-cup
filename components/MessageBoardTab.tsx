@@ -458,7 +458,7 @@ function MessageCard({
                 value={replyDraft}
                 onChange={(e) => setReplyDraft(e.target.value.slice(0, MAX_BODY))}
                 onKeyDown={onReplyKeyDown}
-                placeholder={`Reply to ${m.user_name.split(/\s+/)[0]}…`}
+                placeholder={`Reply to ${m.user_name}…`}
                 rows={1}
                 autoFocus
                 className="flex-1 resize-none rounded-lg border border-white/10 bg-white/5 text-white text-sm placeholder:text-white/40 focus:outline-none focus:border-white/20 px-2.5 py-1.5 leading-relaxed"
