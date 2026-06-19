@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { REACTIONS } from "@/lib/reactions";
 
 interface ReactionAgg {
@@ -337,6 +337,20 @@ function MessageCard({
   const [replyDraft, setReplyDraft] = useState("");
   const [replyPosting, setReplyPosting] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const pickerRef = useRef<HTMLDivElement>(null);
+
+  // Close the emoji palette when clicking anywhere outside it (the trigger button
+  // lives inside pickerRef, so it still toggles; emoji taps close it themselves).
+  useEffect(() => {
+    if (!pickerOpen) return;
+    function onDown(e: MouseEvent) {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setPickerOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [pickerOpen]);
 
   const mine = me != null && m.user_id === me.id;
   const announcer = m.is_announcer;
@@ -417,7 +431,7 @@ function MessageCard({
               </button>
             ))}
 
-            <div className="relative">
+            <div className="relative" ref={pickerRef}>
               <button
                 onClick={() => setPickerOpen((o) => !o)}
                 aria-label="Add reaction"
