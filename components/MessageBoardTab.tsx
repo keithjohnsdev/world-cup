@@ -1,6 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { REACTIONS } from "@/lib/reactions";
+
+interface ReactionAgg {
+  emoji: string;
+  count: number;
+  mine: boolean;
+}
 
 interface Message {
   id: number;
@@ -8,7 +15,10 @@ interface Message {
   user_name: string;
   body: string;
   is_announcer: boolean;
+  parent_id: number | null;
   created_at: string;
+  reactions: ReactionAgg[];
+  replies?: Message[];
 }
 
 interface Me {
@@ -91,6 +101,29 @@ function renderWithFlags(text: string): React.ReactNode[] {
   return nodes;
 }
 
+// Optimistic local toggle of one emoji on a reaction list, mirroring the server's
+// add/remove semantics so the chip updates instantly; the next response reconciles.
+function toggleReaction(list: ReactionAgg[], emoji: string): ReactionAgg[] {
+  const existing = list.find((r) => r.emoji === emoji);
+  let next: ReactionAgg[];
+  if (!existing) {
+    next = [...list, { emoji, count: 1, mine: true }];
+  } else if (existing.mine) {
+    const count = existing.count - 1;
+    next =
+      count <= 0
+        ? list.filter((r) => r.emoji !== emoji)
+        : list.map((r) => (r.emoji === emoji ? { ...r, count, mine: false } : r));
+  } else {
+    next = list.map((r) => (r.emoji === emoji ? { ...r, count: r.count + 1, mine: true } : r));
+  }
+  const order = (e: string) => {
+    const i = (REACTIONS as readonly string[]).indexOf(e);
+    return i === -1 ? REACTIONS.length : i;
+  };
+  return next.sort((a, b) => order(a.emoji) - order(b.emoji));
+}
+
 export function MessageBoardTab() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [me, setMe] = useState<Me | null>(null);
@@ -129,6 +162,64 @@ export function MessageBoardTab() {
   useEffect(() => {
     const id = setInterval(() => setNow((n) => n + 1), 30_000);
     return () => clearInterval(id);
+  }, []);
+
+  // Apply an update to one message wherever it lives — a top-level post or a reply.
+  const updateMessage = useCallback((id: number, fn: (m: Message) => Message) => {
+    setMessages((prev) =>
+      prev.map((m) => {
+        if (m.id === id) return fn(m);
+        if (m.replies?.some((r) => r.id === id)) {
+          return { ...m, replies: m.replies.map((r) => (r.id === id ? fn(r) : r)) };
+        }
+        return m;
+      }),
+    );
+  }, []);
+
+  const react = useCallback(
+    (id: number, emoji: string) => {
+      const token = localStorage.getItem("wc_token");
+      if (!token) return;
+      updateMessage(id, (m) => ({ ...m, reactions: toggleReaction(m.reactions, emoji) }));
+      fetch("/api/messages/react", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-session-token": token },
+        body: JSON.stringify({ message_id: id, emoji }),
+      })
+        .then((r) => r.json())
+        .then((data: { reactions?: ReactionAgg[] }) => {
+          if (Array.isArray(data.reactions)) {
+            updateMessage(id, (m) => ({ ...m, reactions: data.reactions! }));
+          }
+        })
+        .catch(() => { /* the next poll reconciles */ });
+    },
+    [updateMessage],
+  );
+
+  const reply = useCallback(async (parentId: number, text: string): Promise<boolean> => {
+    const token = localStorage.getItem("wc_token");
+    if (!token) return false;
+    try {
+      const r = await fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-session-token": token },
+        body: JSON.stringify({ body: text, parent_id: parentId }),
+      });
+      const data: { message?: Message } = await r.json();
+      if (r.ok && data.message) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === parentId ? { ...m, replies: [...(m.replies ?? []), data.message!] } : m,
+          ),
+        );
+        return true;
+      }
+    } catch {
+      /* swallow — caller keeps the draft so nothing is lost */
+    }
+    return false;
   }, []);
 
   async function post() {
@@ -218,50 +309,188 @@ export function MessageBoardTab() {
           </div>
         ) : (
           <div className="space-y-3">
-            {messages.map((m) => {
-              const mine = me != null && m.user_id === me.id;
-              const announcer = m.is_announcer;
-              const color = nameColor(m.user_name);
-              return (
-                <div
-                  key={m.id}
-                  className={`group flex gap-3 rounded-2xl border p-4 ${
-                    announcer
-                      ? "border-amber-400/40 bg-gradient-to-r from-amber-400/[0.12] to-amber-400/[0.04]"
-                      : mine
-                        ? "border-yellow-300/25 bg-yellow-300/[0.06]"
-                        : "border-white/10 bg-white/5"
-                  }`}
-                >
-                  <div
-                    className="flex items-center justify-center w-9 h-9 rounded-full shrink-0 text-[11px] font-black text-green-950"
-                    style={{ background: announcer ? "#f59e0b" : color }}
-                    aria-hidden
-                  >
-                    {announcer ? <span className="text-base leading-none">📣</span> : initials(m.user_name)}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-baseline gap-2 mb-0.5">
-                      <span className="font-black text-sm truncate" style={{ color: announcer ? "#fbbf24" : color }}>
-                        {m.user_name}
-                      </span>
-                      {announcer ? (
-                        <span className="text-[10px] font-black uppercase tracking-wide text-amber-300/80 bg-amber-400/10 rounded-full px-1.5 py-0.5">
-                          Announcer
-                        </span>
-                      ) : mine ? (
-                        <span className="text-[10px] font-black uppercase tracking-wide text-yellow-300/70">You</span>
-                      ) : null}
-                      <span className="text-white/30 text-[11px] shrink-0 ml-auto">{relativeTime(m.created_at)}</span>
-                    </div>
-                    <p className={`text-sm leading-relaxed whitespace-pre-wrap break-words ${announcer ? "text-amber-50/90 font-medium" : "text-white/85"}`}>{renderWithFlags(m.body)}</p>
-                  </div>
-                </div>
-              );
-            })}
+            {messages.map((m) => (
+              <MessageCard key={m.id} m={m} me={me} isReply={false} onReact={react} onReply={reply} />
+            ))}
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function MessageCard({
+  m,
+  me,
+  isReply,
+  onReact,
+  onReply,
+}: {
+  m: Message;
+  me: Me | null;
+  isReply: boolean;
+  onReact: (id: number, emoji: string) => void;
+  onReply: (parentId: number, text: string) => Promise<boolean>;
+}) {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [replyOpen, setReplyOpen] = useState(false);
+  const [replyDraft, setReplyDraft] = useState("");
+  const [replyPosting, setReplyPosting] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+
+  const mine = me != null && m.user_id === me.id;
+  const announcer = m.is_announcer;
+  const color = nameColor(m.user_name);
+  const replies = m.replies ?? [];
+  const COLLAPSE_AT = 3;
+  const visibleReplies = expanded || replies.length <= COLLAPSE_AT ? replies : replies.slice(0, COLLAPSE_AT);
+
+  async function sendReply() {
+    const text = replyDraft.trim();
+    if (!text || replyPosting) return;
+    setReplyPosting(true);
+    const ok = await onReply(m.id, text);
+    setReplyPosting(false);
+    if (ok) { setReplyDraft(""); setReplyOpen(false); }
+  }
+
+  function onReplyKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendReply();
+    }
+  }
+
+  const cardClass = isReply
+    ? "rounded-xl bg-white/[0.03] p-3"
+    : `rounded-2xl border p-4 ${
+        announcer
+          ? "border-amber-400/40 bg-gradient-to-r from-amber-400/[0.12] to-amber-400/[0.04]"
+          : mine
+            ? "border-yellow-300/25 bg-yellow-300/[0.06]"
+            : "border-white/10 bg-white/5"
+      }`;
+  const avatarSize = isReply ? "w-7 h-7 text-[10px]" : "w-9 h-9 text-[11px]";
+
+  return (
+    <div className={cardClass}>
+      <div className="flex gap-3">
+        <div
+          className={`flex items-center justify-center rounded-full shrink-0 font-black text-green-950 ${avatarSize}`}
+          style={{ background: announcer ? "#f59e0b" : color }}
+          aria-hidden
+        >
+          {announcer ? <span className="text-base leading-none">📣</span> : initials(m.user_name)}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline gap-2 mb-0.5">
+            <span className="font-black text-sm truncate" style={{ color: announcer ? "#fbbf24" : color }}>
+              {m.user_name}
+            </span>
+            {announcer ? (
+              <span className="text-[10px] font-black uppercase tracking-wide text-amber-300/80 bg-amber-400/10 rounded-full px-1.5 py-0.5">
+                Announcer
+              </span>
+            ) : mine ? (
+              <span className="text-[10px] font-black uppercase tracking-wide text-yellow-300/70">You</span>
+            ) : null}
+            <span className="text-white/30 text-[11px] shrink-0 ml-auto">{relativeTime(m.created_at)}</span>
+          </div>
+          <p className={`text-sm leading-relaxed whitespace-pre-wrap break-words ${announcer ? "text-amber-50/90 font-medium" : "text-white/85"}`}>
+            {renderWithFlags(m.body)}
+          </p>
+
+          {/* Reactions + actions */}
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            {m.reactions.map((r) => (
+              <button
+                key={r.emoji}
+                onClick={() => onReact(m.id, r.emoji)}
+                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors cursor-pointer ${
+                  r.mine
+                    ? "border-yellow-300/40 bg-yellow-300/15 text-white"
+                    : "border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
+                }`}
+              >
+                <span>{r.emoji}</span>
+                <span className="tabular-nums">{r.count}</span>
+              </button>
+            ))}
+
+            <div className="relative">
+              <button
+                onClick={() => setPickerOpen((o) => !o)}
+                aria-label="Add reaction"
+                className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-xs text-white/45 hover:bg-white/10 hover:text-white/70 transition-colors cursor-pointer"
+              >
+                <span className="leading-none">🙂</span>
+                <span className="leading-none ml-0.5">＋</span>
+              </button>
+              {pickerOpen && (
+                <div className="absolute z-10 bottom-full left-0 mb-1 flex gap-1.5 rounded-full border border-white/15 bg-[#0d2137] px-2.5 py-1.5 shadow-lg shadow-black/40">
+                  {REACTIONS.map((e) => (
+                    <button
+                      key={e}
+                      onClick={() => { onReact(m.id, e); setPickerOpen(false); }}
+                      className="text-lg leading-none transition-transform hover:scale-125 cursor-pointer"
+                    >
+                      {e}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {!isReply && (
+              <button
+                onClick={() => setReplyOpen((o) => !o)}
+                className="text-[11px] font-semibold uppercase tracking-wide text-white/40 hover:text-white/70 px-1 transition-colors cursor-pointer"
+              >
+                Reply
+              </button>
+            )}
+          </div>
+
+          {/* Reply composer */}
+          {!isReply && replyOpen && (
+            <div className="mt-2 flex items-end gap-2">
+              <textarea
+                value={replyDraft}
+                onChange={(e) => setReplyDraft(e.target.value.slice(0, MAX_BODY))}
+                onKeyDown={onReplyKeyDown}
+                placeholder={`Reply to ${m.user_name.split(/\s+/)[0]}…`}
+                rows={1}
+                autoFocus
+                className="flex-1 resize-none rounded-lg border border-white/10 bg-white/5 text-white text-sm placeholder:text-white/40 focus:outline-none focus:border-white/20 px-2.5 py-1.5 leading-relaxed"
+              />
+              <button
+                onClick={sendReply}
+                disabled={!replyDraft.trim() || replyPosting}
+                className="rounded-full bg-yellow-300 text-green-950 text-xs font-black uppercase tracking-[0.08em] px-4 py-2 transition-all enabled:hover:bg-yellow-200 enabled:cursor-pointer disabled:opacity-40 shrink-0"
+              >
+                {replyPosting ? "…" : "Reply"}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Replies thread */}
+      {!isReply && replies.length > 0 && (
+        <div className="mt-3 ml-6 space-y-2 border-l border-white/10 pl-3">
+          {visibleReplies.map((r) => (
+            <MessageCard key={r.id} m={r} me={me} isReply onReact={onReact} onReply={onReply} />
+          ))}
+          {replies.length > COLLAPSE_AT && (
+            <button
+              onClick={() => setExpanded((x) => !x)}
+              className="text-[11px] font-semibold text-yellow-300/70 hover:text-yellow-200 px-1 cursor-pointer"
+            >
+              {expanded ? "Show fewer" : `Show all ${replies.length} replies`}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -261,6 +261,27 @@ export async function initDb() {
   // many NULLs in a unique index). ON CONFLICT (event_key) targets this.
   await sql`CREATE UNIQUE INDEX IF NOT EXISTS messages_event_key_idx ON messages (event_key)`;
 
+  // Replies: a message can hang off another (self-referential). parent_id NULL = a
+  // top-level post (the default for every existing row and all Gaffer announcements);
+  // non-NULL = a reply to that parent. Replies are kept one level deep in the API.
+  // ON DELETE CASCADE so removing a parent also clears its replies.
+  await sql`ALTER TABLE messages ADD COLUMN IF NOT EXISTS parent_id INTEGER REFERENCES messages(id) ON DELETE CASCADE`;
+  await sql`CREATE INDEX IF NOT EXISTS messages_parent_idx ON messages (parent_id)`;
+
+  // Emoji reactions on a message. The composite PK enforces one of each emoji per
+  // user per message, making the tap-to-add / tap-to-remove toggle idempotent. Both
+  // FKs cascade so a deleted message or user takes its reactions with it.
+  await sql`
+    CREATE TABLE IF NOT EXISTS message_reactions (
+      message_id INTEGER     NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+      user_id    INTEGER     NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      emoji      TEXT        NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (message_id, user_id, emoji)
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS message_reactions_msg_idx ON message_reactions (message_id)`;
+
   // ── Awards ────────────────────────────────────────────────────────────────────
   // Computed by the admin after the tournament (or after each round for live awards).
   // One row per award, re-runnable (DO UPDATE).
