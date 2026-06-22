@@ -1077,21 +1077,7 @@ export default function BracketPage() {
                       </svg>
                     )}
                   </span>
-                ) : t === "bracket" ? (
-                  <span className="inline-flex items-center gap-1.5">
-                    Bracket
-                    <span className="relative -top-px sm:top-0 rounded-full bg-green-600 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide text-white">
-                      New!
-                    </span>
-                  </span>
-                ) : t === "world" ? "The World" : t === "leaderboard" ? "Leaderboard" : t === "stats" ? "Stats" : t === "board" ? (
-                  <span className="inline-flex items-center gap-1.5">
-                    Board
-                    <span className="relative -top-px sm:top-0 rounded-full bg-green-600 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide text-white">
-                      New!
-                    </span>
-                  </span>
-                ) : "The Rules"}
+                ) : t === "bracket" ? "Bracket" : t === "world" ? "The World" : t === "leaderboard" ? "Leaderboard" : t === "stats" ? "Stats" : t === "board" ? "Board" : "The Rules"}
                 <span className={`absolute bottom-[-1px] inset-x-0 h-[2px] ${tab === t ? "bg-yellow-300" : ""}`} />
               </button>
             ))}
