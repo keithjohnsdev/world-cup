@@ -15,7 +15,7 @@ type MessageRow = {
   created_at: string;
 };
 
-type ReactionAgg = { emoji: string; count: number; mine: boolean };
+type ReactionAgg = { emoji: string; count: number; mine: boolean; names: string[] };
 type Message = MessageRow & { reactions: ReactionAgg[]; replies?: Message[] };
 
 async function getUser(req: NextRequest) {
@@ -35,8 +35,9 @@ function isAdmin(name: string) {
 }
 
 // Build a message_id → reactions[] map for the given ids, from the current user's
-// perspective (so each emoji carries whether *they* reacted). Reactions are ordered
-// by the fixed palette for stable display.
+// perspective (so each emoji carries whether *they* reacted, plus the names of who
+// reacted with it, oldest-first). Reactions are ordered by the fixed palette for
+// stable display.
 async function reactionsByMessage(
   ids: number[],
   meId: number,
@@ -45,16 +46,18 @@ async function reactionsByMessage(
   if (ids.length === 0) return map;
   const sql = getSql();
   const rows = (await sql`
-    SELECT message_id, emoji, COUNT(*)::int AS count,
-           BOOL_OR(user_id = ${meId}) AS mine
-    FROM message_reactions
-    WHERE message_id = ANY(${ids})
-    GROUP BY message_id, emoji
-  `) as { message_id: number; emoji: string; count: number; mine: boolean }[];
+    SELECT mr.message_id, mr.emoji, COUNT(*)::int AS count,
+           BOOL_OR(mr.user_id = ${meId}) AS mine,
+           ARRAY_AGG(u.name ORDER BY mr.created_at, mr.user_id) AS names
+    FROM message_reactions mr
+    JOIN users u ON u.id = mr.user_id
+    WHERE mr.message_id = ANY(${ids})
+    GROUP BY mr.message_id, mr.emoji
+  `) as { message_id: number; emoji: string; count: number; mine: boolean; names: string[] }[];
 
   for (const r of rows) {
     if (!map.has(r.message_id)) map.set(r.message_id, []);
-    map.get(r.message_id)!.push({ emoji: r.emoji, count: r.count, mine: r.mine });
+    map.get(r.message_id)!.push({ emoji: r.emoji, count: r.count, mine: r.mine, names: r.names });
   }
   const order = (e: string) => {
     const i = (REACTIONS as readonly string[]).indexOf(e);

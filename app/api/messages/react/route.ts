@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSql, initDb } from "@/lib/db";
 import { REACTIONS, isReaction } from "@/lib/reactions";
 
-type ReactionAgg = { emoji: string; count: number; mine: boolean };
+type ReactionAgg = { emoji: string; count: number; mine: boolean; names: string[] };
 
 async function getUser(req: NextRequest) {
   const token = req.headers.get("x-session-token");
@@ -50,20 +50,24 @@ export async function POST(req: NextRequest) {
     `;
   }
 
-  // Fresh aggregate for just this message, ordered by the fixed palette.
+  // Fresh aggregate for just this message, ordered by the fixed palette. Each emoji
+  // carries the names of who reacted with it (oldest-first) for the reactor list.
   const rows = (await sql`
-    SELECT emoji, COUNT(*)::int AS count, BOOL_OR(user_id = ${user.id}) AS mine
-    FROM message_reactions
-    WHERE message_id = ${message_id}
-    GROUP BY emoji
-  `) as { emoji: string; count: number; mine: boolean }[];
+    SELECT mr.emoji, COUNT(*)::int AS count,
+           BOOL_OR(mr.user_id = ${user.id}) AS mine,
+           ARRAY_AGG(u.name ORDER BY mr.created_at, mr.user_id) AS names
+    FROM message_reactions mr
+    JOIN users u ON u.id = mr.user_id
+    WHERE mr.message_id = ${message_id}
+    GROUP BY mr.emoji
+  `) as { emoji: string; count: number; mine: boolean; names: string[] }[];
 
   const order = (e: string) => {
     const i = (REACTIONS as readonly string[]).indexOf(e);
     return i === -1 ? REACTIONS.length : i;
   };
   const reactions: ReactionAgg[] = rows
-    .map((r) => ({ emoji: r.emoji, count: r.count, mine: r.mine }))
+    .map((r) => ({ emoji: r.emoji, count: r.count, mine: r.mine, names: r.names }))
     .sort((a, b) => order(a.emoji) - order(b.emoji));
 
   return NextResponse.json({ message_id, reactions });

@@ -7,6 +7,7 @@ interface ReactionAgg {
   emoji: string;
   count: number;
   mine: boolean;
+  names: string[];
 }
 
 interface Message {
@@ -103,19 +104,23 @@ function renderWithFlags(text: string): React.ReactNode[] {
 
 // Optimistic local toggle of one emoji on a reaction list, mirroring the server's
 // add/remove semantics so the chip updates instantly; the next response reconciles.
-function toggleReaction(list: ReactionAgg[], emoji: string): ReactionAgg[] {
+// myName is threaded through so the reactor list updates in lockstep with the count.
+function toggleReaction(list: ReactionAgg[], emoji: string, myName: string): ReactionAgg[] {
   const existing = list.find((r) => r.emoji === emoji);
   let next: ReactionAgg[];
   if (!existing) {
-    next = [...list, { emoji, count: 1, mine: true }];
+    next = [...list, { emoji, count: 1, mine: true, names: [myName] }];
   } else if (existing.mine) {
     const count = existing.count - 1;
+    const names = existing.names.filter((n) => n !== myName);
     next =
       count <= 0
         ? list.filter((r) => r.emoji !== emoji)
-        : list.map((r) => (r.emoji === emoji ? { ...r, count, mine: false } : r));
+        : list.map((r) => (r.emoji === emoji ? { ...r, count, mine: false, names } : r));
   } else {
-    next = list.map((r) => (r.emoji === emoji ? { ...r, count: r.count + 1, mine: true } : r));
+    next = list.map((r) =>
+      r.emoji === emoji ? { ...r, count: r.count + 1, mine: true, names: [...r.names, myName] } : r,
+    );
   }
   const order = (e: string) => {
     const i = (REACTIONS as readonly string[]).indexOf(e);
@@ -181,7 +186,7 @@ export function MessageBoardTab() {
     (id: number, emoji: string) => {
       const token = localStorage.getItem("wc_token");
       if (!token) return;
-      updateMessage(id, (m) => ({ ...m, reactions: toggleReaction(m.reactions, emoji) }));
+      updateMessage(id, (m) => ({ ...m, reactions: toggleReaction(m.reactions, emoji, me?.name ?? "") }));
       fetch("/api/messages/react", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-session-token": token },
@@ -195,7 +200,7 @@ export function MessageBoardTab() {
         })
         .catch(() => { /* the next poll reconciles */ });
     },
-    [updateMessage],
+    [updateMessage, me],
   );
 
   const reply = useCallback(async (parentId: number, text: string): Promise<boolean> => {
@@ -333,11 +338,13 @@ function MessageCard({
   onReply: (parentId: number, text: string) => Promise<boolean>;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [whoOpen, setWhoOpen] = useState(false);
   const [replyOpen, setReplyOpen] = useState(false);
   const [replyDraft, setReplyDraft] = useState("");
   const [replyPosting, setReplyPosting] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
+  const whoRef = useRef<HTMLDivElement>(null);
 
   // Close the emoji palette when clicking anywhere outside it (the trigger button
   // lives inside pickerRef, so it still toggles; emoji taps close it themselves).
@@ -352,12 +359,33 @@ function MessageCard({
     return () => document.removeEventListener("mousedown", onDown);
   }, [pickerOpen]);
 
+  // Same outside-click dismissal for the "who reacted" list popover.
+  useEffect(() => {
+    if (!whoOpen) return;
+    function onDown(e: MouseEvent) {
+      if (whoRef.current && !whoRef.current.contains(e.target as Node)) {
+        setWhoOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [whoOpen]);
+
   const mine = me != null && m.user_id === me.id;
   const announcer = m.is_announcer;
   const color = nameColor(m.user_name);
   const replies = m.replies ?? [];
   const COLLAPSE_AT = 3;
   const visibleReplies = expanded || replies.length <= COLLAPSE_AT ? replies : replies.slice(0, COLLAPSE_AT);
+
+  // Everyone who reacted, lumped into one pill: the distinct emojis (palette-ordered,
+  // since m.reactions already is), the total head-count, whether I'm in there, and a
+  // flat reactor list — one row per person-and-the-emoji-they-used — for the popover.
+  const totalReactions = m.reactions.reduce((n, r) => n + r.count, 0);
+  const iReacted = m.reactions.some((r) => r.mine);
+  const reactors = m.reactions.flatMap((r) =>
+    r.names.map((name) => ({ name, emoji: r.emoji, isMe: me != null && name === me.name && r.mine })),
+  );
 
   async function sendReply() {
     const text = replyDraft.trim();
@@ -416,20 +444,42 @@ function MessageCard({
 
           {/* Reactions + actions */}
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            {m.reactions.map((r) => (
-              <button
-                key={r.emoji}
-                onClick={() => onReact(m.id, r.emoji)}
-                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors cursor-pointer ${
-                  r.mine
-                    ? "border-yellow-300/40 bg-yellow-300/15 text-white"
-                    : "border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
-                }`}
-              >
-                <span>{r.emoji}</span>
-                <span className="tabular-nums">{r.count}</span>
-              </button>
-            ))}
+            {/* One combined pill for everyone who reacted: stacked emojis + a head-count.
+                Tapping it opens the list of who reacted with which emoji. */}
+            {totalReactions > 0 && (
+              <div className="relative" ref={whoRef}>
+                <button
+                  onClick={() => setWhoOpen((o) => !o)}
+                  aria-label="See who reacted"
+                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors cursor-pointer ${
+                    iReacted
+                      ? "border-yellow-300/40 bg-yellow-300/15 text-white"
+                      : "border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
+                  }`}
+                >
+                  <span className="flex items-center -space-x-1">
+                    {m.reactions.map((r) => (
+                      <span key={r.emoji} className="leading-none">{r.emoji}</span>
+                    ))}
+                  </span>
+                  <span className="tabular-nums">{totalReactions}</span>
+                </button>
+                {whoOpen && (
+                  <div className="absolute z-10 bottom-full left-0 mb-1 min-w-[10rem] max-w-[16rem] rounded-xl border border-white/15 bg-[#0d2137] p-2 shadow-lg shadow-black/40">
+                    <ul className="space-y-1">
+                      {reactors.map((r, i) => (
+                        <li key={`${r.name}-${r.emoji}-${i}`} className="flex items-center gap-2 text-xs">
+                          <span className="text-sm leading-none shrink-0">{r.emoji}</span>
+                          <span className={`truncate ${r.isMe ? "text-yellow-300 font-semibold" : "text-white/80"}`}>
+                            {r.isMe ? "You" : r.name}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="relative" ref={pickerRef}>
               <button
@@ -442,15 +492,21 @@ function MessageCard({
               </button>
               {pickerOpen && (
                 <div className="absolute z-10 bottom-full left-0 mb-1 flex gap-1.5 rounded-full border border-white/15 bg-[#0d2137] px-2.5 py-1.5 shadow-lg shadow-black/40">
-                  {REACTIONS.map((e) => (
-                    <button
-                      key={e}
-                      onClick={() => { onReact(m.id, e); setPickerOpen(false); }}
-                      className="text-lg leading-none transition-transform hover:scale-125 cursor-pointer"
-                    >
-                      {e}
-                    </button>
-                  ))}
+                  {REACTIONS.map((e) => {
+                    const mine = m.reactions.some((r) => r.emoji === e && r.mine);
+                    return (
+                      <button
+                        key={e}
+                        onClick={() => { onReact(m.id, e); setPickerOpen(false); }}
+                        title={mine ? "Tap to remove" : undefined}
+                        className={`text-lg leading-none rounded-full px-0.5 transition-transform hover:scale-125 cursor-pointer ${
+                          mine ? "bg-yellow-300/20 ring-1 ring-yellow-300/50" : ""
+                        }`}
+                      >
+                        {e}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
