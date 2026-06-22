@@ -379,13 +379,27 @@ function MessageCard({
   const visibleReplies = expanded || replies.length <= COLLAPSE_AT ? replies : replies.slice(0, COLLAPSE_AT);
 
   // Everyone who reacted, lumped into one pill: the distinct emojis (palette-ordered,
-  // since m.reactions already is), the total head-count, whether I'm in there, and a
-  // flat reactor list — one row per person-and-the-emoji-they-used — for the popover.
+  // since m.reactions already is), the total head-count, and whether I'm in there.
   const totalReactions = m.reactions.reduce((n, r) => n + r.count, 0);
   const iReacted = m.reactions.some((r) => r.mine);
-  const reactors = m.reactions.flatMap((r) =>
-    r.names.map((name) => ({ name, emoji: r.emoji, isMe: me != null && name === me.name && r.mine })),
-  );
+
+  // Reactor list for the popover, grouped by person — one row each, with all the
+  // emojis they used stacked beside their name (rather than a row per reaction).
+  // Iterating m.reactions (palette-ordered) keeps each person's emojis palette-ordered.
+  const reactorMap = new Map<string, { name: string; emojis: string[]; isMe: boolean }>();
+  for (const r of m.reactions) {
+    for (const name of r.names) {
+      const mine = me != null && name === me.name && r.mine;
+      const entry = reactorMap.get(name);
+      if (entry) {
+        entry.emojis.push(r.emoji);
+        entry.isMe = entry.isMe || mine;
+      } else {
+        reactorMap.set(name, { name, emojis: [r.emoji], isMe: mine });
+      }
+    }
+  }
+  const reactors = [...reactorMap.values()];
 
   async function sendReply() {
     const text = replyDraft.trim();
@@ -467,9 +481,13 @@ function MessageCard({
                 {whoOpen && (
                   <div className="absolute z-10 bottom-full left-0 mb-1 min-w-[10rem] max-w-[16rem] rounded-xl border border-white/15 bg-[#0d2137] p-2 shadow-lg shadow-black/40">
                     <ul className="space-y-1">
-                      {reactors.map((r, i) => (
-                        <li key={`${r.name}-${r.emoji}-${i}`} className="flex items-center gap-2 text-xs">
-                          <span className="text-sm leading-none shrink-0">{r.emoji}</span>
+                      {reactors.map((r) => (
+                        <li key={r.name} className="flex items-center gap-2 text-xs">
+                          <span className="flex items-center -space-x-0.5 shrink-0">
+                            {r.emojis.map((e, i) => (
+                              <span key={`${e}-${i}`} className="text-sm leading-none">{e}</span>
+                            ))}
+                          </span>
                           <span className={`truncate ${r.isMe ? "text-yellow-300 font-semibold" : "text-white/80"}`}>
                             {r.isMe ? "You" : r.name}
                           </span>
