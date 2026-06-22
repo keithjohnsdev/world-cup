@@ -270,7 +270,7 @@ async function announceLeaderboardMoves(sql: Sql): Promise<number> {
     if (body && (await announce(sql, `rank:${r.id}:${cur}:${r.total}`, body))) posted++;
   }
 
-  // Big movers anywhere in the table since the last update. Surges of 3+ spots that
+  // Big movers anywhere in the table since the last update. Surges of 4+ spots that
   // land OUTSIDE the podium (podium entries are already shouted above), and drops of
   // 4+ (never otherwise announced — a leader sliding is great chatter). The score in
   // the event_key lets a later move re-fire.
@@ -280,7 +280,7 @@ async function announceLeaderboardMoves(sql: Sql): Promise<number> {
     const prev = prevRanks[String(r.id)];
     if (prev == null) continue; // no baseline for this player yet
     const climb = prev - cur; // positive = moved up the table
-    if (climb >= 3 && cur > 3 && r.total > 0) {
+    if (climb >= 4 && cur > 3 && r.total > 0) {
       const body = `📈 ${r.name} is on the charge — up ${climb} spots to ${ordinal(cur)} with ${r.total} pts!`;
       if (await announce(sql, `surge:${r.id}:${cur}:${r.total}`, body)) posted++;
     } else if (climb <= -4) {
