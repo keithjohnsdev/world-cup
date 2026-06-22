@@ -1316,7 +1316,7 @@ export default function BracketPage() {
               <div className="text-4xl mb-3">🗂️</div>
               <h2 className="text-white font-black text-xl mb-2 leading-tight">Try the live practice bracket</h2>
               <p className="text-white/65 text-sm leading-relaxed">
-                The Round of 32 is built <span className="text-amber-300 font-bold">live from the current group standings</span>{" "}according to official 2026 FIFA rules. Click teams to play out the whole bracket. Nothing here is saved until the group stage ends June 27th.
+                The Round of 32 is built <span className="text-amber-300 font-bold">live according to FIFA tournament rules</span>{" "}off the current qualifying 32 teams — updating as group results land. Play it out round by round and crown your practice champion. Just for fun for now, nothing is saved until the group stage ends June 27th.
               </p>
             </div>
             <div className="px-6 pb-6 flex flex-col gap-2">

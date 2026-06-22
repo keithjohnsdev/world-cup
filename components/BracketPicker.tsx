@@ -387,7 +387,7 @@ function LiveRoundOf32({ results, standings }: { results: ResultEntry[]; standin
             <div className="h-px w-10 bg-gradient-to-l from-transparent to-yellow-300/60" />
           </div>
           <p className="text-white/55 text-sm mt-3 max-w-md mx-auto leading-relaxed">
-            The Round of 32 is built live from the current group standings according to official 2026 FIFA rules. Click teams to play out the whole bracket. Nothing here is saved.
+            The Round of 32 is built live from the current group standings according to official 2026 FIFA rules. Click teams to play out the whole bracket. Nothing here is saved until the group stage ends June 27th.
           </p>
         </div>
 
