@@ -38,6 +38,8 @@ export async function initDb() {
   // One-time spotlight flag: set once a player has been shown the new Message
   // Board tab, so the intro overlay only appears until they've acknowledged it.
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS seen_board         BOOLEAN  DEFAULT false`;
+  // Same idea for the live practice bracket intro — shown once per player.
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS seen_bracket       BOOLEAN  DEFAULT false`;
 
   // All user selections — group picks, bracket picks, and meta (champion, star, etc.)
   // stage ∈ {group, runner, third, fourth, champion, meta, heart, r32, r16, qf, sf, final}
