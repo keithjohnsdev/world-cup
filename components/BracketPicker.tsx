@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { resolveR32, sourceLabel, type ResolvedMatch } from "@/lib/bracket";
+import { resolveR32, sourceLabel, type ResolvedMatch, type SlotSource } from "@/lib/bracket";
 import { resolveThirdAssignment, type ThirdEntry } from "@/lib/thirds";
 import { getTeam } from "@/lib/data";
 import { FlagIcon } from "@/components/FlagIcon";
@@ -71,6 +71,82 @@ function groupStageComplete(results: ResultEntry[], standings: StandingRow[]): b
   const played = new Map(standings.map((s) => [s.team_id, s.played_games]));
   const thirds = results.filter((r) => r.stage === "third");
   return thirds.length >= 12 && thirds.every((r) => (played.get(r.team_id) ?? 0) >= 3);
+}
+
+// Whether the team currently in each of a group's qualifying positions is
+// mathematically *locked* into that exact rank, or merely the current leader.
+type SlotLocks = { winner: boolean; runner: boolean; third: boolean };
+
+// Sound clinch detection from the current group standings. A position is reported
+// locked only when the team holding it is guaranteed to finish in exactly that rank
+// no matter how the remaining group games go. The test uses a points-only bound
+// (max attainable points for each rival), so it is conservative: it never reports a
+// lock that isn't certain, though it may stay "likely" in cases a tiebreaker would
+// actually decide. A finished group (all four teams played 3) is locked outright.
+// Third place additionally requires the whole group stage to be done, since a 3rd's
+// bracket slot depends on the cross-group ranking of the best eight thirds.
+function computeGroupLocks(standings: StandingRow[], groupComplete: boolean): Record<string, SlotLocks> {
+  const byGroup = new Map<string, StandingRow[]>();
+  for (const s of standings) {
+    const g = getTeam(s.team_id)?.group;
+    if (!g) continue;
+    (byGroup.get(g) ?? byGroup.set(g, []).get(g)!).push(s);
+  }
+
+  const out: Record<string, SlotLocks> = {};
+  for (const [g, rowsRaw] of byGroup) {
+    // Without all four teams in the table we can't bound the missing ones — stay safe.
+    if (rowsRaw.length < 4) {
+      out[g] = { winner: false, runner: false, third: false };
+      continue;
+    }
+    const rows = [...rowsRaw].sort(
+      (a, b) => b.points - a.points || b.goal_diff - a.goal_diff || b.goals_for - a.goals_for,
+    );
+
+    // Whole group played out → the table is final, every position decided.
+    if (rows.every((r) => r.played_games >= 3)) {
+      out[g] = { winner: true, runner: true, third: groupComplete };
+      continue;
+    }
+
+    const maxPts = (r: StandingRow) => r.points + 3 * Math.max(0, 3 - r.played_games);
+    // For the team at rank `idx`, count rivals guaranteed strictly above / below it.
+    const lockedRank = (idx: number) => {
+      const t = rows[idx];
+      let above = 0;
+      let below = 0;
+      rows.forEach((o, j) => {
+        if (j === idx) return;
+        if (o.points > maxPts(t)) above++; // rival's floor beats T's ceiling
+        else if (t.points > maxPts(o)) below++; // T's floor beats rival's ceiling
+      });
+      return { above, below };
+    };
+
+    const w = lockedRank(0);
+    const r = lockedRank(1);
+    out[g] = {
+      winner: w.below === 3, // everyone else guaranteed below → exactly 1st
+      runner: r.above === 1 && r.below === 2, // one above, two below → exactly 2nd
+      third: false, // 3rd only locks once the full group stage settles qualification
+    };
+  }
+  return out;
+}
+
+// Is the team filling this slot source locked into it, given the per-group clinch
+// map and (for thirds) whether the group stage is complete?
+function sourceLocked(
+  s: SlotSource,
+  locks: Record<string, SlotLocks>,
+  thirdAssign: Record<string, string> | null,
+  groupComplete: boolean,
+): boolean {
+  if (s.kind === "winner") return !!locks[s.group]?.winner;
+  if (s.kind === "runner") return !!locks[s.group]?.runner;
+  const g = thirdAssign?.[s.group];
+  return !!(g && groupComplete && locks[g]?.third);
 }
 
 // Build the full bracket. R32 comes from the live standings + third assignment;
@@ -265,6 +341,7 @@ function LiveSlot({
   qualifier,
   detail,
   teamId,
+  locked,
   isWinner,
   isDimmed,
   canClick,
@@ -273,6 +350,7 @@ function LiveSlot({
   qualifier: string;
   detail: string;
   teamId?: string;
+  locked?: boolean;
   isWinner: boolean;
   isDimmed: boolean;
   canClick: boolean;
@@ -294,6 +372,25 @@ function LiveSlot({
             <span className={`block truncate text-xs font-semibold leading-tight transition-colors ${isWinner ? "text-green-300" : isDimmed ? "text-white/25" : "text-white/85"}`}>{team.name}</span>
             <span className={`block text-[9px] font-bold uppercase tracking-wider leading-tight ${isDimmed ? "text-white/15" : "text-green-400/70"}`}>{qualifier} · {detail}</span>
           </div>
+          {!isDimmed && (
+            locked ? (
+              <span
+                className="shrink-0 flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider"
+                style={{ background: "rgba(74,222,128,0.14)", color: "#4ade80", border: "1px solid rgba(74,222,128,0.3)" }}
+                title="Mathematically guaranteed this spot"
+              >
+                🔒 Locked
+              </span>
+            ) : (
+              <span
+                className="shrink-0 rounded px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider"
+                style={{ background: "rgba(251,191,36,0.12)", color: "#fbbf24", border: "1px solid rgba(251,191,36,0.28)" }}
+                title="Currently in this spot, but not yet clinched"
+              >
+                Likely
+              </span>
+            )
+          )}
           {isWinner && <span className="text-green-400 text-[10px] font-black shrink-0">✓</span>}
         </>
       ) : (
@@ -333,6 +430,7 @@ function LiveRoundOf32({ results, standings }: { results: ResultEntry[]; standin
   const [practice, setPractice] = useState<Picks>({});
   const thirdAssign = useMemo(() => computeThirdAssign(results, standings), [results, standings]);
   const complete = useMemo(() => groupStageComplete(results, standings), [results, standings]);
+  const locks = useMemo(() => computeGroupLocks(standings, complete), [standings, complete]);
 
   // Resolve R32 once (depends on results + third assignment) for sanitizing + render.
   const r32resolved = useMemo(() => {
@@ -427,6 +525,10 @@ function LiveRoundOf32({ results, standings }: { results: ResultEntry[]; standin
             <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.07)" }} />
             <span className="text-white/25 text-[11px] font-medium tabular-nums">{r32resolved.filter(m => picks[`r32:${m.slot}`]).length}/16</span>
           </div>
+          <div className="mb-3 flex items-center gap-3 text-[9px] font-bold uppercase tracking-wider text-white/40">
+            <span className="flex items-center gap-1"><span style={{ color: "#4ade80" }}>🔒 Locked</span> = clinched</span>
+            <span className="flex items-center gap-1"><span style={{ color: "#fbbf24" }}>Likely</span> = current leader, not yet certain</span>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             {r32resolved.map((m: ResolvedMatch, i) => {
               const ready = !!(m.team1 && m.team2);
@@ -446,9 +548,9 @@ function LiveRoundOf32({ results, standings }: { results: ResultEntry[]; standin
                     <span className="text-[9px] font-black uppercase tracking-widest text-white/25">Match {i + 1}</span>
                     {ready && !winner && <span className="text-[9px] font-black uppercase tracking-widest text-white/30">Tap to pick</span>}
                   </div>
-                  <LiveSlot qualifier={homeLabel.qualifier} detail={homeLabel.detail} teamId={m.team1} isWinner={winner === m.team1} isDimmed={!!(winner && winner !== m.team1)} canClick={ready && !!m.team1} onClick={() => m.team1 && pick("r32", m.slot, m.team1)} />
+                  <LiveSlot qualifier={homeLabel.qualifier} detail={homeLabel.detail} teamId={m.team1} locked={sourceLocked(m.home, locks, thirdAssign, complete)} isWinner={winner === m.team1} isDimmed={!!(winner && winner !== m.team1)} canClick={ready && !!m.team1} onClick={() => m.team1 && pick("r32", m.slot, m.team1)} />
                   <div className="mx-2.5 h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
-                  <LiveSlot qualifier={awayLabel.qualifier} detail={awayLabel.detail} teamId={m.team2} isWinner={winner === m.team2} isDimmed={!!(winner && winner !== m.team2)} canClick={ready && !!m.team2} onClick={() => m.team2 && pick("r32", m.slot, m.team2)} />
+                  <LiveSlot qualifier={awayLabel.qualifier} detail={awayLabel.detail} teamId={m.team2} locked={sourceLocked(m.away, locks, thirdAssign, complete)} isWinner={winner === m.team2} isDimmed={!!(winner && winner !== m.team2)} canClick={ready && !!m.team2} onClick={() => m.team2 && pick("r32", m.slot, m.team2)} />
                 </div>
               );
             })}
