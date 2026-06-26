@@ -134,9 +134,10 @@ function RoundColumn({
   mirror: boolean;
 }) {
   const flip = mirror ? { transform: "scaleX(-1)" } : undefined;
+  const labelFlip = mirror ? { display: "inline-block", transform: "scaleX(-1)" } : undefined;
   return (
     <div className="wcbt-round">
-      <div className="wcbt-rlabel"><span style={flip}>{round.label}</span></div>
+      <div className="wcbt-rlabel"><span style={labelFlip}>{round.label}</span></div>
       <div className="wcbt-games">
         {round.matches.map((m) => {
           const decided = !!picks[`${round.stage}:${m.slot}`];
