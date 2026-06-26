@@ -18,6 +18,8 @@ export interface TreeRound {
   matches: TreeMatch[]; // in bracket order (left half first, right half second)
 }
 
+type LockState = "locked" | "likely";
+
 interface Props {
   rounds: TreeRound[]; // exactly the four feeder rounds: r32, r16, qf, sf
   finalMatch: TreeMatch;
@@ -25,7 +27,12 @@ interface Props {
   canPick: boolean;
   onPick: (stage: string, slot: string, teamId: string) => void;
   championKicker?: string; // small label above "Champion" (e.g. "Your", "Practice")
+  // Optional certainty of the team in a slot (R32 only): "locked" = clinched, "likely"
+  // = current leader but not yet certain. Surfaced as a left color accent + a legend.
+  teamLock?: (stage: string, slot: string, teamId?: string) => LockState | undefined;
 }
+
+const LOCK_COLOR: Record<LockState, string> = { locked: "#4ade80", likely: "#fbbf24" };
 
 // One team's row inside a bracket node. Clicking advances them (when allowed).
 function TeamRow({
@@ -33,6 +40,7 @@ function TeamRow({
   isWinner,
   isDimmed,
   isFinal,
+  lock,
   canClick,
   onClick,
 }: {
@@ -40,11 +48,14 @@ function TeamRow({
   isWinner: boolean;
   isDimmed: boolean;
   isFinal: boolean;
+  lock?: LockState;
   canClick: boolean;
   onClick: () => void;
 }) {
   const team = teamId ? getTeam(teamId) : undefined;
   const winColor = isFinal ? "#fbbf24" : "#4ade80";
+  // Certainty accent drawn as an inset left bar so it costs no horizontal space.
+  const accent = lock && !isDimmed ? `inset 3px 0 0 ${LOCK_COLOR[lock]}` : undefined;
   return (
     <button
       type="button"
@@ -52,7 +63,7 @@ function TeamRow({
       disabled={!canClick}
       title={team?.name}
       className={`flex w-full items-center gap-1.5 px-1.5 py-1 text-left transition-colors ${canClick ? "cursor-pointer hover:bg-white/[0.07]" : "cursor-default"}`}
-      style={{ background: isWinner ? (isFinal ? "rgba(251,191,36,0.16)" : "rgba(74,222,128,0.14)") : undefined }}
+      style={{ background: isWinner ? (isFinal ? "rgba(251,191,36,0.16)" : "rgba(74,222,128,0.14)") : undefined, boxShadow: accent }}
     >
       {team ? (
         <>
@@ -79,6 +90,7 @@ function Node({
   picks,
   canPick,
   onPick,
+  teamLock,
   isFinal = false,
 }: {
   match: TreeMatch;
@@ -86,6 +98,7 @@ function Node({
   picks: Picks;
   canPick: boolean;
   onPick: (stage: string, slot: string, teamId: string) => void;
+  teamLock?: (stage: string, slot: string, teamId?: string) => LockState | undefined;
   isFinal?: boolean;
 }) {
   const winner = picks[`${stage}:${match.slot}`];
@@ -102,6 +115,7 @@ function Node({
         isWinner={!!winner && winner === match.team1}
         isDimmed={!!(winner && winner !== match.team1)}
         isFinal={isFinal}
+        lock={teamLock?.(stage, match.slot, match.team1)}
         canClick={clickable && !!match.team1}
         onClick={() => match.team1 && onPick(stage, match.slot, match.team1)}
       />
@@ -111,6 +125,7 @@ function Node({
         isWinner={!!winner && winner === match.team2}
         isDimmed={!!(winner && winner !== match.team2)}
         isFinal={isFinal}
+        lock={teamLock?.(stage, match.slot, match.team2)}
         canClick={clickable && !!match.team2}
         onClick={() => match.team2 && onPick(stage, match.slot, match.team2)}
       />
@@ -125,12 +140,14 @@ function RoundColumn({
   picks,
   canPick,
   onPick,
+  teamLock,
   mirror,
 }: {
   round: TreeRound;
   picks: Picks;
   canPick: boolean;
   onPick: (stage: string, slot: string, teamId: string) => void;
+  teamLock?: (stage: string, slot: string, teamId?: string) => LockState | undefined;
   mirror: boolean;
 }) {
   const flip = mirror ? { transform: "scaleX(-1)" } : undefined;
@@ -145,7 +162,7 @@ function RoundColumn({
             <div key={m.slot} className={`wcbt-game${decided ? " wcbt-won" : ""}`}>
               <div className="wcbt-cell">
                 <div style={flip}>
-                  <Node match={m} stage={round.stage} picks={picks} canPick={canPick} onPick={onPick} />
+                  <Node match={m} stage={round.stage} picks={picks} canPick={canPick} onPick={onPick} teamLock={teamLock} />
                 </div>
               </div>
             </div>
@@ -159,7 +176,7 @@ function RoundColumn({
 // Classic two-sided knockout tree: both halves converge on the Final in the middle,
 // with a festive champion spot beneath. Horizontally scrollable on small screens,
 // fully visible on desktop. Interactive — tap a team to send them through.
-export function BracketTree({ rounds, finalMatch, picks, canPick, onPick, championKicker = "Your" }: Props) {
+export function BracketTree({ rounds, finalMatch, picks, canPick, onPick, championKicker = "Your", teamLock }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Split each round down the middle: first half feeds the left side, second the right.
@@ -174,17 +191,30 @@ export function BracketTree({ rounds, finalMatch, picks, canPick, onPick, champi
     <div>
       <style>{CSS}</style>
 
-      <div className="mb-3 flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-wider text-white/35">
+      <div className="mb-2 flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-wider text-white/35">
         <span className="sm:hidden">← Scroll sideways →</span>
         <span>Tap a team to send them through</span>
       </div>
+
+      {teamLock && (
+        <div className="mb-3 flex items-center justify-center gap-4 text-[10px] font-bold uppercase tracking-wider text-white/40">
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-2.5 w-1 rounded-sm" style={{ background: LOCK_COLOR.locked }} />
+            Locked in
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-2.5 w-1 rounded-sm" style={{ background: LOCK_COLOR.likely }} />
+            Likely (may change)
+          </span>
+        </div>
+      )}
 
       <div ref={scrollRef} className="wcbt-wrap">
         <div className="wcbt-row">
           {/* Left half */}
           <div className="wcbt-side">
             {left.map((r) => (
-              <RoundColumn key={`L-${r.stage}`} round={r} picks={picks} canPick={canPick} onPick={onPick} mirror={false} />
+              <RoundColumn key={`L-${r.stage}`} round={r} picks={picks} canPick={canPick} onPick={onPick} teamLock={teamLock} mirror={false} />
             ))}
           </div>
 
@@ -215,7 +245,7 @@ export function BracketTree({ rounds, finalMatch, picks, canPick, onPick, champi
               flipped so SF ends up next to the center and R32 on the far right. */}
           <div className="wcbt-side wcbt-mirror">
             {right.map((r) => (
-              <RoundColumn key={`R-${r.stage}`} round={r} picks={picks} canPick={canPick} onPick={onPick} mirror />
+              <RoundColumn key={`R-${r.stage}`} round={r} picks={picks} canPick={canPick} onPick={onPick} teamLock={teamLock} mirror />
             ))}
           </div>
         </div>

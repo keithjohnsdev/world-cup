@@ -998,6 +998,20 @@ export default function BracketPage() {
       return next;
     });
 
+    // An empty teamId means "clear this pick" — persist the removal right away (the
+    // batch save below only ever upserts, so without this the server would keep it).
+    if (!teamId) {
+      const token = localStorage.getItem("wc_token");
+      if (token) {
+        fetch("/api/picks", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json", "x-session-token": token },
+          body: JSON.stringify({ stage, slot }),
+        }).catch(() => {});
+      }
+      return;
+    }
+
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
       const token = localStorage.getItem("wc_token");
@@ -1314,9 +1328,9 @@ export default function BracketPage() {
             <div className="px-6 pt-6 pb-5 text-center">
               <span className="inline-block rounded-full bg-green-600 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white mb-4">New!</span>
               <div className="text-4xl mb-3">🗂️</div>
-              <h2 className="text-white font-black text-xl mb-2 leading-tight">Try the live practice bracket</h2>
+              <h2 className="text-white font-black text-xl mb-2 leading-tight">Your bracket is open</h2>
               <p className="text-white/65 text-sm leading-relaxed">
-                The Round of 32 is built <span className="text-amber-300 font-bold">live according to FIFA tournament rules</span>{" "}off the current qualifying 32 teams — updating as group results land. Play it out round by round and crown your practice champion. Just for fun for now, nothing is saved until the group stage ends June 27th.
+                The Round of 32 is built <span className="text-amber-300 font-bold">live according to FIFA tournament rules</span>{" "}off the current qualifying teams — updating as group results land. Pick your way to a champion and <span className="text-amber-300 font-bold">your picks save automatically</span>. If a team that hasn&apos;t clinched its spot gets overtaken, those picks clear so you can pick again.
               </p>
             </div>
             <div className="px-6 pb-6 flex flex-col gap-2">

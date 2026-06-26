@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { resolveR32, sourceLabel, type ResolvedMatch, type SlotSource } from "@/lib/bracket";
 import { resolveThirdAssignment, type ThirdEntry } from "@/lib/thirds";
 import { getTeam } from "@/lib/data";
@@ -8,6 +8,9 @@ import { FlagIcon } from "@/components/FlagIcon";
 import { BracketTree, type TreeRound } from "@/components/BracketTree";
 
 type Picks = Record<string, string>;
+
+// The five knockout pick stages, used to scope "real bracket" reads/clears.
+const KNOCKOUT_KEYS = new Set(["r32", "r16", "qf", "sf", "final"]);
 
 interface ResultEntry {
   stage: string;
@@ -445,13 +448,23 @@ function sanitizePractice(r32: MatchData[], raw: Picks): Picks {
   return p;
 }
 
-// Interactive practice bracket shown during Phase 1. The Round of 32 is built live
-// from the current group standings (third-placed teams resolved via FIFA's Annex C
-// once the group stage finishes); from there players advance teams round by round
-// for fun. Picks are local only — nothing is saved, and the server rejects knockout
-// picks anyway.
-function LiveRoundOf32({ results, standings }: { results: ResultEntry[]; standings: StandingRow[] }) {
-  const [practice, setPractice] = useState<Picks>({});
+// Live, saved bracket shown while the group stage is finishing. The Round of 32 is
+// built from the current group standings (third-placed teams resolved via FIFA's
+// Annex C once the group stage completes); from there players advance teams round by
+// round. Picks are saved for real. As results land, any pick whose team no longer
+// holds its slot (a "likely" qualifier that got overtaken) is cleared automatically
+// so the player can pick again.
+function LiveRoundOf32({
+  results,
+  standings,
+  picks: rawPicks,
+  onPick,
+}: {
+  results: ResultEntry[];
+  standings: StandingRow[];
+  picks: Picks;
+  onPick: (stage: string, slot: string, teamId: string) => void;
+}) {
   const [view, setView] = useState<"tree" | "list">("tree");
   const thirdAssign = useMemo(() => computeThirdAssign(results, standings), [results, standings]);
   const complete = useMemo(() => groupStageComplete(results, standings), [results, standings]);
@@ -464,10 +477,34 @@ function LiveRoundOf32({ results, standings }: { results: ResultEntry[]; standin
   }, [results, thirdAssign]);
   const r32data: MatchData[] = r32resolved.map((m) => ({ slot: m.slot, team1: m.team1, team2: m.team2 }));
 
-  const picks = useMemo(() => sanitizePractice(r32data, practice), [r32data, practice]);
+  // Render against a sanitized view so a just-invalidated pick disappears immediately,
+  // before the server round-trip below removes it for good.
+  const picks = useMemo(() => sanitizePractice(r32data, rawPicks), [r32data, rawPicks]);
 
-  const pick = (stage: string, slot: string, teamId: string) => {
-    setPractice(prev => sanitizePractice(r32data, { ...prev, [`${stage}:${slot}`]: teamId }));
+  // Persist the removal of any saved knockout pick the live bracket just invalidated.
+  const invalidKeys = useMemo(
+    () => Object.keys(rawPicks).filter((k) => KNOCKOUT_KEYS.has(k.split(":")[0]) && !(k in picks)),
+    [rawPicks, picks],
+  );
+  useEffect(() => {
+    invalidKeys.forEach((k) => {
+      const [s, sl] = k.split(":");
+      onPick(s, sl, "");
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invalidKeys.join("|")]);
+
+  const pick = (stage: string, slot: string, teamId: string) => onPick(stage, slot, teamId);
+
+  // Whether the team in an R32 slot is mathematically locked into it or just the
+  // current ("likely") leader — surfaced as a color in the bracket tree.
+  const teamLock = (stage: string, slot: string, teamId?: string): "locked" | "likely" | undefined => {
+    if (stage !== "r32" || !teamId) return undefined;
+    const rm = r32resolved.find((x) => x.slot === slot);
+    if (!rm) return undefined;
+    const src = rm.team1 === teamId ? rm.home : rm.team2 === teamId ? rm.away : undefined;
+    if (!src) return undefined;
+    return sourceLocked(src, locks, thirdAssign, complete) ? "locked" : "likely";
   };
 
   const { r16, qf, sf, finalMatch } = buildBracket(results, picks, thirdAssign);
@@ -482,7 +519,14 @@ function LiveRoundOf32({ results, standings }: { results: ResultEntry[]; standin
   );
   const pickPct = Math.round((madePicks / TOTAL_PICKS) * 100);
   const bracketComplete = !!picks["final:m1"];
-  const hasPractice = Object.keys(practice).length > 0;
+  const hasPicks = madePicks > 0;
+
+  const resetPicks = () => {
+    Object.keys(picks).forEach((k) => {
+      const [s, sl] = k.split(":");
+      if (KNOCKOUT_KEYS.has(s)) onPick(s, sl, "");
+    });
+  };
 
   const treeRounds: TreeRound[] = [
     { stage: "r32", label: "R32", matches: r32data },
@@ -506,9 +550,9 @@ function LiveRoundOf32({ results, standings }: { results: ResultEntry[]; standin
               <span className="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75 animate-ping" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-green-400" />
             </span>
-            Live Practice
+            Live Bracket
           </div>
-          <p className="font-black uppercase leading-none text-white mb-1" style={{ fontSize: "clamp(1.9rem, 6vw, 2.6rem)", letterSpacing: "-0.02em" }}>Practice</p>
+          <p className="font-black uppercase leading-none text-white mb-1" style={{ fontSize: "clamp(1.9rem, 6vw, 2.6rem)", letterSpacing: "-0.02em" }}>Your</p>
           <div className="flex items-center justify-center gap-3">
             <div className="h-px w-10 bg-gradient-to-r from-transparent to-yellow-300/60" />
             <h2 className="font-black uppercase leading-none text-yellow-300" style={{ fontSize: "clamp(1.9rem, 6vw, 2.6rem)", letterSpacing: "-0.02em" }}>
@@ -517,7 +561,7 @@ function LiveRoundOf32({ results, standings }: { results: ResultEntry[]; standin
             <div className="h-px w-10 bg-gradient-to-l from-transparent to-yellow-300/60" />
           </div>
           <p className="text-white/55 text-sm mt-3 max-w-md mx-auto leading-relaxed">
-            The Round of 32 is built live from the current group standings according to official 2026 FIFA rules. Click teams to play out the whole bracket. Nothing here is saved until the group stage ends June 27th.
+            The Round of 32 is built live from the current group standings according to official 2026 FIFA rules. Pick your way through — <span className="text-white/80 font-semibold">your bracket is saved automatically</span>. As results come in, any pick whose team no longer holds its spot is cleared so you can pick again.
           </p>
         </div>
 
@@ -539,9 +583,9 @@ function LiveRoundOf32({ results, standings }: { results: ResultEntry[]; standin
           ) : !complete ? (
             <p className="text-white/35 text-[11px] mt-2">Third-placed qualifiers are provisional — they&apos;ll shift as group results come in.</p>
           ) : null}
-          {hasPractice && (
+          {hasPicks && (
             <button
-              onClick={() => setPractice({})}
+              onClick={resetPicks}
               className="mt-4 rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-widest text-white/50 transition-colors hover:text-white"
               style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
             >
@@ -553,7 +597,7 @@ function LiveRoundOf32({ results, standings }: { results: ResultEntry[]; standin
         <ViewToggle view={view} onChange={setView} />
 
         {view === "tree" && (
-          <BracketTree rounds={treeRounds} finalMatch={finalMatch} picks={picks} canPick onPick={pick} championKicker="Practice" />
+          <BracketTree rounds={treeRounds} finalMatch={finalMatch} picks={picks} canPick onPick={pick} teamLock={teamLock} championKicker="Your" />
         )}
 
         {view === "list" && (<>
@@ -605,10 +649,10 @@ function LiveRoundOf32({ results, standings }: { results: ResultEntry[]; standin
         <Divider />
         <RoundSection label="The Final" stage="final" matches={[finalMatch]} picks={picks} canPick onPick={pick} cols={1} />
 
-        {/* Practice champion */}
+        {/* Champion */}
         <div className="mt-4 text-center">
           <div className="h-px bg-gradient-to-r from-transparent via-yellow-300/30 to-transparent mb-10" />
-          <p className="text-white/35 font-black uppercase tracking-[0.25em] text-xs mb-1">Practice</p>
+          <p className="text-white/35 font-black uppercase tracking-[0.25em] text-xs mb-1">Your</p>
           <h3 className="font-black uppercase text-yellow-300 mb-8 leading-none" style={{ fontSize: "clamp(2rem, 6vw, 2.8rem)", letterSpacing: "-0.01em" }}>Champion</h3>
           {championTeam ? (
             <div className="inline-flex flex-col items-center gap-4 rounded-2xl px-12 py-8 mx-auto" style={{ background: "rgba(251,191,36,0.07)", border: "1px solid rgba(251,191,36,0.28)" }}>
@@ -619,7 +663,7 @@ function LiveRoundOf32({ results, standings }: { results: ResultEntry[]; standin
           ) : (
             <div className="inline-flex flex-col items-center gap-3 rounded-2xl px-10 py-8 mx-auto" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
               <span className="text-5xl opacity-15">🏆</span>
-              <p className="text-white/25 text-sm">Play it out to crown a practice champion</p>
+              <p className="text-white/25 text-sm">Play it out to crown your champion</p>
             </div>
           )}
         </div>
@@ -646,7 +690,7 @@ export function BracketPicker({ picks, results, standings, phase, preview, onPic
   ];
 
   if (phase === "phase1_open" || phase === "phase1_locked") {
-    return <LiveRoundOf32 results={results} standings={standings} />;
+    return <LiveRoundOf32 results={results} standings={standings} picks={picks} onPick={onPick} />;
   }
 
   return (
