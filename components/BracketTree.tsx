@@ -65,22 +65,22 @@ function TeamRow({
       onClick={canClick ? onClick : undefined}
       disabled={!canClick}
       title={team?.name}
-      className={`flex w-full items-center gap-1.5 px-1.5 py-1 text-left transition-colors ${canClick ? "cursor-pointer hover:bg-white/[0.07]" : "cursor-default"}`}
+      className={`flex w-full items-center gap-2 px-2.5 py-2 text-left transition-colors ${canClick ? "cursor-pointer hover:bg-white/[0.07]" : "cursor-default"}`}
       style={{ background: winBg }}
     >
       {team ? (
         <>
-          <FlagIcon cc={team.cc} name={team.name} className={`h-3 w-[18px] shrink-0 rounded-[2px] ${isDimmed ? "opacity-25" : ""}`} />
+          <FlagIcon cc={team.cc} name={team.name} className={`h-3.5 w-[21px] shrink-0 rounded-[2px] ${isDimmed ? "opacity-25" : ""}`} />
           <span
-            className="min-w-0 flex-1 truncate text-[12px] font-bold leading-tight sm:text-[10px]"
+            className="min-w-0 flex-1 truncate text-[14px] font-bold leading-tight sm:text-[12px]"
             style={{ color: isWinner ? winColor : isDimmed ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.82)" }}
           >
             {team.name}
           </span>
-          {isWinner && <span className="shrink-0 text-[11px] font-black sm:text-[9px]" style={{ color: winColor }}>✓</span>}
+          {isWinner && <span className="shrink-0 text-[13px] font-black sm:text-[11px]" style={{ color: winColor }}>✓</span>}
         </>
       ) : (
-        <span className="text-[11px] italic text-white/20 sm:text-[9px]">TBD</span>
+        <span className="text-[13px] italic text-white/20 sm:text-[11px]">TBD</span>
       )}
     </button>
   );
@@ -370,7 +370,7 @@ const CSS = `
 .wcbt-row {
   display: flex; align-items: stretch; width: max-content; margin: 0 auto;
   min-height: clamp(440px, 62vh, 580px);
-  --g: 18px; --node: 96px; --line: rgba(255,255,255,0.13); --line-on: rgba(74,222,128,0.6);
+  --g: 18px; --node: 116px; --line: rgba(255,255,255,0.13); --line-on: rgba(74,222,128,0.6);
 }
 .wcbt-side { display: flex; align-items: stretch; }
 .wcbt-mirror { transform: scaleX(-1); }
