@@ -58,15 +58,15 @@ function TeamRow({
         <>
           <FlagIcon cc={team.cc} name={team.name} className={`h-3 w-[18px] shrink-0 rounded-[2px] ${isDimmed ? "opacity-25" : ""}`} />
           <span
-            className="min-w-0 flex-1 truncate text-[10px] font-bold leading-tight"
+            className="min-w-0 flex-1 truncate text-[12px] font-bold leading-tight sm:text-[10px]"
             style={{ color: isWinner ? winColor : isDimmed ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.82)" }}
           >
             {team.name}
           </span>
-          {isWinner && <span className="shrink-0 text-[9px] font-black" style={{ color: winColor }}>✓</span>}
+          {isWinner && <span className="shrink-0 text-[11px] font-black sm:text-[9px]" style={{ color: winColor }}>✓</span>}
         </>
       ) : (
-        <span className="text-[9px] italic text-white/20">TBD</span>
+        <span className="text-[11px] italic text-white/20 sm:text-[9px]">TBD</span>
       )}
     </button>
   );
@@ -201,7 +201,7 @@ export function BracketTree({ rounds, finalMatch, picks, canPick, onPick, champi
                     <>
                       <span className="wcbt-sparkle text-base leading-none">🏆</span>
                       <FlagIcon cc={championTeam.cc} name={championTeam.name} className="h-6 w-9 rounded shadow-lg" />
-                      <span className="max-w-[90px] truncate text-center text-[9px] font-black leading-tight text-yellow-300">{championTeam.name}</span>
+                      <span className="max-w-[90px] truncate text-center text-[11px] font-black leading-tight text-yellow-300 sm:text-[9px]">{championTeam.name}</span>
                     </>
                   ) : (
                     <span className="text-base leading-none opacity-20">🏆</span>
@@ -273,7 +273,8 @@ const CSS = `
 .wcbt-side { display: flex; align-items: stretch; }
 .wcbt-mirror { transform: scaleX(-1); }
 .wcbt-round { display: flex; flex-direction: column; }
-.wcbt-rlabel { height: 18px; margin-bottom: 8px; text-align: center; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: rgba(255,255,255,0.32); white-space: nowrap; }
+.wcbt-rlabel { height: 18px; margin-bottom: 8px; text-align: center; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: rgba(255,255,255,0.32); white-space: nowrap; }
+@media (min-width: 640px) { .wcbt-rlabel { font-size: 9px; } }
 .wcbt-games { flex: 1; display: flex; flex-direction: column; }
 .wcbt-game { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; padding: 0 calc(var(--g) / 2); }
 .wcbt-cell { width: var(--node); position: relative; }
