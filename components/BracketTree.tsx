@@ -65,22 +65,22 @@ function TeamRow({
       onClick={canClick ? onClick : undefined}
       disabled={!canClick}
       title={team?.name}
-      className={`flex w-full items-center gap-2 px-2.5 py-2 text-left transition-colors ${canClick ? "cursor-pointer hover:bg-white/[0.07]" : "cursor-default"}`}
+      className={`flex w-full items-center gap-2.5 px-3 py-3.5 text-left transition-colors sm:gap-2 sm:px-2.5 sm:py-2 ${canClick ? "cursor-pointer hover:bg-white/[0.07]" : "cursor-default"}`}
       style={{ background: winBg }}
     >
       {team ? (
         <>
-          <FlagIcon cc={team.cc} name={team.name} className={`h-3.5 w-[21px] shrink-0 rounded-[2px] ${isDimmed ? "opacity-25" : ""}`} />
+          <FlagIcon cc={team.cc} name={team.name} className={`h-[19px] w-[28px] shrink-0 rounded-[2px] sm:h-3.5 sm:w-[21px] ${isDimmed ? "opacity-25" : ""}`} />
           <span
-            className="min-w-0 flex-1 truncate text-[14px] font-bold leading-tight sm:text-[12px]"
+            className="min-w-0 flex-1 truncate text-[17px] font-bold leading-tight sm:text-[12px]"
             style={{ color: isWinner ? winColor : isDimmed ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.82)" }}
           >
             {team.name}
           </span>
-          {isWinner && <span className="shrink-0 text-[13px] font-black sm:text-[11px]" style={{ color: winColor }}>✓</span>}
+          {isWinner && <span className="shrink-0 text-[16px] font-black sm:text-[11px]" style={{ color: winColor }}>✓</span>}
         </>
       ) : (
-        <span className="text-[13px] italic text-white/20 sm:text-[11px]">TBD</span>
+        <span className="text-[16px] italic text-white/20 sm:text-[11px]">TBD</span>
       )}
     </button>
   );
@@ -370,16 +370,16 @@ const CSS = `
 .wcbt-row {
   display: flex; align-items: stretch; width: max-content; margin: 0 auto;
   min-height: clamp(440px, 62vh, 580px);
-  --g: 18px; --node: 116px; --line: rgba(255,255,255,0.13); --line-on: rgba(74,222,128,0.6);
+  --g: 18px; --node: 158px; --line: rgba(255,255,255,0.13); --line-on: rgba(74,222,128,0.6);
 }
 .wcbt-side { display: flex; align-items: stretch; }
 .wcbt-mirror { transform: scaleX(-1); }
 .wcbt-round { display: flex; flex-direction: column; }
 .wcbt-rlabel { height: 18px; margin-bottom: 8px; text-align: center; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: rgba(255,255,255,0.32); white-space: nowrap; }
-@media (min-width: 640px) { .wcbt-rlabel { font-size: 9px; } }
+@media (min-width: 640px) { .wcbt-rlabel { font-size: 9px; } .wcbt-row { --node: 116px; } }
 .wcbt-games { flex: 1; display: flex; flex-direction: column; }
 .wcbt-game { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; padding: 0 calc(var(--g) / 2); }
-.wcbt-cell { width: var(--node); position: relative; }
+.wcbt-cell { width: var(--node); position: relative; margin: 3px 0; }
 
 /* source stub: every node reaches toward the next round */
 .wcbt-game::after { content: ""; position: absolute; right: 0; top: 50%; width: calc(var(--g) / 2); height: 2px; background: var(--line); transform: translateY(-50%); }
