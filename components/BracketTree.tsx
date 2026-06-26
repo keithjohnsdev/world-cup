@@ -253,8 +253,7 @@ export function BracketTree({ rounds, finalMatch, picks, canPick, onPick, champi
     <div>
       <style>{CSS}</style>
 
-      <div className="mb-2 flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-wider text-white/35">
-        <span className="sm:hidden">← Scroll sideways →</span>
+      <div className="mb-2 hidden items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-wider text-white/35 sm:flex">
         <span>Tap a team to send them through</span>
       </div>
 
