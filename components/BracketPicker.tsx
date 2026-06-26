@@ -5,6 +5,7 @@ import { resolveR32, sourceLabel, type ResolvedMatch, type SlotSource } from "@/
 import { resolveThirdAssignment, type ThirdEntry } from "@/lib/thirds";
 import { getTeam } from "@/lib/data";
 import { FlagIcon } from "@/components/FlagIcon";
+import { BracketTree, type TreeRound } from "@/components/BracketTree";
 
 type Picks = Record<string, string>;
 
@@ -335,6 +336,29 @@ function Divider() {
   );
 }
 
+// Segmented control to switch between the round-by-round list and the bracket tree.
+function ViewToggle({ view, onChange }: { view: "tree" | "list"; onChange: (v: "tree" | "list") => void }) {
+  return (
+    <div className="mb-8 flex justify-center">
+      <div className="inline-flex items-center gap-1 rounded-full p-1" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
+        {([
+          ["tree", "Bracket"],
+          ["list", "List"],
+        ] as const).map(([v, label]) => (
+          <button
+            key={v}
+            onClick={() => onChange(v)}
+            className={`rounded-full px-4 py-1.5 text-[11px] font-black uppercase tracking-widest transition-colors ${view === v ? "text-green-950" : "text-white/50 hover:text-white"}`}
+            style={{ background: view === v ? "#fbbf24" : "transparent" }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // One half of a live R32 matchup: the source slot ("Winner · Group A", "3rd · Group
 // E/F/G…") plus the team currently occupying it, or a placeholder while it forms.
 function LiveSlot({
@@ -428,6 +452,7 @@ function sanitizePractice(r32: MatchData[], raw: Picks): Picks {
 // picks anyway.
 function LiveRoundOf32({ results, standings }: { results: ResultEntry[]; standings: StandingRow[] }) {
   const [practice, setPractice] = useState<Picks>({});
+  const [view, setView] = useState<"tree" | "list">("tree");
   const thirdAssign = useMemo(() => computeThirdAssign(results, standings), [results, standings]);
   const complete = useMemo(() => groupStageComplete(results, standings), [results, standings]);
   const locks = useMemo(() => computeGroupLocks(standings, complete), [standings, complete]);
@@ -459,12 +484,19 @@ function LiveRoundOf32({ results, standings }: { results: ResultEntry[]; standin
   const bracketComplete = !!picks["final:m1"];
   const hasPractice = Object.keys(practice).length > 0;
 
+  const treeRounds: TreeRound[] = [
+    { stage: "r32", label: "R32", matches: r32data },
+    { stage: "r16", label: "R16", matches: r16 },
+    { stage: "qf", label: "QF", matches: qf },
+    { stage: "sf", label: "SF", matches: sf },
+  ];
+
   return (
     <div
       className="min-h-screen"
       style={{ background: "linear-gradient(160deg, #060d1a 0%, #0d2137 60%, #071628 100%)" }}
     >
-      <div className="max-w-2xl mx-auto px-4 pt-10 pb-24">
+      <div className={`${view === "tree" ? "max-w-5xl" : "max-w-2xl"} mx-auto px-4 pt-10 pb-24`}>
 
         {/* Header */}
         <div className="mb-8 text-center">
@@ -518,6 +550,13 @@ function LiveRoundOf32({ results, standings }: { results: ResultEntry[]; standin
           )}
         </div>
 
+        <ViewToggle view={view} onChange={setView} />
+
+        {view === "tree" && (
+          <BracketTree rounds={treeRounds} finalMatch={finalMatch} picks={picks} canPick onPick={pick} championKicker="Practice" />
+        )}
+
+        {view === "list" && (<>
         {/* Live, interactive Round of 32 */}
         <div className="mb-10">
           <div className="flex items-center gap-3 mb-3">
@@ -584,6 +623,7 @@ function LiveRoundOf32({ results, standings }: { results: ResultEntry[]; standin
             </div>
           )}
         </div>
+        </>)}
 
       </div>
     </div>
@@ -592,10 +632,18 @@ function LiveRoundOf32({ results, standings }: { results: ResultEntry[]; standin
 
 export function BracketPicker({ picks, results, standings, phase, preview, onPick }: Props) {
   const canPick = phase === "phase2_open";
+  const [view, setView] = useState<"tree" | "list">("tree");
   const thirdAssign = useMemo(() => computeThirdAssign(results, standings), [results, standings]);
   const { r32, r16, qf, sf, finalMatch } = buildBracket(results, picks, thirdAssign);
   const champion = picks["final:m1"];
   const championTeam = champion ? getTeam(champion) : undefined;
+
+  const treeRounds: TreeRound[] = [
+    { stage: "r32", label: "R32", matches: r32 },
+    { stage: "r16", label: "R16", matches: r16 },
+    { stage: "qf", label: "QF", matches: qf },
+    { stage: "sf", label: "SF", matches: sf },
+  ];
 
   if (phase === "phase1_open" || phase === "phase1_locked") {
     return <LiveRoundOf32 results={results} standings={standings} />;
@@ -606,7 +654,7 @@ export function BracketPicker({ picks, results, standings, phase, preview, onPic
       className="min-h-screen"
       style={{ background: "linear-gradient(160deg, #060d1a 0%, #0d2137 60%, #071628 100%)" }}
     >
-      <div className="max-w-2xl mx-auto px-4 pt-10 pb-24">
+      <div className={`${view === "tree" ? "max-w-5xl" : "max-w-2xl"} mx-auto px-4 pt-10 pb-24`}>
 
         {/* Page header */}
         <div className="mb-10 text-center">
@@ -630,6 +678,13 @@ export function BracketPicker({ picks, results, standings, phase, preview, onPic
           ))}
         </div>
 
+        <ViewToggle view={view} onChange={setView} />
+
+        {view === "tree" && (
+          <BracketTree rounds={treeRounds} finalMatch={finalMatch} picks={picks} canPick={canPick} onPick={onPick} />
+        )}
+
+        {view === "list" && (<>
         <RoundSection label="Round of 32" stage="r32" matches={r32} picks={picks} canPick={canPick} onPick={onPick} cols={2} />
         <Divider />
         <RoundSection label="Round of 16" stage="r16" matches={r16} picks={picks} canPick={canPick} onPick={onPick} cols={2} />
@@ -676,6 +731,7 @@ export function BracketPicker({ picks, results, standings, phase, preview, onPic
             </div>
           )}
         </div>
+        </>)}
 
       </div>
     </div>
