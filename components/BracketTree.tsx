@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getTeam } from "@/lib/data";
 import { FlagIcon } from "@/components/FlagIcon";
 
@@ -53,9 +53,12 @@ function TeamRow({
   onClick: () => void;
 }) {
   const team = teamId ? getTeam(teamId) : undefined;
-  const winColor = isFinal ? "#fbbf24" : "#4ade80";
-  // Certainty accent drawn as an inset left bar so it costs no horizontal space.
-  const accent = lock && !isDimmed ? `inset 3px 0 0 ${LOCK_COLOR[lock]}` : undefined;
+  // The winner highlight doubles as the certainty cue: green when the advanced team
+  // is locked into its slot, amber when it's only the "likely" (not-yet-clinched)
+  // pick. The Final is always gold.
+  const amber = isWinner && !isFinal && lock === "likely";
+  const winColor = isFinal || amber ? "#fbbf24" : "#4ade80";
+  const winBg = isWinner ? (isFinal || amber ? "rgba(251,191,36,0.16)" : "rgba(74,222,128,0.14)") : undefined;
   return (
     <button
       type="button"
@@ -63,7 +66,7 @@ function TeamRow({
       disabled={!canClick}
       title={team?.name}
       className={`flex w-full items-center gap-1.5 px-1.5 py-1 text-left transition-colors ${canClick ? "cursor-pointer hover:bg-white/[0.07]" : "cursor-default"}`}
-      style={{ background: isWinner ? (isFinal ? "rgba(251,191,36,0.16)" : "rgba(74,222,128,0.14)") : undefined, boxShadow: accent }}
+      style={{ background: winBg }}
     >
       {team ? (
         <>
@@ -104,7 +107,16 @@ function Node({
   const winner = picks[`${stage}:${match.slot}`];
   const ready = !!(match.team1 && match.team2);
   const clickable = canPick && ready;
-  const accent = isFinal ? "rgba(251,191,36,0.45)" : winner ? "rgba(74,222,128,0.3)" : ready ? "rgba(74,222,128,0.16)" : "rgba(255,255,255,0.09)";
+  // Border echoes the winner's certainty: gold for the Final, amber for a "likely"
+  // advanced team, green for a locked one.
+  const amberWin = !isFinal && !!winner && teamLock?.(stage, match.slot, winner) === "likely";
+  const accent = isFinal
+    ? "rgba(251,191,36,0.45)"
+    : winner
+      ? (amberWin ? "rgba(251,191,36,0.4)" : "rgba(74,222,128,0.3)")
+      : ready
+        ? "rgba(74,222,128,0.16)"
+        : "rgba(255,255,255,0.09)";
   return (
     <div
       className="overflow-hidden rounded-lg"
@@ -178,6 +190,56 @@ function RoundColumn({
 // fully visible on desktop. Interactive — tap a team to send them through.
 export function BracketTree({ rounds, finalMatch, picks, canPick, onPick, championKicker = "Your", teamLock }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const drag = useRef({ moved: false });
+  const [pannable, setPannable] = useState(false);
+
+  // Only show the grab cursor / drag affordance when there's actually overflow.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const check = () => setPannable(el.scrollWidth > el.clientWidth + 1);
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    window.addEventListener("resize", check);
+    return () => { ro.disconnect(); window.removeEventListener("resize", check); };
+  }, []);
+
+  // Click-and-drag to pan (mouse only — touch keeps native momentum scrolling). A
+  // 4px threshold distinguishes a pan from a tap, and onClickCapture swallows the
+  // click that follows a drag so it doesn't accidentally pick a team.
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType !== "mouse" || e.button !== 0) return;
+    const el = scrollRef.current;
+    if (!el || el.scrollWidth <= el.clientWidth) return;
+    const rect = el.getBoundingClientRect();
+    if (e.clientY > rect.bottom - 14) return; // let the native scrollbar handle its own drag
+    const startX = e.clientX;
+    const startLeft = el.scrollLeft;
+    drag.current.moved = false;
+    const move = (ev: PointerEvent) => {
+      const dx = ev.clientX - startX;
+      if (!drag.current.moved && Math.abs(dx) < 4) return;
+      drag.current.moved = true;
+      el.scrollLeft = startLeft - dx;
+      el.classList.add("wcbt-grabbing");
+      ev.preventDefault();
+    };
+    const up = () => {
+      el.classList.remove("wcbt-grabbing");
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
+  const onClickCapture = (e: React.MouseEvent) => {
+    if (drag.current.moved) {
+      e.stopPropagation();
+      e.preventDefault();
+      drag.current.moved = false;
+    }
+  };
 
   // Split each round down the middle: first half feeds the left side, second the right.
   const left: TreeRound[] = rounds.map((r) => ({ ...r, matches: r.matches.slice(0, Math.ceil(r.matches.length / 2)) }));
@@ -199,17 +261,22 @@ export function BracketTree({ rounds, finalMatch, picks, canPick, onPick, champi
       {teamLock && (
         <div className="mb-3 flex items-center justify-center gap-4 text-[10px] font-bold uppercase tracking-wider text-white/40">
           <span className="flex items-center gap-1.5">
-            <span className="inline-block h-2.5 w-1 rounded-sm" style={{ background: LOCK_COLOR.locked }} />
+            <span className="inline-block h-3 w-3 rounded" style={{ background: "rgba(74,222,128,0.16)", border: `1px solid ${LOCK_COLOR.locked}` }} />
             Locked in
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="inline-block h-2.5 w-1 rounded-sm" style={{ background: LOCK_COLOR.likely }} />
+            <span className="inline-block h-3 w-3 rounded" style={{ background: "rgba(251,191,36,0.16)", border: `1px solid ${LOCK_COLOR.likely}` }} />
             Likely (may change)
           </span>
         </div>
       )}
 
-      <div ref={scrollRef} className="wcbt-wrap">
+      <div
+        ref={scrollRef}
+        className={`wcbt-wrap${pannable ? " wcbt-pannable" : ""}`}
+        onPointerDown={onPointerDown}
+        onClickCapture={onClickCapture}
+      >
         <div className="wcbt-row">
           {/* Left half */}
           <div className="wcbt-side">
@@ -294,7 +361,13 @@ const CONFETTI = [
 // and vertical bars draw the elbows. The right half is scaleX(-1) flipped so one set
 // of left-to-right rules serves both sides.
 const CSS = `
-.wcbt-wrap { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; padding-bottom: 6px; }
+.wcbt-wrap { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; padding-bottom: 10px; scrollbar-width: thin; scrollbar-color: rgba(74,222,128,0.45) transparent; }
+.wcbt-wrap::-webkit-scrollbar { height: 9px; }
+.wcbt-wrap::-webkit-scrollbar-track { background: rgba(255,255,255,0.04); border-radius: 999px; margin: 0 2px; }
+.wcbt-wrap::-webkit-scrollbar-thumb { border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; background-color: rgba(74,222,128,0.5); background-image: linear-gradient(90deg, rgba(74,222,128,0.65), rgba(251,191,36,0.65)); transition: background-image 150ms ease; }
+.wcbt-wrap::-webkit-scrollbar-thumb:hover { background-image: linear-gradient(90deg, rgba(74,222,128,0.95), rgba(251,191,36,0.95)); }
+.wcbt-pannable { cursor: grab; }
+.wcbt-grabbing, .wcbt-grabbing * { cursor: grabbing !important; user-select: none; }
 .wcbt-row {
   display: flex; align-items: stretch; width: max-content; margin: 0 auto;
   min-height: clamp(440px, 62vh, 580px);
