@@ -375,11 +375,11 @@ function LiveSlot({
           {!isDimmed && (
             locked ? (
               <span
-                className="shrink-0 flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider"
+                className="shrink-0 rounded px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider"
                 style={{ background: "rgba(74,222,128,0.14)", color: "#4ade80", border: "1px solid rgba(74,222,128,0.3)" }}
                 title="Mathematically guaranteed this spot"
               >
-                🔒 Locked
+                Locked
               </span>
             ) : (
               <span
@@ -526,7 +526,7 @@ function LiveRoundOf32({ results, standings }: { results: ResultEntry[]; standin
             <span className="text-white/25 text-[11px] font-medium tabular-nums">{r32resolved.filter(m => picks[`r32:${m.slot}`]).length}/16</span>
           </div>
           <div className="mb-3 flex items-center gap-3 text-[9px] font-bold uppercase tracking-wider text-white/40">
-            <span className="flex items-center gap-1"><span style={{ color: "#4ade80" }}>🔒 Locked</span> = clinched</span>
+            <span className="flex items-center gap-1"><span style={{ color: "#4ade80" }}>Locked</span> = clinched</span>
             <span className="flex items-center gap-1"><span style={{ color: "#fbbf24" }}>Likely</span> = current leader, not yet certain</span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
