@@ -440,9 +440,12 @@ async function finalGroupPositions(
   return out;
 }
 
-// Perfect group: a player nailed all four finishing positions in a now-final group
-// (the maximum 8/8). One shout per player per group.
-async function announcePerfectGroups(sql: Sql): Promise<number> {
+// Solo call: in a now-final group, a player nailed a finishing position that NO
+// other player got right. Perfect-group shouts were too common and crowded the
+// board; this rewards the genuinely contrarian read. One shout per player per
+// group, bundling all of that player's solo spots in the group into one line.
+const POS_LABEL = ["1st", "2nd", "3rd", "4th"] as const;
+async function announceSoloGroupCalls(sql: Sql): Promise<number> {
   const finals = await finalGroupPositions(sql);
   if (finals.size === 0) return 0;
 
@@ -459,21 +462,27 @@ async function announcePerfectGroups(sql: Sql): Promise<number> {
   const positions = ["group", "runner", "third", "fourth"] as const;
   let posted = 0;
   for (const [groupId, { actual }] of finals) {
-    // Group everyone's four picks for this group.
-    const byUser = new Map<number, (string | null)[]>();
-    for (const p of rawPicks) {
-      if (p.slot !== groupId) continue;
-      const idx = positions.indexOf(p.stage as (typeof positions)[number]);
-      if (idx < 0) continue;
-      if (!byUser.has(p.user_id)) byUser.set(p.user_id, [null, null, null, null]);
-      byUser.get(p.user_id)![idx] = p.team_id;
+    // For each finishing position, find every player who called it correctly.
+    // A position with exactly one correct caller is that player's solo call.
+    const soloByUser = new Map<number, { team: string; label: string }[]>();
+    for (let idx = 0; idx < positions.length; idx++) {
+      const actualId = actual[idx];
+      if (!actualId) continue;
+      const correctUsers = rawPicks
+        .filter((p) => p.slot === groupId && p.stage === positions[idx] && p.team_id === actualId)
+        .map((p) => p.user_id);
+      if (correctUsers.length !== 1) continue; // not unique — someone else (or nobody) called it
+      const userId = correctUsers[0];
+      if (!soloByUser.has(userId)) soloByUser.set(userId, []);
+      soloByUser.get(userId)!.push({ team: teamName(actualId, actualId), label: POS_LABEL[idx] });
     }
-    for (const [userId, predicted] of byUser) {
-      if (!predicted.every((id, i) => id != null && id === actual[i])) continue; // not perfect
+
+    for (const [userId, calls] of soloByUser) {
       const name = nameById.get(userId);
       if (!name) continue;
-      const body = `🎯 PERFECT GROUP! ${name} called all four spots in Group ${groupId} — a flawless 8/8.`;
-      if (await announce(sql, `perfect:${userId}:${groupId}`, body)) posted++;
+      const callText = joinNames(calls.map((c) => `${c.team} in ${c.label}`));
+      const body = `🎯 Solo call! ${name} was the only one to nail ${callText} in Group ${groupId}.`;
+      if (await announce(sql, `solo:${userId}:${groupId}`, body)) posted++;
     }
   }
   return posted;
@@ -527,7 +536,7 @@ export async function runAnnouncer(sql: Sql, matches: RawMatch[]): Promise<numbe
   }
 
   // Standings-table-derived checks (don't need the match list). Each is isolated.
-  for (const check of [announceStarPower, announcePerfectGroups]) {
+  for (const check of [announceStarPower, announceSoloGroupCalls]) {
     try {
       posted += await check(sql);
     } catch (err) {
