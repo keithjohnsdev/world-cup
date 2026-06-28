@@ -280,8 +280,6 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
   const pickMap = buildMap(picks);
   const resultMap = buildMap(results);
   const playedSet = new Set(playedTeamIds);
-  const liveSet = new Set(liveTeamIds);
-  const hasResults = results.length > 0;
 
   return (
     <>
@@ -446,7 +444,6 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
               const predicted = pickMap[group.id] ?? [];
               const actual = resultMap[group.id] ?? [];
               const groupHasResult = actual.some(Boolean);
-              const groupHasLive = actual.some((id) => id != null && liveSet.has(id));
               const groupPts = STAGES.reduce((s, _, i) => {
                 const pid = predicted[i] ?? null;
                 return s + scorePosition(pid, i, actual, pid != null && playedSet.has(pid));
@@ -483,20 +480,13 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
                     >
                       <div className="w-7 shrink-0" />
                       <div className="flex-1 text-white/30 text-[9px] font-black uppercase tracking-[0.18em]">Your Pick</div>
-                      {/* Actual title + (to its right) the live legend, merged into one
-                          fixed region so the columns stay aligned whether or not it shows. */}
+                      {/* Keep the column width fixed (matches the points column below) so
+                          the "Actual"/"Final" label stays aligned with the flags. */}
                       <div className="shrink-0 flex items-center">
                         <span className="w-[4.5rem] text-center text-white/30 text-[9px] font-black uppercase tracking-[0.18em]">
                           {groupStageComplete ? "Final" : "Actual"}
                         </span>
-                        <span className="w-8 ml-3 flex items-center justify-center">
-                          {groupHasLive && (
-                            <span className="inline-flex items-center gap-1 text-green-400/90 text-[9px] font-black uppercase whitespace-nowrap">
-                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-400" />
-                              Live
-                            </span>
-                          )}
-                        </span>
+                        <span className="w-8 ml-3" />
                       </div>
                     </div>
                   )}
@@ -592,16 +582,6 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
                                 ) : (
                                   <span className="text-white/20 text-[11px] font-bold tabular-nums leading-none w-4 text-left">
                                     –
-                                  </span>
-                                )}
-                                {actualId != null && liveSet.has(actualId) && (
-                                  <span
-                                    className="absolute right-0 top-1/2 -translate-y-[calc(50%+1px)] flex h-2 w-2"
-                                    aria-label="Match in progress"
-                                    title="Match in progress"
-                                  >
-                                    <span className="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75 animate-ping" />
-                                    <span className="relative inline-flex h-2 w-2 rounded-full bg-green-400 ring-1 ring-[#0d2137]" />
                                   </span>
                                 )}
                               </>
