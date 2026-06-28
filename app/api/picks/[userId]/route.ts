@@ -11,7 +11,7 @@ export async function GET(
   if (isNaN(id)) return NextResponse.json({ error: "Invalid user ID" }, { status: 400 });
 
   const sql = getSql();
-  const [rawUsers, rawPicks, rawStandings, rawHeartPick, rawChampionPick, rawPlayed, rawGroupPoints, rawBracketPicks, rawBracketResults] = await Promise.all([
+  const [rawUsers, rawPicks, rawStandings, rawHeartPick, rawChampionPick, rawPlayed, rawGroupPoints, rawBracketPicks, rawBracketResults, rawGroupStats] = await Promise.all([
     sql`SELECT name FROM users WHERE id = ${id}`,
     sql`SELECT stage, slot, team_id FROM picks
         WHERE user_id = ${id} AND stage IN ('group','runner','third','fourth')
@@ -30,6 +30,9 @@ export async function GET(
         WHERE user_id = ${id} AND stage IN ('r32','r16','qf','sf','final')`,
     sql`SELECT stage, slot, team_id, was_shootout FROM results
         WHERE stage IN ('r32','r16','qf','sf','final')`,
+    // Group standings — lets the Bracket tab resolve each R32 matchup (incl. the
+    // best-third assignment) so both contestants can be shown.
+    sql`SELECT team_id, points, played_games, goal_diff, goals_for FROM group_points`,
   ]);
 
   const userRows = rawUsers    as { name: string }[];
@@ -37,6 +40,7 @@ export async function GET(
   const results  = rawStandings as { stage: string; slot: string; team_id: string }[];
   const bracketPicks = rawBracketPicks as { stage: string; slot: string; team_id: string; is_star_power: boolean }[];
   const bracketResults = rawBracketResults as { stage: string; slot: string; team_id: string; was_shootout: boolean }[];
+  const standings = rawGroupStats as { team_id: string; points: number; played_games: number; goal_diff: number; goals_for: number }[];
   const playedTeamIds = (rawPlayed as { team_id: string }[]).map((r) => r.team_id);
   const groupPoints = Object.fromEntries(
     (rawGroupPoints as { team_id: string; points: number }[]).map((r) => [r.team_id, r.points]),
@@ -63,6 +67,7 @@ export async function GET(
     results,
     bracketPicks,
     bracketResults,
+    standings,
     heartPickTeamId,
     heartPoints,
     championPickTeamId,

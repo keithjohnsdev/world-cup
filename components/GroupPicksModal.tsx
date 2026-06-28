@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { GROUPS, getTeam } from "@/lib/data";
 import { FlagIcon } from "@/components/FlagIcon";
+import { resolveR32 } from "@/lib/bracket";
+import { resolveThirdAssignment, type ThirdEntry } from "@/lib/thirds";
 
 const STAGES = ["group", "runner", "third", "fourth"] as const;
 type Stage = typeof STAGES[number];
@@ -44,9 +46,15 @@ function buildMap(entries: Entry[]): Record<string, (string | null)[]> {
 // player's advanced team matches the actual winner, half on a shootout loss (mercy
 // rule), and double when it's the kid's Star Power pick. Picks/results are compared
 // per bracket slot, exactly as the scoring engine does.
+//
+// Each match shows BOTH contestants: for the R32 they come from the real group
+// results + best-third assignment; for later rounds they're the player's own feeder
+// picks (the two teams they advanced into that slot) — the same way the bracket the
+// player filled out is built.
 
 interface BracketPick { stage: string; slot: string; team_id: string; is_star_power?: boolean; }
 interface BracketResult { stage: string; slot: string; team_id: string; was_shootout?: boolean; }
+interface StandingRow { team_id: string; points: number; played_games: number; goal_diff: number; goals_for: number; }
 
 const KNOCKOUT_ROUNDS: { stage: string; label: string; pts: number; slots: number }[] = [
   { stage: "r32", label: "Round of 32", pts: 2, slots: 16 },
@@ -56,14 +64,64 @@ const KNOCKOUT_ROUNDS: { stage: string; label: string; pts: number; slots: numbe
   { stage: "final", label: "The Final", pts: 32, slots: 1 },
 ];
 
+const GROUP_LETTERS = "ABCDEFGHIJKL".split("");
+// Feeder round that supplies each round's contestants (R32 is sourced separately).
+const FEEDER_OF: Record<string, string> = { r16: "r32", qf: "r16", sf: "qf", final: "sf" };
+
+// One team row inside a match card: shows the flag/name, a left accent when it's the
+// player's pick, and a ✓ once it has actually won the match.
+function MatchTeam({
+  teamId, isPicked, isWinner, decided, outcome, isStar,
+}: {
+  teamId?: string;
+  isPicked: boolean;
+  isWinner: boolean;
+  decided: boolean;
+  outcome: "correct" | "half" | "wrong" | null;
+  isStar?: boolean;
+}) {
+  const team = teamId ? getTeam(teamId) : null;
+
+  let bg: string | undefined;
+  let nameCls = "text-white/45";
+  if (isPicked && outcome === "correct") { bg = "rgba(22,163,74,0.18)"; nameCls = "text-green-300"; }
+  else if (isPicked && outcome === "half") { bg = "rgba(234,179,8,0.15)"; nameCls = "text-yellow-200"; }
+  else if (isPicked && outcome === "wrong") { bg = "rgba(239,68,68,0.14)"; nameCls = "text-red-300"; }
+  else if (isPicked) { bg = "rgba(255,255,255,0.05)"; nameCls = "text-white"; }
+  else if (isWinner) { nameCls = "text-white/75"; }
+
+  return (
+    <div
+      className="flex items-center gap-2 px-2.5 py-1.5"
+      style={{ background: bg, borderLeft: isPicked ? "2px solid rgba(255,255,255,0.5)" : "2px solid transparent" }}
+    >
+      {team ? (
+        <>
+          <FlagIcon cc={team.cc} name={team.name} className={`w-6 h-[17px] rounded-sm shrink-0 ${decided && !isWinner ? "opacity-40" : ""}`} />
+          <span className={`text-[13px] font-semibold leading-tight truncate flex-1 min-w-0 ${nameCls}`}>{team.name}</span>
+          {isStar && isPicked && <span className="text-yellow-300 text-[11px] font-black shrink-0" title="Star Power — points doubled">⭐</span>}
+          {isPicked && <span className="text-[8px] font-black uppercase tracking-wider text-white/40 shrink-0">Pick</span>}
+          {isWinner && <span className="text-green-400 text-[11px] font-black shrink-0" title="Won the match">✓</span>}
+        </>
+      ) : (
+        <span className="text-[12px] italic text-white/20 flex-1">TBD</span>
+      )}
+    </div>
+  );
+}
+
 function BracketScore({
   picks,
   results,
+  groupResults,
+  standings,
   liveTeamIds,
   bracketScore,
 }: {
   picks: BracketPick[];
   results: BracketResult[];
+  groupResults: Entry[];       // group/runner/third/fourth standings, for resolving R32
+  standings: StandingRow[];    // group_points, for the best-third assignment
   liveTeamIds: string[];
   bracketScore: number;
 }) {
@@ -71,6 +129,29 @@ function BracketScore({
   const resMap = new Map(results.map((r) => [`${r.stage}:${r.slot}`, r]));
   const liveSet = new Set(liveTeamIds);
   const hasPicks = picks.length > 0;
+
+  // Resolve the real R32 matchups (group winners/runners + the best-third assignment).
+  const groupResMap = new Map(groupResults.map((r) => [`${r.stage}:${r.slot}`, r.team_id]));
+  const statByTeam = new Map(standings.map((s) => [s.team_id, s]));
+  const thirdByGroup = new Map(groupResults.filter((r) => r.stage === "third").map((r) => [r.slot, r.team_id]));
+  const thirdEntries: ThirdEntry[] = [];
+  for (const g of GROUP_LETTERS) {
+    const teamId = thirdByGroup.get(g);
+    const st = teamId ? statByTeam.get(teamId) : undefined;
+    if (teamId && st) thirdEntries.push({ group: g, teamId, points: st.points, goalDiff: st.goal_diff, goalsFor: st.goals_for, playedGames: st.played_games });
+  }
+  const thirdAssign = resolveThirdAssignment(thirdEntries, true);
+  const r32Teams = new Map(resolveR32(groupResMap, thirdAssign).map((m) => [m.slot, [m.team1, m.team2] as const]));
+
+  // The two contestants of any bracket slot.
+  const contestants = (stage: string, slotNum: number): [string | undefined, string | undefined] => {
+    if (stage === "r32") {
+      const t = r32Teams.get(`m${slotNum}`);
+      return t ? [t[0], t[1]] : [undefined, undefined];
+    }
+    const feeder = FEEDER_OF[stage];
+    return [pickMap.get(`${feeder}:m${2 * slotNum - 1}`)?.team_id, pickMap.get(`${feeder}:m${2 * slotNum}`)?.team_id];
+  };
 
   if (!hasPicks && results.length === 0) {
     return (
@@ -85,55 +166,48 @@ function BracketScore({
     <div className="space-y-3">
       {KNOCKOUT_ROUNDS.map(({ stage, label, pts, slots }) => {
         // Only show a round once it has at least one pick or one decided match.
-        const keys = Array.from({ length: slots }, (_, i) => `${stage}:m${i + 1}`);
-        const anyContent = keys.some((k) => pickMap.has(k) || resMap.has(k));
+        const slotNums = Array.from({ length: slots }, (_, i) => i + 1);
+        const anyContent = slotNums.some((n) => pickMap.has(`${stage}:m${n}`) || resMap.has(`${stage}:m${n}`));
         if (!anyContent) return null;
 
         let earned = 0;
         let correct = 0;
         let decided = 0;
 
-        const rows = keys.map((key, i) => {
+        const cards = slotNums.map((n) => {
+          const key = `${stage}:m${n}`;
           const pick = pickMap.get(key);
           const res = resMap.get(key);
           const pickedId = pick?.team_id ?? null;
-          const pickedTeam = pickedId ? getTeam(pickedId) : null;
           const actualId = res?.team_id ?? null;
-          const actualTeam = actualId ? getTeam(actualId) : null;
+          const [t1, t2] = contestants(stage, n);
 
           const isDecided = !!res;
           const isCorrect = isDecided && pickedId != null && pickedId === actualId;
           // Shootout mercy: a non-correct pick on a match decided by penalties earns half.
           const isHalf = isDecided && !isCorrect && pickedId != null && !!res?.was_shootout;
-          const isLive = !isDecided && pickedId != null && liveSet.has(pickedId);
+          const isLive = !isDecided && [t1, t2].some((t) => t != null && liveSet.has(t));
 
           let rowPts = 0;
           if (isCorrect) rowPts = pick?.is_star_power ? pts * 2 : pts;
           else if (isHalf) rowPts = pts / 2;
 
-          if (isDecided) {
-            decided += 1;
-            if (isCorrect) correct += 1;
-          }
+          if (isDecided) { decided += 1; if (isCorrect) correct += 1; }
           earned += rowPts;
 
-          let rowBg = "";
-          let ptsCls = "text-white/20";
-          if (isCorrect) { rowBg = "rgba(22,163,74,0.16)"; ptsCls = "text-green-400"; }
-          else if (isHalf) { rowBg = "rgba(234,179,8,0.13)"; ptsCls = "text-yellow-300"; }
-          else if (isDecided && pickedId) { rowBg = "rgba(239,68,68,0.11)"; ptsCls = "text-red-400"; }
-          else if (pickedId) { rowBg = "rgba(255,255,255,0.02)"; ptsCls = "text-white/25"; }
+          const outcome: "correct" | "half" | "wrong" | null = !isDecided ? null : isCorrect ? "correct" : isHalf ? "half" : "wrong";
+          let ptsCls = "text-white/25";
+          if (isCorrect) ptsCls = "text-green-400";
+          else if (isHalf) ptsCls = "text-yellow-300";
+          else if (isDecided) ptsCls = "text-red-400";
 
-          return { i, key, pickedTeam, actualTeam, pick, isDecided, isCorrect, isHalf, isLive, rowPts, rowBg, ptsCls, pickedId };
+          return { n, key, pick, pickedId, actualId, t1, t2, isDecided, isCorrect, isHalf, isLive, rowPts, ptsCls, outcome };
         });
 
         return (
-          <div key={stage} className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.09)" }}>
+          <div key={stage}>
             {/* Round header */}
-            <div
-              className="flex items-center justify-between px-4 py-2"
-              style={{ background: "linear-gradient(135deg, #1d4270 0%, #163358 100%)" }}
-            >
+            <div className="flex items-center justify-between mb-2 px-0.5">
               <div className="flex items-baseline gap-2">
                 <span className="text-yellow-300 font-black text-xs uppercase tracking-[0.18em]">{label}</span>
                 <span className="text-white/30 text-[10px] font-bold uppercase tracking-wide">{pts} pts each</span>
@@ -146,54 +220,39 @@ function BracketScore({
               )}
             </div>
 
-            {/* Match rows */}
-            {rows.map(({ i, key, pickedTeam, actualTeam, pick, isDecided, isCorrect, isHalf, isLive, rowPts, rowBg, ptsCls, pickedId }) => (
-              <div
-                key={key}
-                className="flex items-center gap-3 px-4 py-2.5"
-                style={{ background: rowBg || undefined, borderTop: "1px solid rgba(255,255,255,0.05)" }}
-              >
-                <div className="w-6 shrink-0 text-center text-[11px] font-black text-white/25 tabular-nums">{i + 1}</div>
-
-                {/* Your pick */}
-                {pickedTeam ? (
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <FlagIcon cc={pickedTeam.cc} name={pickedTeam.name} className="w-8 h-[22px] rounded shrink-0" />
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="text-white text-sm font-semibold leading-tight truncate">{pickedTeam.name}</span>
-                        {pick?.is_star_power && (
-                          <span className="text-yellow-300 text-[11px] font-black shrink-0" title="Star Power — points doubled">⭐</span>
-                        )}
-                        {isCorrect && <span className="text-green-400 text-[11px] font-black shrink-0">✓</span>}
-                      </div>
-                      {/* Status sub-line */}
-                      {isLive ? (
-                        <div className="flex items-center gap-1 text-green-400/90 text-[10px] font-bold leading-none mt-0.5">
-                          <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
-                          playing now
-                        </div>
-                      ) : !isDecided ? (
-                        <div className="text-white/30 text-[10px] italic leading-none mt-0.5">awaiting result</div>
-                      ) : isHalf ? (
-                        <div className="text-yellow-400/70 text-[10px] leading-none mt-0.5">lost on penalties</div>
-                      ) : !isCorrect && actualTeam ? (
-                        <div className="text-red-400/70 text-[10px] leading-none mt-0.5">{actualTeam.name} won</div>
-                      ) : null}
+            {/* Match cards */}
+            <div className={`grid gap-2 ${slots > 1 ? "sm:grid-cols-2" : ""}`}>
+              {cards.map(({ n, key, pick, pickedId, actualId, t1, t2, isDecided, isHalf, isLive, rowPts, ptsCls, outcome }) => (
+                <div key={key} className="rounded-lg overflow-hidden" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                  {/* Card header: match number, status, points */}
+                  <div className="flex items-center justify-between px-2.5 py-1" style={{ background: "rgba(0,0,0,0.18)" }}>
+                    <span className="text-[9px] font-black uppercase tracking-widest text-white/30">Match {n}</span>
+                    <div className="flex items-center gap-2">
+                      {isLive && (
+                        <span className="flex items-center gap-1 text-green-400/90 text-[9px] font-black uppercase">
+                          <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />Live
+                        </span>
+                      )}
+                      {!isDecided && !isLive && pickedId && <span className="text-white/25 text-[9px] font-bold uppercase tracking-wider">Pending</span>}
+                      {isHalf && <span className="text-yellow-400/70 text-[9px] font-bold uppercase tracking-wider">Penalties</span>}
+                      <span className={`text-xs font-black tabular-nums ${ptsCls}`}>
+                        {isDecided ? (rowPts > 0 ? `+${rowPts}` : "0") : pickedId ? "–" : ""}
+                      </span>
                     </div>
                   </div>
-                ) : (
-                  <div className="flex-1 text-white/20 text-sm italic">
-                    No pick{actualTeam ? <span className="text-white/25 not-italic"> · {actualTeam.name} won</span> : ""}
-                  </div>
-                )}
-
-                {/* Points */}
-                <div className={`w-10 shrink-0 text-right text-sm font-black tabular-nums ${ptsCls}`}>
-                  {isDecided ? (rowPts > 0 ? `+${rowPts}` : "0") : pickedId ? "–" : ""}
+                  {/* Two contestants */}
+                  <MatchTeam teamId={t1} isPicked={!!pickedId && pickedId === t1} isWinner={isDecided && actualId === t1} decided={isDecided} outcome={pickedId === t1 ? outcome : null} isStar={pick?.is_star_power} />
+                  <div className="mx-2.5 h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
+                  <MatchTeam teamId={t2} isPicked={!!pickedId && pickedId === t2} isWinner={isDecided && actualId === t2} decided={isDecided} outcome={pickedId === t2 ? outcome : null} isStar={pick?.is_star_power} />
+                  {/* If the player's pick busted earlier and isn't one of the two real contestants */}
+                  {pickedId && pickedId !== t1 && pickedId !== t2 && (
+                    <div className="px-2.5 py-1 text-[10px] text-white/30 italic" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+                      You had {getTeam(pickedId)?.name ?? "—"} — eliminated earlier
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         );
       })}
@@ -235,6 +294,7 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
   const [results, setResults] = useState<Entry[]>([]);
   const [bracketPicks, setBracketPicks] = useState<BracketPick[]>([]);
   const [bracketResults, setBracketResults] = useState<BracketResult[]>([]);
+  const [standings, setStandings] = useState<StandingRow[]>([]);
   const [heartPickTeamId, setHeartPickTeamId] = useState<string | null>(null);
   const [heartPoints, setHeartPoints] = useState(0);
   const [championPickTeamId, setChampionPickTeamId] = useState<string | null>(null);
@@ -252,6 +312,7 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
         setResults(d.results ?? []);
         setBracketPicks(d.bracketPicks ?? []);
         setBracketResults(d.bracketResults ?? []);
+        setStandings(d.standings ?? []);
         setHeartPickTeamId(d.heartPickTeamId ?? null);
         setHeartPoints(d.heartPoints ?? 0);
         setChampionPickTeamId(d.championPickTeamId ?? null);
@@ -432,6 +493,8 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
               <BracketScore
                 picks={bracketPicks}
                 results={bracketResults}
+                groupResults={results}
+                standings={standings}
                 liveTeamIds={liveTeamIds}
                 bracketScore={breakdown.bracketScore}
               />
