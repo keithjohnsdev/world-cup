@@ -931,6 +931,22 @@ export default function BracketPage() {
       .catch(() => {});
   }, []);
 
+  // Persist the full pick set as idempotent upserts. `keepalive` lets the request
+  // outlive a tab close / navigation, so a pick made at the last moment still lands.
+  const savePicks = useCallback((keepalive = false) => {
+    const token = localStorage.getItem("wc_token");
+    if (!token) return;
+    Object.entries(picksRef.current).forEach(([key, tId]) => {
+      const [s, sl] = key.split(":");
+      fetch("/api/picks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-session-token": token },
+        body: JSON.stringify({ stage: s, slot: sl, teamId: tId }),
+        keepalive,
+      }).catch(() => {});
+    });
+  }, []);
+
   useEffect(() => {
     const token = localStorage.getItem("wc_token");
     const name = localStorage.getItem("wc_name");
@@ -984,6 +1000,25 @@ export default function BracketPage() {
     return () => { clearInterval(id); document.removeEventListener("visibilitychange", onVisible); };
   }, [fetchResults]);
 
+  // Safety net for last-moment picks: if the player backgrounds or leaves the tab
+  // while a debounced save is still pending, flush it immediately (keepalive so it
+  // completes even as the page unloads) so a freshly-made pick is never lost.
+  useEffect(() => {
+    const flush = () => {
+      if (!saveTimerRef.current) return; // nothing pending
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+      savePicks(true);
+    };
+    const onHide = () => { if (document.visibilityState === "hidden") flush(); };
+    document.addEventListener("visibilitychange", onHide);
+    window.addEventListener("pagehide", flush);
+    return () => {
+      document.removeEventListener("visibilitychange", onHide);
+      window.removeEventListener("pagehide", flush);
+    };
+  }, [savePicks]);
+
   function handlePick(stage: string, slot: string, teamId: string) {
     setPicks((prev) => {
       const key = `${stage}:${slot}`;
@@ -1014,19 +1049,8 @@ export default function BracketPage() {
 
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
-      const token = localStorage.getItem("wc_token");
-      if (!token) return;
-      const snap = picksRef.current;
-      Promise.all(
-        Object.entries(snap).map(([key, tId]) => {
-          const [s, sl] = key.split(":");
-          return fetch("/api/picks", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "x-session-token": token },
-            body: JSON.stringify({ stage: s, slot: sl, teamId: tId }),
-          });
-        })
-      );
+      saveTimerRef.current = null;
+      savePicks();
     }, 800);
   }
 

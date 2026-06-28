@@ -430,21 +430,50 @@ function LiveSlot({
   );
 }
 
-// Drop any practice pick whose stored winner is no longer one of the two teams
-// actually in that match — happens when an upstream pick (or the live standings)
-// changes. Walks the rounds in order so a single change cascades downstream.
+// Drop only the picks that have become *provably* invalid, leaving the rest of the
+// bracket intact. A pick is provably invalid when the team it advanced is no longer
+// one of the two teams that can be in that match — and we can only know that once
+// both contestants are actually KNOWN.
+//
+// Critically, an UNKNOWN contestant (standings not loaded yet, or a third-placed
+// team not yet assigned) is NOT proof the pick is wrong. The old version treated
+// "unknown" the same as "changed", so a slow or empty /api/results read resolved
+// every R32 slot to undefined and deleted the player's entire bracket — which was
+// then persisted to the DB. Never delete on an unresolved slot.
+//
+// Walks the rounds in order so a single genuine change still cascades downstream:
+// when a feeder pick is removed, the pick that advanced that now-gone team goes too.
 function sanitizePractice(r32: MatchData[], raw: Picks): Picks {
   const p = { ...raw };
-  const keep = (key: string, t1?: string, t2?: string) => {
-    const w = p[key];
-    if (w && w !== t1 && w !== t2) delete p[key];
-  };
+  const removed = new Set<string>();
+  const drop = (key: string) => { delete p[key]; removed.add(key); };
 
-  for (let i = 0; i < 16; i++) keep(`r32:m${i + 1}`, r32[i]?.team1, r32[i]?.team2);
-  for (let i = 0; i < 8; i++) keep(`r16:m${i + 1}`, p[`r32:m${2 * i + 1}`], p[`r32:m${2 * i + 2}`]);
-  for (let i = 0; i < 4; i++) keep(`qf:m${i + 1}`, p[`r16:m${2 * i + 1}`], p[`r16:m${2 * i + 2}`]);
-  for (let i = 0; i < 2; i++) keep(`sf:m${i + 1}`, p[`qf:m${2 * i + 1}`], p[`qf:m${2 * i + 2}`]);
-  keep("final:m1", p["sf:m1"], p["sf:m2"]);
+  // R32 — judged against the live-resolved matchup, but only when it's fully known.
+  for (let i = 0; i < 16; i++) {
+    const key = `r32:m${i + 1}`;
+    const w = p[key];
+    if (!w) continue;
+    const t1 = r32[i]?.team1;
+    const t2 = r32[i]?.team2;
+    if (w === t1 || w === t2) continue;  // still a valid contestant — keep
+    if (t1 && t2) drop(key);             // both known and ours is neither → gone
+    // else: at least one side unknown — can't prove it's wrong, so keep it.
+  }
+
+  // Later rounds — the two contestants are the player's own feeder picks. A pick is
+  // invalid only when it matches neither feeder winner AND we can prove it: either
+  // both feeders are decided, or a feeder was just removed (so the team this pick
+  // advanced is no longer in the bracket).
+  const prune = (key: string, f1: string, f2: string) => {
+    const w = p[key];
+    if (!w) return;
+    if (w === p[f1] || w === p[f2]) return;  // still matches a surviving feeder winner
+    if ((p[f1] && p[f2]) || removed.has(f1) || removed.has(f2)) drop(key);
+  };
+  for (let i = 0; i < 8; i++) prune(`r16:m${i + 1}`, `r32:m${2 * i + 1}`, `r32:m${2 * i + 2}`);
+  for (let i = 0; i < 4; i++) prune(`qf:m${i + 1}`, `r16:m${2 * i + 1}`, `r16:m${2 * i + 2}`);
+  for (let i = 0; i < 2; i++) prune(`sf:m${i + 1}`, `qf:m${2 * i + 1}`, `qf:m${2 * i + 2}`);
+  prune("final:m1", "sf:m1", "sf:m2");
   return p;
 }
 
