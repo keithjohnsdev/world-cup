@@ -11,7 +11,7 @@ export async function GET(
   if (isNaN(id)) return NextResponse.json({ error: "Invalid user ID" }, { status: 400 });
 
   const sql = getSql();
-  const [rawUsers, rawPicks, rawStandings, rawHeartPick, rawChampionPick, rawPlayed, rawGroupPoints] = await Promise.all([
+  const [rawUsers, rawPicks, rawStandings, rawHeartPick, rawChampionPick, rawPlayed, rawGroupPoints, rawBracketPicks, rawBracketResults] = await Promise.all([
     sql`SELECT name FROM users WHERE id = ${id}`,
     sql`SELECT stage, slot, team_id FROM picks
         WHERE user_id = ${id} AND stage IN ('group','runner','third','fourth')
@@ -25,11 +25,18 @@ export async function GET(
         WHERE user_id = ${id} AND stage = 'champion' AND slot = 'pick' LIMIT 1`,
     sql`SELECT team_id FROM teams_played`,
     sql`SELECT team_id, points FROM group_points`,
+    // Knockout picks + results power the Bracket score tab.
+    sql`SELECT stage, slot, team_id, is_star_power FROM picks
+        WHERE user_id = ${id} AND stage IN ('r32','r16','qf','sf','final')`,
+    sql`SELECT stage, slot, team_id, was_shootout FROM results
+        WHERE stage IN ('r32','r16','qf','sf','final')`,
   ]);
 
   const userRows = rawUsers    as { name: string }[];
   const pickRows = rawPicks    as { stage: string; slot: string; team_id: string }[];
   const results  = rawStandings as { stage: string; slot: string; team_id: string }[];
+  const bracketPicks = rawBracketPicks as { stage: string; slot: string; team_id: string; is_star_power: boolean }[];
+  const bracketResults = rawBracketResults as { stage: string; slot: string; team_id: string; was_shootout: boolean }[];
   const playedTeamIds = (rawPlayed as { team_id: string }[]).map((r) => r.team_id);
   const groupPoints = Object.fromEntries(
     (rawGroupPoints as { team_id: string; points: number }[]).map((r) => [r.team_id, r.points]),
@@ -54,6 +61,8 @@ export async function GET(
     name: userRows[0].name,
     picks: pickRows,
     results,
+    bracketPicks,
+    bracketResults,
     heartPickTeamId,
     heartPoints,
     championPickTeamId,

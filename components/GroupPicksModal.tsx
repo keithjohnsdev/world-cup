@@ -39,6 +39,174 @@ function buildMap(entries: Entry[]): Record<string, (string | null)[]> {
   return map;
 }
 
+// ── Bracket (knockout) scoring view ────────────────────────────────────────────
+// Mirrors lib/scoring.ts: each knockout slot scores its round's base points when the
+// player's advanced team matches the actual winner, half on a shootout loss (mercy
+// rule), and double when it's the kid's Star Power pick. Picks/results are compared
+// per bracket slot, exactly as the scoring engine does.
+
+interface BracketPick { stage: string; slot: string; team_id: string; is_star_power?: boolean; }
+interface BracketResult { stage: string; slot: string; team_id: string; was_shootout?: boolean; }
+
+const KNOCKOUT_ROUNDS: { stage: string; label: string; pts: number; slots: number }[] = [
+  { stage: "r32", label: "Round of 32", pts: 2, slots: 16 },
+  { stage: "r16", label: "Round of 16", pts: 4, slots: 8 },
+  { stage: "qf", label: "Quarterfinals", pts: 8, slots: 4 },
+  { stage: "sf", label: "Semifinals", pts: 16, slots: 2 },
+  { stage: "final", label: "The Final", pts: 32, slots: 1 },
+];
+
+function BracketScore({
+  picks,
+  results,
+  liveTeamIds,
+  bracketScore,
+}: {
+  picks: BracketPick[];
+  results: BracketResult[];
+  liveTeamIds: string[];
+  bracketScore: number;
+}) {
+  const pickMap = new Map(picks.map((p) => [`${p.stage}:${p.slot}`, p]));
+  const resMap = new Map(results.map((r) => [`${r.stage}:${r.slot}`, r]));
+  const liveSet = new Set(liveTeamIds);
+  const hasPicks = picks.length > 0;
+
+  if (!hasPicks && results.length === 0) {
+    return (
+      <div className="text-center py-16">
+        <div className="text-4xl mb-3 opacity-30">🏆</div>
+        <div className="text-white/40 text-sm">No bracket picks yet.</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {KNOCKOUT_ROUNDS.map(({ stage, label, pts, slots }) => {
+        // Only show a round once it has at least one pick or one decided match.
+        const keys = Array.from({ length: slots }, (_, i) => `${stage}:m${i + 1}`);
+        const anyContent = keys.some((k) => pickMap.has(k) || resMap.has(k));
+        if (!anyContent) return null;
+
+        let earned = 0;
+        let correct = 0;
+        let decided = 0;
+
+        const rows = keys.map((key, i) => {
+          const pick = pickMap.get(key);
+          const res = resMap.get(key);
+          const pickedId = pick?.team_id ?? null;
+          const pickedTeam = pickedId ? getTeam(pickedId) : null;
+          const actualId = res?.team_id ?? null;
+          const actualTeam = actualId ? getTeam(actualId) : null;
+
+          const isDecided = !!res;
+          const isCorrect = isDecided && pickedId != null && pickedId === actualId;
+          // Shootout mercy: a non-correct pick on a match decided by penalties earns half.
+          const isHalf = isDecided && !isCorrect && pickedId != null && !!res?.was_shootout;
+          const isLive = !isDecided && pickedId != null && liveSet.has(pickedId);
+
+          let rowPts = 0;
+          if (isCorrect) rowPts = pick?.is_star_power ? pts * 2 : pts;
+          else if (isHalf) rowPts = pts / 2;
+
+          if (isDecided) {
+            decided += 1;
+            if (isCorrect) correct += 1;
+          }
+          earned += rowPts;
+
+          let rowBg = "";
+          let ptsCls = "text-white/20";
+          if (isCorrect) { rowBg = "rgba(22,163,74,0.16)"; ptsCls = "text-green-400"; }
+          else if (isHalf) { rowBg = "rgba(234,179,8,0.13)"; ptsCls = "text-yellow-300"; }
+          else if (isDecided && pickedId) { rowBg = "rgba(239,68,68,0.11)"; ptsCls = "text-red-400"; }
+          else if (pickedId) { rowBg = "rgba(255,255,255,0.02)"; ptsCls = "text-white/25"; }
+
+          return { i, key, pickedTeam, actualTeam, pick, isDecided, isCorrect, isHalf, isLive, rowPts, rowBg, ptsCls, pickedId };
+        });
+
+        return (
+          <div key={stage} className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.09)" }}>
+            {/* Round header */}
+            <div
+              className="flex items-center justify-between px-4 py-2"
+              style={{ background: "linear-gradient(135deg, #1d4270 0%, #163358 100%)" }}
+            >
+              <div className="flex items-baseline gap-2">
+                <span className="text-yellow-300 font-black text-xs uppercase tracking-[0.18em]">{label}</span>
+                <span className="text-white/30 text-[10px] font-bold uppercase tracking-wide">{pts} pts each</span>
+              </div>
+              {decided > 0 && (
+                <div className="flex items-center gap-2.5">
+                  <span className="text-green-300/80 text-[11px] font-bold tabular-nums leading-none">{correct}/{decided} ✓</span>
+                  <span className="text-white/50 text-xs font-bold tabular-nums leading-none">+{earned}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Match rows */}
+            {rows.map(({ i, key, pickedTeam, actualTeam, pick, isDecided, isCorrect, isHalf, isLive, rowPts, rowBg, ptsCls, pickedId }) => (
+              <div
+                key={key}
+                className="flex items-center gap-3 px-4 py-2.5"
+                style={{ background: rowBg || undefined, borderTop: "1px solid rgba(255,255,255,0.05)" }}
+              >
+                <div className="w-6 shrink-0 text-center text-[11px] font-black text-white/25 tabular-nums">{i + 1}</div>
+
+                {/* Your pick */}
+                {pickedTeam ? (
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <FlagIcon cc={pickedTeam.cc} name={pickedTeam.name} className="w-8 h-[22px] rounded shrink-0" />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-white text-sm font-semibold leading-tight truncate">{pickedTeam.name}</span>
+                        {pick?.is_star_power && (
+                          <span className="text-yellow-300 text-[11px] font-black shrink-0" title="Star Power — points doubled">⭐</span>
+                        )}
+                        {isCorrect && <span className="text-green-400 text-[11px] font-black shrink-0">✓</span>}
+                      </div>
+                      {/* Status sub-line */}
+                      {isLive ? (
+                        <div className="flex items-center gap-1 text-green-400/90 text-[10px] font-bold leading-none mt-0.5">
+                          <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
+                          playing now
+                        </div>
+                      ) : !isDecided ? (
+                        <div className="text-white/30 text-[10px] italic leading-none mt-0.5">awaiting result</div>
+                      ) : isHalf ? (
+                        <div className="text-yellow-400/70 text-[10px] leading-none mt-0.5">lost on penalties</div>
+                      ) : !isCorrect && actualTeam ? (
+                        <div className="text-red-400/70 text-[10px] leading-none mt-0.5">{actualTeam.name} won</div>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex-1 text-white/20 text-sm italic">
+                    No pick{actualTeam ? <span className="text-white/25 not-italic"> · {actualTeam.name} won</span> : ""}
+                  </div>
+                )}
+
+                {/* Points */}
+                <div className={`w-10 shrink-0 text-right text-sm font-black tabular-nums ${ptsCls}`}>
+                  {isDecided ? (rowPts > 0 ? `+${rowPts}` : "0") : pickedId ? "–" : ""}
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      })}
+
+      <div className="text-center pt-1">
+        <span className="text-white/30 text-[11px]">
+          Bracket total: <span className="text-yellow-300 font-black">{bracketScore}</span> pts
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export interface ScoreBreakdownProps {
   groupScore: number;
   bracketScore: number;
@@ -65,12 +233,16 @@ interface Props {
 export function GroupPicksModal({ userId, userName, breakdown, groupStageComplete, liveTeamIds = [], onClose }: Props) {
   const [picks, setPicks] = useState<Entry[]>([]);
   const [results, setResults] = useState<Entry[]>([]);
+  const [bracketPicks, setBracketPicks] = useState<BracketPick[]>([]);
+  const [bracketResults, setBracketResults] = useState<BracketResult[]>([]);
   const [heartPickTeamId, setHeartPickTeamId] = useState<string | null>(null);
   const [heartPoints, setHeartPoints] = useState(0);
   const [championPickTeamId, setChampionPickTeamId] = useState<string | null>(null);
   const [playedTeamIds, setPlayedTeamIds] = useState<string[]>([]);
   const [groupPoints, setGroupPoints] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  // Bracket is the active phase now, so it leads; Groups holds the existing view.
+  const [tab, setTab] = useState<"bracket" | "groups">("bracket");
 
   useEffect(() => {
     fetch(`/api/picks/${userId}`)
@@ -78,6 +250,8 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
       .then(d => {
         setPicks(d.picks ?? []);
         setResults(d.results ?? []);
+        setBracketPicks(d.bracketPicks ?? []);
+        setBracketResults(d.bracketResults ?? []);
         setHeartPickTeamId(d.heartPickTeamId ?? null);
         setHeartPoints(d.heartPoints ?? 0);
         setChampionPickTeamId(d.championPickTeamId ?? null);
@@ -137,7 +311,7 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
 
           <div className="flex-1 min-w-0">
             <div className="text-white font-black text-lg leading-tight truncate">{userName}</div>
-            <div className="text-green-400 text-xs font-bold uppercase tracking-wider mt-0.5">Group Stage Picks</div>
+            <div className="text-green-400 text-xs font-bold uppercase tracking-wider mt-0.5">{tab === "bracket" ? "Bracket Picks" : "Group Stage Picks"}</div>
           </div>
 
           <div className="text-right shrink-0">
@@ -189,9 +363,30 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
                 </div>
               );
             })()}
+
+            {/* Bracket / Groups tab switcher */}
+            <div className="flex justify-center py-1">
+              <div className="inline-flex items-center gap-1 rounded-full p-1" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                {([["bracket", "Bracket"], ["groups", "Groups"]] as const).map(([v, label]) => (
+                  <button
+                    key={v}
+                    onClick={() => setTab(v)}
+                    className={`rounded-full px-5 py-1.5 text-[11px] font-black uppercase tracking-widest transition-colors ${tab === v ? "text-green-950" : "text-white/50 hover:text-white"}`}
+                    style={{ background: tab === v ? "#fbbf24" : "transparent" }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {tab === "bracket" && (<>
             {/* Champion pick */}
             {(() => {
               const championTeam = championPickTeamId ? getTeam(championPickTeamId) : null;
+              const finalRes = bracketResults.find((r) => r.stage === "final" && r.slot === "m1");
+              const championWon = !!(championTeam && finalRes && finalRes.team_id === championPickTeamId);
+              const championBonus = breakdown.championBonus + breakdown.chargeupBonus;
               if (!championTeam) return null;
               return (
                 <div className="rounded-xl overflow-hidden mb-1" style={{ border: "1px solid rgba(251,191,36,0.25)", background: "rgba(251,191,36,0.06)" }}>
@@ -202,8 +397,12 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
                       <div className="flex items-center gap-2">
                         <FlagIcon cc={championTeam.cc} name={championTeam.name} className="w-8 h-[22px] rounded shrink-0" />
                         <span className="text-white font-bold text-sm truncate">{championTeam.name}</span>
+                        {championWon && <span className="text-green-400 text-[11px] font-black shrink-0">✓</span>}
                       </div>
                     </div>
+                    {championWon && championBonus > 0 && (
+                      <span className="text-yellow-300 font-black text-sm tabular-nums shrink-0">+{championBonus}</span>
+                    )}
                   </div>
                 </div>
               );
@@ -230,6 +429,18 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
                 </div>
               );
             })()}
+
+            <div className="pt-2">
+              <BracketScore
+                picks={bracketPicks}
+                results={bracketResults}
+                liveTeamIds={liveTeamIds}
+                bracketScore={breakdown.bracketScore}
+              />
+            </div>
+            </>)}
+
+            {tab === "groups" && (
             <div className="space-y-3 pt-2">
             {GROUPS.map(group => {
               const predicted = pickMap[group.id] ?? [];
@@ -413,6 +624,7 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
               );
             })}
             </div>
+            )}
             </>
           )}
         </div>
