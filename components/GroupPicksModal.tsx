@@ -244,12 +244,27 @@ function BracketScore({
                   <MatchTeam teamId={t1} isPicked={!!pickedId && pickedId === t1} isWinner={isDecided && actualId === t1} decided={isDecided} outcome={pickedId === t1 ? outcome : null} isStar={pick?.is_star_power} />
                   <div className="mx-2.5 h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
                   <MatchTeam teamId={t2} isPicked={!!pickedId && pickedId === t2} isWinner={isDecided && actualId === t2} decided={isDecided} outcome={pickedId === t2 ? outcome : null} isStar={pick?.is_star_power} />
-                  {/* If the player's pick busted earlier and isn't one of the two real contestants */}
-                  {pickedId && pickedId !== t1 && pickedId !== t2 && (
-                    <div className="px-2.5 py-1 text-[10px] text-white/30 italic" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-                      You had {getTeam(pickedId)?.name ?? "—"} — eliminated earlier
-                    </div>
-                  )}
+                  {/* The player's pick busted earlier and isn't one of the two real
+                      contestants — show it greyed out with an "Eliminated" badge. */}
+                  {pickedId && pickedId !== t1 && pickedId !== t2 && (() => {
+                    const pt = getTeam(pickedId);
+                    return (
+                      <div
+                        className="flex items-center gap-2 px-2.5 py-1.5 opacity-50"
+                        style={{ borderTop: "1px solid rgba(255,255,255,0.05)", borderLeft: "2px solid rgba(255,255,255,0.5)" }}
+                      >
+                        {pt && <FlagIcon cc={pt.cc} name={pt.name} className="w-6 h-[17px] rounded-sm shrink-0 grayscale" />}
+                        <span className="text-[13px] font-semibold leading-tight truncate flex-1 min-w-0 text-white/40 line-through">{pt?.name ?? "—"}</span>
+                        <span className="text-[8px] font-black uppercase tracking-wider text-white/40 shrink-0">Pick</span>
+                        <span
+                          className="text-[8px] font-black uppercase tracking-wider rounded px-1.5 py-0.5 shrink-0"
+                          style={{ background: "rgba(239,68,68,0.18)", color: "#f87171", border: "1px solid rgba(239,68,68,0.4)" }}
+                        >
+                          Eliminated
+                        </span>
+                      </div>
+                    );
+                  })()}
                 </div>
               ))}
             </div>
