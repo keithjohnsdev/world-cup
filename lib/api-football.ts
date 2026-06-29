@@ -53,7 +53,11 @@ export interface RawMatch extends MatchWindowEntry {
 function normaliseRound(stage: string): string {
   const map: Record<string, string> = {
     GROUP_STAGE:    "group stage",
+    // football-data.org v4 reports the 48-team knockout rounds as LAST_32 / LAST_16
+    // (not ROUND_OF_*). Map both spellings so findKnockoutSlot recognises them.
+    LAST_32:        "round of 32",
     ROUND_OF_32:    "round of 32",
+    LAST_16:        "round of 16",
     ROUND_OF_16:    "round of 16",
     QUARTER_FINALS: "quarter-finals",
     SEMI_FINALS:    "semi-finals",
