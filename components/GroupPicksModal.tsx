@@ -445,7 +445,7 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
                   <button
                     key={v}
                     onClick={() => setTab(v)}
-                    className={`rounded-full px-5 py-1.5 text-[11px] font-black uppercase tracking-widest transition-colors ${tab === v ? "text-green-950" : "text-white/50 hover:text-white"}`}
+                    className={`cursor-pointer rounded-full px-5 py-1.5 text-[11px] font-black uppercase tracking-widest transition-colors ${tab === v ? "text-green-950" : "text-white/50 hover:text-white"}`}
                     style={{ background: tab === v ? "#fbbf24" : "transparent" }}
                   >
                     {label}
