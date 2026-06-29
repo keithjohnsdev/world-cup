@@ -904,6 +904,7 @@ export default function BracketPage() {
   const [bracketStandings, setBracketStandings] = useState<{ team_id: string; points: number; played_games: number; goal_diff: number; goals_for: number }[]>([]);
   const [bracketPhase, setBracketPhase] = useState("phase1_open");
   const [bracketPreview, setBracketPreview] = useState(false);
+  const [bracketLocked, setBracketLocked] = useState(false);
   const [awardsVisible, setAwardsVisible] = useState(false);
   // One-time intro spotlight for the new Message Board tab (per-player, server-backed).
   const [boardSpotlight, setBoardSpotlight] = useState(false);
@@ -927,6 +928,7 @@ export default function BracketPage() {
         if (data?.phase) setBracketPhase(data.phase);
         if (data?.preview) setBracketPreview(true);
         if (data?.awardsVisible) setAwardsVisible(true);
+        setBracketLocked(!!data?.bracketLocked);
       })
       .catch(() => {});
   }, []);
@@ -1383,6 +1385,7 @@ export default function BracketPage() {
           standings={bracketStandings}
           phase={bracketPhase}
           preview={bracketPreview}
+          locked={bracketLocked}
           onPick={handlePick}
         />
       )}

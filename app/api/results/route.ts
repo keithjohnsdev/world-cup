@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSql, initDb } from "@/lib/db";
+import { bracketLockedFor } from "@/lib/bracket-lock";
 
 export async function GET(req: NextRequest) {
   await initDb();
@@ -20,6 +21,9 @@ export async function GET(req: NextRequest) {
 
   const phase = (phaseRows as { value: string }[])[0]?.value ?? "phase1_open";
   const awardsVisible = (awardsRows as { value: string }[])[0]?.value === "true";
+  // Whether THIS player's bracket is frozen by the per-player lock (so the client
+  // can render the bracket read-only without attempting saves the API would reject).
+  const bracketLocked = await bracketLockedFor(sql, (auth as { id: number }[])[0].id);
 
-  return NextResponse.json({ results: rows, phase, awardsVisible, standings });
+  return NextResponse.json({ results: rows, phase, awardsVisible, standings, bracketLocked });
 }

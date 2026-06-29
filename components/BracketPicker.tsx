@@ -38,6 +38,9 @@ interface Props {
   standings: StandingRow[];
   phase: string;
   preview?: boolean;
+  // Per-player freeze (from the bracket_lock setting). When true, this player's
+  // bracket is read-only even while the phase would otherwise allow picking.
+  locked?: boolean;
   onPick: (stage: string, slot: string, teamId: string) => void;
 }
 
@@ -487,11 +490,13 @@ function LiveRoundOf32({
   results,
   standings,
   picks: rawPicks,
+  canPick = true,
   onPick,
 }: {
   results: ResultEntry[];
   standings: StandingRow[];
   picks: Picks;
+  canPick?: boolean;
   onPick: (stage: string, slot: string, teamId: string) => void;
 }) {
   const [view, setView] = useState<"tree" | "list">("tree");
@@ -516,12 +521,13 @@ function LiveRoundOf32({
     [rawPicks, picks],
   );
   useEffect(() => {
+    if (!canPick) return; // bracket frozen for this player — never mutate their picks
     invalidKeys.forEach((k) => {
       const [s, sl] = k.split(":");
       onPick(s, sl, "");
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [invalidKeys.join("|")]);
+  }, [invalidKeys.join("|"), canPick]);
 
   const pick = (stage: string, slot: string, teamId: string) => onPick(stage, slot, teamId);
 
@@ -573,14 +579,21 @@ function LiveRoundOf32({
 
         {/* Header */}
         <div className="mb-8 text-center">
-          <div className="inline-flex items-center gap-2 mb-4 rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-widest"
-            style={{ background: "rgba(74,222,128,0.1)", border: "1px solid rgba(74,222,128,0.35)", color: "#4ade80" }}>
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75 animate-ping" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-green-400" />
-            </span>
-            Live Bracket
-          </div>
+          {canPick ? (
+            <div className="inline-flex items-center gap-2 mb-4 rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-widest"
+              style={{ background: "rgba(74,222,128,0.1)", border: "1px solid rgba(74,222,128,0.35)", color: "#4ade80" }}>
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75 animate-ping" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-green-400" />
+              </span>
+              Live Bracket
+            </div>
+          ) : (
+            <div className="inline-flex items-center gap-1.5 mb-4 rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-widest"
+              style={{ background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.35)", color: "#fbbf24" }}>
+              🔒 Bracket Locked
+            </div>
+          )}
           <p className="font-black uppercase leading-none text-white mb-1" style={{ fontSize: "clamp(1.9rem, 6vw, 2.6rem)", letterSpacing: "-0.02em" }}>Your</p>
           <div className="flex items-center justify-center gap-3">
             <div className="h-px w-10 bg-gradient-to-r from-transparent to-yellow-300/60" />
@@ -590,7 +603,11 @@ function LiveRoundOf32({
             <div className="h-px w-10 bg-gradient-to-l from-transparent to-yellow-300/60" />
           </div>
           <p className="text-white/55 text-sm mt-3 max-w-md mx-auto leading-relaxed">
-            The Round of 32 is built live from the current group standings according to official 2026 FIFA rules. Pick your way through — <span className="text-white/80 font-semibold">your bracket is saved automatically</span>. As results come in, any pick whose team no longer holds its spot is cleared so you can pick again.
+            {canPick ? (
+              <>The Round of 32 is built live from the current group standings according to official 2026 FIFA rules. Pick your way through — <span className="text-white/80 font-semibold">your bracket is saved automatically</span>. As results come in, any pick whose team no longer holds its spot is cleared so you can pick again.</>
+            ) : (
+              <>Your bracket is <span className="text-yellow-300/90 font-semibold">locked in</span> — review your picks below, but they can no longer be changed.</>
+            )}
           </p>
         </div>
 
@@ -612,7 +629,7 @@ function LiveRoundOf32({
           ) : !complete ? (
             <p className="text-white/35 text-[11px] mt-2">Third-placed qualifiers are provisional — they&apos;ll shift as group results come in.</p>
           ) : null}
-          {hasPicks && (
+          {hasPicks && canPick && (
             <button
               onClick={resetPicks}
               className="mt-4 rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-widest text-white/50 transition-colors hover:text-white"
@@ -626,7 +643,7 @@ function LiveRoundOf32({
         <ViewToggle view={view} onChange={setView} />
 
         {view === "tree" && (
-          <BracketTree rounds={treeRounds} finalMatch={finalMatch} picks={picks} canPick onPick={pick} teamLock={teamLock} championKicker="Your" />
+          <BracketTree rounds={treeRounds} finalMatch={finalMatch} picks={picks} canPick={canPick} onPick={pick} teamLock={teamLock} championKicker="Your" />
         )}
 
         {view === "list" && (<>
@@ -654,11 +671,11 @@ function LiveRoundOf32({
                 >
                   <div className="flex items-center justify-between px-2.5 pt-1.5">
                     <span className="text-[9px] font-black uppercase tracking-widest text-white/25">Match {i + 1}</span>
-                    {ready && !winner && <span className="text-[9px] font-black uppercase tracking-widest text-white/30">Tap to pick</span>}
+                    {canPick && ready && !winner && <span className="text-[9px] font-black uppercase tracking-widest text-white/30">Tap to pick</span>}
                   </div>
-                  <LiveSlot qualifier={homeLabel.qualifier} detail={homeLabel.detail} teamId={m.team1} locked={sourceLocked(m.home, locks, thirdAssign, complete)} isWinner={winner === m.team1} isDimmed={!!(winner && winner !== m.team1)} canClick={ready && !!m.team1} onClick={() => m.team1 && pick("r32", m.slot, m.team1)} />
+                  <LiveSlot qualifier={homeLabel.qualifier} detail={homeLabel.detail} teamId={m.team1} locked={sourceLocked(m.home, locks, thirdAssign, complete)} isWinner={winner === m.team1} isDimmed={!!(winner && winner !== m.team1)} canClick={canPick && ready && !!m.team1} onClick={() => m.team1 && pick("r32", m.slot, m.team1)} />
                   <div className="mx-2.5 h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
-                  <LiveSlot qualifier={awayLabel.qualifier} detail={awayLabel.detail} teamId={m.team2} locked={sourceLocked(m.away, locks, thirdAssign, complete)} isWinner={winner === m.team2} isDimmed={!!(winner && winner !== m.team2)} canClick={ready && !!m.team2} onClick={() => m.team2 && pick("r32", m.slot, m.team2)} />
+                  <LiveSlot qualifier={awayLabel.qualifier} detail={awayLabel.detail} teamId={m.team2} locked={sourceLocked(m.away, locks, thirdAssign, complete)} isWinner={winner === m.team2} isDimmed={!!(winner && winner !== m.team2)} canClick={canPick && ready && !!m.team2} onClick={() => m.team2 && pick("r32", m.slot, m.team2)} />
                 </div>
               );
             })}
@@ -666,13 +683,13 @@ function LiveRoundOf32({
         </div>
 
         <Divider />
-        <RoundSection label="Round of 16" stage="r16" matches={r16} picks={picks} canPick onPick={pick} cols={2} />
+        <RoundSection label="Round of 16" stage="r16" matches={r16} picks={picks} canPick={canPick} onPick={pick} cols={2} />
         <Divider />
-        <RoundSection label="Quarterfinals" stage="qf" matches={qf} picks={picks} canPick onPick={pick} cols={2} />
+        <RoundSection label="Quarterfinals" stage="qf" matches={qf} picks={picks} canPick={canPick} onPick={pick} cols={2} />
         <Divider />
-        <RoundSection label="Semifinals" stage="sf" matches={sf} picks={picks} canPick onPick={pick} cols={2} />
+        <RoundSection label="Semifinals" stage="sf" matches={sf} picks={picks} canPick={canPick} onPick={pick} cols={2} />
         <Divider />
-        <RoundSection label="The Final" stage="final" matches={[finalMatch]} picks={picks} canPick onPick={pick} cols={1} />
+        <RoundSection label="The Final" stage="final" matches={[finalMatch]} picks={picks} canPick={canPick} onPick={pick} cols={1} />
 
         {/* Champion */}
         <div className="mt-4 text-center">
@@ -699,8 +716,8 @@ function LiveRoundOf32({
   );
 }
 
-export function BracketPicker({ picks, results, standings, phase, preview, onPick }: Props) {
-  const canPick = phase === "phase2_open";
+export function BracketPicker({ picks, results, standings, phase, preview, locked = false, onPick }: Props) {
+  const canPick = phase === "phase2_open" && !locked;
   const [view, setView] = useState<"tree" | "list">("tree");
   const thirdAssign = useMemo(() => computeThirdAssign(results, standings), [results, standings]);
   const { r32, r16, qf, sf, finalMatch } = buildBracket(results, picks, thirdAssign);
@@ -715,7 +732,7 @@ export function BracketPicker({ picks, results, standings, phase, preview, onPic
   ];
 
   if (phase === "phase1_open" || phase === "phase1_locked") {
-    return <LiveRoundOf32 results={results} standings={standings} picks={picks} onPick={onPick} />;
+    return <LiveRoundOf32 results={results} standings={standings} picks={picks} canPick={!locked} onPick={onPick} />;
   }
 
   return (
