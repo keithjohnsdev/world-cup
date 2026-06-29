@@ -5,9 +5,12 @@ import { resolveR32, sourceLabel, type ResolvedMatch, type SlotSource } from "@/
 import { resolveThirdAssignment, type ThirdEntry } from "@/lib/thirds";
 import { getTeam } from "@/lib/data";
 import { FlagIcon } from "@/components/FlagIcon";
-import { BracketTree, type TreeRound } from "@/components/BracketTree";
+import { BracketTree, type TreeRound, type TreeMatch } from "@/components/BracketTree";
 
 type Picks = Record<string, string>;
+// The three ways to view/fill the bracket: the connected tree, the round-by-round
+// list, and "Baby Mode" — huge two-flag rows for a toddler to tap a winner.
+type BracketView = "tree" | "list" | "baby";
 
 // The five knockout pick stages, used to scope "real bracket" reads/clears.
 const KNOCKOUT_KEYS = new Set(["r32", "r16", "qf", "sf", "final"]);
@@ -342,25 +345,108 @@ function Divider() {
   );
 }
 
-// Segmented control to switch between the round-by-round list and the bracket tree.
-function ViewToggle({ view, onChange }: { view: "tree" | "list"; onChange: (v: "tree" | "list") => void }) {
+// Segmented control to switch between the bracket tree, the round-by-round list,
+// and the toddler-friendly Baby Mode.
+function ViewToggle({ view, onChange }: { view: BracketView; onChange: (v: BracketView) => void }) {
   return (
     <div className="mb-8 flex justify-center">
       <div className="inline-flex items-center gap-1 rounded-full p-1" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
         {([
           ["tree", "Bracket"],
           ["list", "List"],
+          ["baby", "Baby Mode"],
         ] as const).map(([v, label]) => (
           <button
             key={v}
             onClick={() => onChange(v)}
-            className={`rounded-full px-4 py-1.5 text-[11px] font-black uppercase tracking-widest transition-colors ${view === v ? "text-green-950" : "text-white/50 hover:text-white"}`}
+            className={`cursor-pointer rounded-full px-4 py-1.5 text-[11px] font-black uppercase tracking-widest transition-colors ${view === v ? "text-green-950" : "text-white/50 hover:text-white"}`}
             style={{ background: view === v ? "#fbbf24" : "transparent" }}
           >
             {label}
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+// Baby Mode — a dead-simple picking interface for a toddler. Every ready match is one
+// row of two huge tappable flag cards (flag + country name). Tap a flag to make that
+// team the winner; the pick lights up green. Later rounds appear as their feeder
+// picks get made. Big targets, no bracket lines, no small text.
+function BabyMode({
+  rounds,
+  finalMatch,
+  picks,
+  canPick,
+  onPick,
+}: {
+  rounds: TreeRound[];
+  finalMatch: TreeMatch;
+  picks: Picks;
+  canPick: boolean;
+  onPick: (stage: string, slot: string, teamId: string) => void;
+}) {
+  const allRounds: TreeRound[] = [...rounds, { stage: "final", label: "The Final", matches: [finalMatch] }];
+  const readyRounds = allRounds
+    .map((r) => ({ ...r, matches: r.matches.filter((m) => m.team1 && m.team2) }))
+    .filter((r) => r.matches.length > 0);
+
+  const BigTeam = ({ stage, slot, teamId, picked, faded }: {
+    stage: string; slot: string; teamId?: string; picked: boolean; faded: boolean;
+  }) => {
+    const team = teamId ? getTeam(teamId) : undefined;
+    if (!team) {
+      return (
+        <div className="flex-1 flex items-center justify-center rounded-3xl p-6 min-h-[8.5rem]" style={{ background: "rgba(255,255,255,0.03)", border: "3px dashed rgba(255,255,255,0.1)" }}>
+          <span className="text-white/25 text-lg font-bold italic">TBD</span>
+        </div>
+      );
+    }
+    return (
+      <button
+        type="button"
+        onClick={canPick ? () => onPick(stage, slot, team.id) : undefined}
+        disabled={!canPick}
+        className={`flex-1 flex flex-col items-center justify-center gap-3 rounded-3xl p-5 sm:p-6 min-h-[8.5rem] transition-all ${canPick ? "cursor-pointer active:scale-[0.97]" : "cursor-default"}`}
+        style={{
+          background: picked ? "rgba(74,222,128,0.18)" : "rgba(255,255,255,0.05)",
+          border: picked ? "3px solid #4ade80" : "3px solid rgba(255,255,255,0.1)",
+          opacity: faded ? 0.4 : 1,
+        }}
+      >
+        <FlagIcon cc={team.cc} name={team.name} className="w-28 h-[76px] sm:w-36 sm:h-24 rounded-xl shadow-lg" />
+        <span className="text-lg sm:text-2xl font-black text-white text-center leading-tight">{team.name}</span>
+        {picked && <span className="text-3xl leading-none">✅</span>}
+      </button>
+    );
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto">
+      <div className="text-center mb-8">
+        <div className="text-5xl mb-2">👶</div>
+        <h3 className="font-black uppercase text-yellow-300 leading-none mb-2" style={{ fontSize: "clamp(1.6rem, 5vw, 2.2rem)" }}>Baby Mode</h3>
+        <p className="text-white/60 text-base font-semibold">Tap a flag to pick who wins! 🏆</p>
+      </div>
+
+      {readyRounds.map((round) => (
+        <div key={round.stage} className="mb-10">
+          <div className="text-center text-yellow-300/80 font-black uppercase tracking-[0.2em] text-sm mb-4">{round.label}</div>
+          <div className="space-y-4">
+            {round.matches.map((m) => {
+              const winner = picks[`${round.stage}:${m.slot}`];
+              return (
+                <div key={m.slot} className="flex items-stretch gap-2 sm:gap-3">
+                  <BigTeam stage={round.stage} slot={m.slot} teamId={m.team1} picked={winner === m.team1} faded={!!winner && winner !== m.team1} />
+                  <div className="flex items-center justify-center shrink-0 w-7 text-white/30 font-black text-base">vs</div>
+                  <BigTeam stage={round.stage} slot={m.slot} teamId={m.team2} picked={winner === m.team2} faded={!!winner && winner !== m.team2} />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -499,7 +585,7 @@ function LiveRoundOf32({
   canPick?: boolean;
   onPick: (stage: string, slot: string, teamId: string) => void;
 }) {
-  const [view, setView] = useState<"tree" | "list">("tree");
+  const [view, setView] = useState<BracketView>("tree");
   const thirdAssign = useMemo(() => computeThirdAssign(results, standings), [results, standings]);
   const complete = useMemo(() => groupStageComplete(results, standings), [results, standings]);
   const locks = useMemo(() => computeGroupLocks(standings, complete), [standings, complete]);
@@ -646,6 +732,10 @@ function LiveRoundOf32({
           <BracketTree rounds={treeRounds} finalMatch={finalMatch} picks={picks} canPick={canPick} onPick={pick} teamLock={teamLock} championKicker="Your" />
         )}
 
+        {view === "baby" && (
+          <BabyMode rounds={treeRounds} finalMatch={finalMatch} picks={picks} canPick={canPick} onPick={pick} />
+        )}
+
         {view === "list" && (<>
         {/* Live, interactive Round of 32 */}
         <div className="mb-10">
@@ -718,7 +808,7 @@ function LiveRoundOf32({
 
 export function BracketPicker({ picks, results, standings, phase, preview, locked = false, onPick }: Props) {
   const canPick = phase === "phase2_open" && !locked;
-  const [view, setView] = useState<"tree" | "list">("tree");
+  const [view, setView] = useState<BracketView>("tree");
   const thirdAssign = useMemo(() => computeThirdAssign(results, standings), [results, standings]);
   const { r32, r16, qf, sf, finalMatch } = buildBracket(results, picks, thirdAssign);
   const champion = picks["final:m1"];
@@ -768,6 +858,10 @@ export function BracketPicker({ picks, results, standings, phase, preview, locke
 
         {view === "tree" && (
           <BracketTree rounds={treeRounds} finalMatch={finalMatch} picks={picks} canPick={canPick} onPick={onPick} />
+        )}
+
+        {view === "baby" && (
+          <BabyMode rounds={treeRounds} finalMatch={finalMatch} picks={picks} canPick={canPick} onPick={onPick} />
         )}
 
         {view === "list" && (<>
