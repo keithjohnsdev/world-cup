@@ -441,7 +441,7 @@ export function GroupPicksModal({ userId, userName, breakdown, groupStageComplet
             {/* Bracket / Groups tab switcher */}
             <div className="flex justify-center py-1">
               <div className="inline-flex items-center gap-1 rounded-full p-1" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
-                {([["bracket", "Bracket"], ["groups", "Groups"]] as const).map(([v, label]) => (
+                {([["groups", "Groups"], ["bracket", "Bracket"]] as const).map(([v, label]) => (
                   <button
                     key={v}
                     onClick={() => setTab(v)}
