@@ -37,6 +37,20 @@ export async function processMatches(
     // Skip WITHOUT marking processed so the next cron run retries.
     if (match.hasResult === false) { skipped.push(mid); continue; }
 
+    // A knockout match can never truly end in a draw — someone always advances
+    // via extra time or penalties. But the free tier often reports a shootout
+    // match as FINISHED with score.winner "DRAW" (the level regulation/ET score)
+    // for a while before it enters the penalty winner. That yields hasResult=true
+    // but an empty winnerName, which would otherwise fall through and get marked
+    // processed with NO result row — permanently poisoning the fixture. Treat it
+    // as unresolved: skip WITHOUT marking processed so a later run picks up the
+    // real winner. (Group matches legitimately draw, so this only applies to KO.)
+    const isKnockout =
+      match.round !== "group stage" &&
+      !match.round.includes("3rd") &&
+      !match.round.includes("third");
+    if (isKnockout && !match.winnerName) { skipped.push(mid); continue; }
+
     try {
       if (match.round === "group stage") {
         await handleGroupMatch(sql, match);
