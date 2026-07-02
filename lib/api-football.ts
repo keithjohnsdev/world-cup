@@ -144,6 +144,62 @@ export async function fetchAllMatches(): Promise<RawMatch[]> {
   } satisfies RawMatch));
 }
 
+// A match shaped for on-screen display: kickoff, status, and a clean scoreline
+// (regulation/ET goals split out from any shootout, so the UI can show "1–1 (3–2 pens)").
+// Team names are left un-mapped here; callers map them to our ids.
+export interface DisplayMatch {
+  id: number;
+  round: string;       // normalised ("group stage", "round of 32", …)
+  matchday: number | null;
+  status: string;      // TIMED | SCHEDULED | IN_PLAY | PAUSED | FINISHED | …
+  utcDate: string;     // ISO 8601 kickoff
+  homeTeamName: string;
+  awayTeamName: string;
+  winnerName: string;  // "" for a draw / not-yet-decided
+  wasShootout: boolean;
+  homeGoals: number | null; // goals after regulation + extra time (shootout excluded)
+  awayGoals: number | null;
+  homePens: number | null;  // shootout tally (null when not a shootout)
+  awayPens: number | null;
+}
+
+// Fetch EVERY World Cup match shaped for display (one request, ~104 matches).
+// Powers the real-results bracket's team-history modal.
+export async function fetchDisplayMatches(): Promise<DisplayMatch[]> {
+  const res = await fetch(`${BASE}/competitions/${WC}/matches`, { headers: headers() });
+  if (!res.ok) throw new Error(`football-data.org /matches ${res.status}`);
+  const json = await res.json();
+  return (json.matches ?? []).map((m: any): DisplayMatch => {
+    const winnerField: string = m.score?.winner ?? "";
+    const shootout = m.score?.duration === "PENALTY_SHOOTOUT";
+    const ftH = m.score?.fullTime?.home ?? null;
+    const ftA = m.score?.fullTime?.away ?? null;
+    const penH = m.score?.penalties?.home ?? null;
+    const penA = m.score?.penalties?.away ?? null;
+    // football-data folds the shootout tally into fullTime for penalty finishes.
+    // Peel it back off so the displayed scoreline is the level regulation/ET score.
+    const homeGoals = shootout && ftH != null && penH != null ? ftH - penH : ftH;
+    const awayGoals = shootout && ftA != null && penA != null ? ftA - penA : ftA;
+    return {
+      id: m.id,
+      round: normaliseRound(m.stage ?? ""),
+      matchday: m.matchday ?? null,
+      status: m.status ?? "",
+      utcDate: m.utcDate ?? "",
+      homeTeamName: m.homeTeam?.name ?? "",
+      awayTeamName: m.awayTeam?.name ?? "",
+      winnerName:
+        winnerField === "HOME_TEAM" ? m.homeTeam?.name ?? "" :
+        winnerField === "AWAY_TEAM" ? m.awayTeam?.name ?? "" : "",
+      wasShootout: shootout,
+      homeGoals,
+      awayGoals,
+      homePens: shootout ? penH : null,
+      awayPens: shootout ? penA : null,
+    };
+  });
+}
+
 // Fetch group standings — returns map of group letter ("A"…"L") → entries sorted by position.
 export async function fetchGroupStandings(): Promise<Map<string, StandingEntry[]>> {
   const res = await fetch(

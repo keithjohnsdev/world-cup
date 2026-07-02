@@ -11,7 +11,9 @@ import { NavHeader } from "@/components/ui/NavHeader";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { GroupPicksModal, type ScoreBreakdownProps } from "@/components/GroupPicksModal";
-import { BracketPicker } from "@/components/BracketPicker";
+// BracketPicker (pick-your-own bracket) is retained for the next tournament; the
+// bracket tab now shows the live real-results bracket via ResultsBracket.
+import { ResultsBracket } from "@/components/ResultsBracket";
 import { NewsTab } from "@/components/NewsTab";
 import { StatsTab } from "@/components/StatsTab";
 import { MessageBoardTab } from "@/components/MessageBoardTab";
@@ -903,8 +905,6 @@ export default function BracketPage() {
   const [bracketResults, setBracketResults] = useState<{ stage: string; slot: string; team_id: string }[]>([]);
   const [bracketStandings, setBracketStandings] = useState<{ team_id: string; points: number; played_games: number; goal_diff: number; goals_for: number }[]>([]);
   const [bracketPhase, setBracketPhase] = useState("phase1_open");
-  const [bracketPreview, setBracketPreview] = useState(false);
-  const [bracketLocked, setBracketLocked] = useState(false);
   const [awardsVisible, setAwardsVisible] = useState(false);
   // One-time intro spotlight for the new Message Board tab (per-player, server-backed).
   const [boardSpotlight, setBoardSpotlight] = useState(false);
@@ -926,9 +926,7 @@ export default function BracketPage() {
         if (data?.results) setBracketResults(data.results);
         if (data?.standings) setBracketStandings(data.standings);
         if (data?.phase) setBracketPhase(data.phase);
-        if (data?.preview) setBracketPreview(true);
         if (data?.awardsVisible) setAwardsVisible(true);
-        setBracketLocked(!!data?.bracketLocked);
       })
       .catch(() => {});
   }, []);
@@ -1377,17 +1375,10 @@ export default function BracketPage() {
         </div>
       )}
 
-      {/* Bracket tab */}
+      {/* Bracket tab — live real-results bracket (read-only). The pick-your-own
+          BracketPicker lives on for the next tournament but is no longer mounted. */}
       {tab === "bracket" && (
-        <BracketPicker
-          picks={picks}
-          results={bracketResults}
-          standings={bracketStandings}
-          phase={bracketPhase}
-          preview={bracketPreview}
-          locked={bracketLocked}
-          onPick={handlePick}
-        />
+        <ResultsBracket results={bracketResults} standings={bracketStandings} />
       )}
     </div>
   );
