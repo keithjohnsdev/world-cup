@@ -908,8 +908,8 @@ export default function BracketPage() {
   const [awardsVisible, setAwardsVisible] = useState(false);
   // One-time intro spotlight for the new Message Board tab (per-player, server-backed).
   const [boardSpotlight, setBoardSpotlight] = useState(false);
-  // Same, for the live practice bracket. Only one intro shows at a time (board wins).
-  const [bracketSpotlight, setBracketSpotlight] = useState(false);
+  // Same, for the live real-results bracket. Only one intro shows at a time (board wins).
+  const [resultsSpotlight, setResultsSpotlight] = useState(false);
   const router = useRouter();
 
   const picksRef = useRef<Picks>({});
@@ -966,24 +966,24 @@ export default function BracketPage() {
         }
       });
 
-    // Show the one-time intro spotlights (Message Board, then live practice bracket).
+    // Show the one-time intro spotlights (Message Board, then live results bracket).
     // At most one appears at a time — the Board takes priority. If a player deep-linked
     // straight to a tab, there's nothing to point them to, so just mark it seen.
     const startedOnBoard = urlTab === "board";
     const startedOnBracket = urlTab === "bracket";
-    const markSeen = (which: "board" | "bracket") =>
+    const markSeen = (which: "board" | "results") =>
       fetch(`/api/seen-${which}`, { method: "POST", headers: { "x-session-token": token } }).catch(() => {});
     Promise.all([
       fetch("/api/seen-board", { headers: { "x-session-token": token } }).then((r) => r.json()).catch(() => ({ seen: true })),
-      fetch("/api/seen-bracket", { headers: { "x-session-token": token } }).then((r) => r.json()).catch(() => ({ seen: true })),
-    ]).then(([board, bracket]: { seen?: boolean }[]) => {
+      fetch("/api/seen-results", { headers: { "x-session-token": token } }).then((r) => r.json()).catch(() => ({ seen: true })),
+    ]).then(([board, results]: { seen?: boolean }[]) => {
       if (!board?.seen) {
         if (startedOnBoard) markSeen("board");
         else { setBoardSpotlight(true); return; } // board intro wins; bracket waits for next visit
       }
-      if (!bracket?.seen) {
-        if (startedOnBracket) markSeen("bracket");
-        else setBracketSpotlight(true);
+      if (!results?.seen) {
+        if (startedOnBracket) markSeen("results");
+        else setResultsSpotlight(true);
       }
     });
 
@@ -1070,12 +1070,12 @@ export default function BracketPage() {
     }
   }, []);
 
-  // Same for the live practice bracket intro. Idempotent — safe to call repeatedly.
-  const markBracketSeen = useCallback(() => {
-    setBracketSpotlight(false);
+  // Same for the live real-results bracket intro. Idempotent — safe to call repeatedly.
+  const markResultsSeen = useCallback(() => {
+    setResultsSpotlight(false);
     const token = localStorage.getItem("wc_token");
     if (token) {
-      fetch("/api/seen-bracket", { method: "POST", headers: { "x-session-token": token } }).catch(() => {});
+      fetch("/api/seen-results", { method: "POST", headers: { "x-session-token": token } }).catch(() => {});
     }
   }, []);
 
@@ -1104,7 +1104,7 @@ export default function BracketPage() {
             {(["rules", "groups", "bracket", "leaderboard", "board", "stats", "news", "world"] as const).map((t) => (
               <button
                 key={t}
-                onClick={e => { (e.currentTarget as HTMLElement).style.color = ""; (e.currentTarget as HTMLElement).style.textShadow = ""; setTab(t); history.replaceState(null, "", `?tab=${t}`); if (t === "board" && boardSpotlight) markBoardSeen(); if (t === "bracket" && bracketSpotlight) markBracketSeen(); }}
+                onClick={e => { (e.currentTarget as HTMLElement).style.color = ""; (e.currentTarget as HTMLElement).style.textShadow = ""; setTab(t); history.replaceState(null, "", `?tab=${t}`); if (t === "board" && boardSpotlight) markBoardSeen(); if (t === "bracket" && resultsSpotlight) markResultsSeen(); }}
                 className={`relative flex items-center h-full px-4 text-xs font-black uppercase tracking-[0.15em] whitespace-nowrap transition-all cursor-pointer ${
                   tab === t
                     ? "text-yellow-300"
@@ -1337,12 +1337,13 @@ export default function BracketPage() {
         </div>
       )}
 
-      {/* Live practice bracket intro — only while the practice bracket actually exists (Phase 1). */}
-      {bracketSpotlight && (bracketPhase === "phase1_open" || bracketPhase === "phase1_locked") && (
+      {/* Live real-results bracket announcement — points every player to the
+          repurposed Bracket tab exactly once. */}
+      {resultsSpotlight && (
         <div
           className="fixed inset-0 z-[60] flex items-start justify-center p-4 pt-24"
           style={{ background: "rgba(0,0,0,0.72)" }}
-          onClick={markBracketSeen}
+          onClick={markResultsSeen}
         >
           <div
             className="w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl"
@@ -1351,21 +1352,21 @@ export default function BracketPage() {
           >
             <div className="px-6 pt-6 pb-5 text-center">
               <span className="inline-block rounded-full bg-green-600 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white mb-4">New!</span>
-              <div className="text-4xl mb-3">🗂️</div>
-              <h2 className="text-white font-black text-xl mb-2 leading-tight">Your bracket is open</h2>
+              <div className="text-4xl mb-3">🏆</div>
+              <h2 className="text-white font-black text-xl mb-2 leading-tight">Follow the bracket live</h2>
               <p className="text-white/65 text-sm leading-relaxed">
-                The Round of 32 is built <span className="text-amber-300 font-bold">live according to FIFA tournament rules</span>{" "}off the current qualifying teams — updating as group results land. Pick your way to a champion and <span className="text-amber-300 font-bold">your picks save automatically</span>. If a team that hasn&apos;t clinched its spot gets overtaken, those picks clear so you can pick again.
+                The <span className="text-amber-300 font-bold">Bracket</span> tab now shows the <span className="text-amber-300 font-bold">real World Cup results</span> as they happen — every knockout matchup, updating live as games finish. <span className="text-amber-300 font-bold">Tap any team</span> to see all their games and scores.
               </p>
             </div>
             <div className="px-6 pb-6 flex flex-col gap-2">
               <button
-                onClick={() => { setTab("bracket"); history.replaceState(null, "", "?tab=bracket"); markBracketSeen(); }}
+                onClick={() => { setTab("bracket"); history.replaceState(null, "", "?tab=bracket"); markResultsSeen(); }}
                 className="w-full rounded-xl bg-yellow-300 hover:bg-yellow-200 text-green-950 font-black text-sm uppercase tracking-wide py-3 transition-colors cursor-pointer"
               >
-                Take me there →
+                Show me →
               </button>
               <button
-                onClick={markBracketSeen}
+                onClick={markResultsSeen}
                 className="w-full text-white/40 hover:text-white/70 text-xs font-bold py-1.5 transition-colors cursor-pointer"
               >
                 Maybe later

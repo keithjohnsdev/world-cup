@@ -40,6 +40,9 @@ export async function initDb() {
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS seen_board         BOOLEAN  DEFAULT false`;
   // Same idea for the live practice bracket intro — shown once per player.
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS seen_bracket       BOOLEAN  DEFAULT false`;
+  // And once more for the new live real-results bracket announcement. Defaults false
+  // so every existing player is pointed to the repurposed Bracket tab exactly once.
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS seen_results       BOOLEAN  DEFAULT false`;
 
   // All user selections — group picks, bracket picks, and meta (champion, star, etc.)
   // stage ∈ {group, runner, third, fourth, champion, meta, heart, r32, r16, qf, sf, final}
