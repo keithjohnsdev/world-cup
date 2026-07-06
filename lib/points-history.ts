@@ -20,6 +20,13 @@ type Sql = ReturnType<typeof getSql>;
 
 const STAGE_BY_SLOT = ["group", "runner", "third", "fourth"] as const;
 
+// A kid earns a Kaboose Boost by *starting* a knockout round in last place, so a
+// round's boost may only count from the game that round begins — never earlier.
+// Maps the knockout stage whose first result opens a round to that round's snapshot.
+const SNAPSHOT_BY_STAGE: Record<string, string> = {
+  r32: "pre_r32", r16: "pre_r16", qf: "pre_qf", sf: "pre_sf", final: "pre_final",
+};
+
 // Build a single group's table from the group matches played so far, returning
 // team ids ordered 1st → 4th. Real criteria — points → goal difference → goals
 // for — decide separated teams. EXACT ties (common in the early group stage:
@@ -123,6 +130,12 @@ export async function rebuildPointsHistory(sql: Sql, matches?: RawMatch[]): Prom
   const groupMatches: { groupId: string; homeId: string; awayId: string; homeGoals: number; awayGoals: number }[] = [];
   const playedTeams = new Set<string>();
 
+  // Which knockout rounds have begun so far in the replay. Gates Kaboose Boosts
+  // so a boost is only credited from the game its round started — otherwise the
+  // full boost would be back-applied to every earlier game (even the group stage),
+  // masking the stretch a kid actually spent in last place.
+  const startedRounds = new Set<string>();
+
   const history: HistoryRow[] = [];
   let gameIndex = 0;
 
@@ -158,6 +171,9 @@ export async function rebuildPointsHistory(sql: Sql, matches?: RawMatch[]): Prom
       const map = new Map([...resultRows.values()].map((r) => [`${r.stage}:${r.slot}`, r.team_id]));
       const mapping = findKnockoutSlot(homeId, awayId, match.round, map);
       if (winnerId && mapping) {
+        // This round is now under way, so its Kaboose Boost may start counting.
+        const snapshotRound = SNAPSHOT_BY_STAGE[mapping.stage];
+        if (snapshotRound) startedRounds.add(snapshotRound);
         resultRows.set(`${mapping.stage}:${mapping.slot}`, { stage: mapping.stage, slot: mapping.slot, team_id: winnerId, was_shootout: match.wasShootout });
         emit = true;
       }
@@ -168,8 +184,13 @@ export async function rebuildPointsHistory(sql: Sql, matches?: RawMatch[]): Prom
 
     const results = [...resultRows.values()];
     const label = makeLabel(match, homeId, awayId);
+    // Only snapshots for rounds that have already begun count toward the boost at
+    // this point in the replay (see startedRounds). At the latest game every
+    // taken snapshot is active, so the graph's present-day totals still match the
+    // live leaderboard exactly — only the historical curve is corrected.
+    const activeSnapshots = rawSnapshots.filter((s) => startedRounds.has(s.round));
     for (const user of rawUsers) {
-      const kaboose = kabooseRoundsForUser(user.id, rawSnapshots);
+      const kaboose = kabooseRoundsForUser(user.id, activeSnapshots);
       const bd = scoreUser(user, picksByUser.get(user.id) ?? [], results, kaboose, playedTeams);
       history.push({
         user_id: user.id,
