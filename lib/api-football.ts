@@ -66,13 +66,34 @@ function normaliseRound(stage: string): string {
   return map[stage] ?? stage.toLowerCase().replace(/_/g, " ");
 }
 
+// Resolve the winning side's team name for a match.
+//
+// Normally we trust score.winner. But the football-data free tier sometimes
+// publishes a FINISHED knockout — especially a penalty shootout — with
+// score.winner still null (and occasionally a stale/incorrect penalties tally),
+// and can leave it that way for a day or more. In that state the fullTime score
+// is already decisive: the shootout tally is folded into fullTime, so the
+// advancing side leads there even while `winner` is null. Fall back to the
+// fullTime goals so a genuinely-decided match doesn't stay stuck unprocessed.
+//
+// A level fullTime (a real group-stage draw) yields "" and stays unresolved,
+// which is correct — group draws carry no winner, and a knockout reported level
+// simply isn't decided yet in the feed.
+function resolveWinnerName(m: any): string {
+  const winnerField: string = m.score?.winner ?? "";
+  if (winnerField === "HOME_TEAM") return m.homeTeam?.name ?? "";
+  if (winnerField === "AWAY_TEAM") return m.awayTeam?.name ?? "";
+  const ftH = m.score?.fullTime?.home ?? null;
+  const ftA = m.score?.fullTime?.away ?? null;
+  if ((m.status ?? "") === "FINISHED" && ftH != null && ftA != null && ftH !== ftA) {
+    return ftH > ftA ? (m.homeTeam?.name ?? "") : (m.awayTeam?.name ?? "");
+  }
+  return "";
+}
+
 // Normalise one raw API match into our CompletedMatch shape.
 function normaliseMatch(m: any): CompletedMatch {
-  const winnerField: string = m.score?.winner ?? "";
-  const winnerName =
-    winnerField === "HOME_TEAM" ? m.homeTeam.name :
-    winnerField === "AWAY_TEAM" ? m.awayTeam.name :
-    "";
+  const winnerName = resolveWinnerName(m);
   return {
     id:           m.id,
     round:        normaliseRound(m.stage ?? ""),
@@ -81,7 +102,10 @@ function normaliseMatch(m: any): CompletedMatch {
     awayTeamName: m.awayTeam.name,
     winnerName,
     wasShootout:  m.score?.duration === "PENALTY_SHOOTOUT",
-    hasResult:    (m.score?.winner ?? null) !== null,
+    // Resolved if the API set an explicit winner (incl. a "DRAW" for group
+    // matches) OR we inferred a winner from a decisive fullTime. A finished
+    // match left level with a null winner stays unresolved so the next run retries.
+    hasResult:    (m.score?.winner ?? null) !== null || winnerName !== "",
   };
 }
 
@@ -170,16 +194,36 @@ export async function fetchDisplayMatches(): Promise<DisplayMatch[]> {
   if (!res.ok) throw new Error(`football-data.org /matches ${res.status}`);
   const json = await res.json();
   return (json.matches ?? []).map((m: any): DisplayMatch => {
-    const winnerField: string = m.score?.winner ?? "";
     const shootout = m.score?.duration === "PENALTY_SHOOTOUT";
     const ftH = m.score?.fullTime?.home ?? null;
     const ftA = m.score?.fullTime?.away ?? null;
-    const penH = m.score?.penalties?.home ?? null;
-    const penA = m.score?.penalties?.away ?? null;
-    // football-data folds the shootout tally into fullTime for penalty finishes.
-    // Peel it back off so the displayed scoreline is the level regulation/ET score.
-    const homeGoals = shootout && ftH != null && penH != null ? ftH - penH : ftH;
-    const awayGoals = shootout && ftA != null && penA != null ? ftA - penA : ftA;
+
+    let homeGoals = ftH;
+    let awayGoals = ftA;
+    let homePens: number | null = null;
+    let awayPens: number | null = null;
+    if (shootout) {
+      // football-data folds the shootout tally into fullTime for penalty finishes.
+      // Prefer regulation(+ET) for the level scoreline and derive the shootout
+      // tally from fullTime (the authoritative total) — the standalone penalties
+      // field is sometimes stale/incorrect on the free tier. Fall back to peeling
+      // penalties off fullTime only when regulation isn't reported.
+      const regH = m.score?.regularTime?.home ?? null;
+      const regA = m.score?.regularTime?.away ?? null;
+      if (regH != null && regA != null) {
+        homeGoals = regH + (m.score?.extraTime?.home ?? 0);
+        awayGoals = regA + (m.score?.extraTime?.away ?? 0);
+        homePens = ftH != null ? ftH - homeGoals : (m.score?.penalties?.home ?? null);
+        awayPens = ftA != null ? ftA - awayGoals : (m.score?.penalties?.away ?? null);
+      } else {
+        const penH = m.score?.penalties?.home ?? null;
+        const penA = m.score?.penalties?.away ?? null;
+        homeGoals = ftH != null && penH != null ? ftH - penH : ftH;
+        awayGoals = ftA != null && penA != null ? ftA - penA : ftA;
+        homePens = penH;
+        awayPens = penA;
+      }
+    }
     return {
       id: m.id,
       round: normaliseRound(m.stage ?? ""),
@@ -188,14 +232,12 @@ export async function fetchDisplayMatches(): Promise<DisplayMatch[]> {
       utcDate: m.utcDate ?? "",
       homeTeamName: m.homeTeam?.name ?? "",
       awayTeamName: m.awayTeam?.name ?? "",
-      winnerName:
-        winnerField === "HOME_TEAM" ? m.homeTeam?.name ?? "" :
-        winnerField === "AWAY_TEAM" ? m.awayTeam?.name ?? "" : "",
+      winnerName: resolveWinnerName(m),
       wasShootout: shootout,
       homeGoals,
       awayGoals,
-      homePens: shootout ? penH : null,
-      awayPens: shootout ? penA : null,
+      homePens,
+      awayPens,
     };
   });
 }
