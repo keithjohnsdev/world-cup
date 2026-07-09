@@ -69,12 +69,18 @@ function normaliseRound(stage: string): string {
 // Resolve the winning side's team name for a match.
 //
 // Normally we trust score.winner. But the football-data free tier sometimes
-// publishes a FINISHED knockout — especially a penalty shootout — with
-// score.winner still null (and occasionally a stale/incorrect penalties tally),
-// and can leave it that way for a day or more. In that state the fullTime score
-// is already decisive: the shootout tally is folded into fullTime, so the
-// advancing side leads there even while `winner` is null. Fall back to the
-// fullTime goals so a genuinely-decided match doesn't stay stuck unprocessed.
+// publishes a FINISHED knockout decided in regulation/extra time with
+// score.winner still null for a while. There the fullTime score is decisive
+// (a genuine non-level result), so we fall back to it rather than leave a
+// decided match stuck unprocessed.
+//
+// Penalty shootouts are the dangerous exception. For a shootout the regulation
+// score is level and fullTime *folds the shootout tally in* — but the free tier
+// can publish that tally mid-flight or stale, so fullTime may briefly show the
+// side that actually LOST the shootout ahead. Inferring a winner from it then
+// locks in the wrong team (and processed_fixtures makes it permanent). So for a
+// shootout we trust ONLY an explicit winner; until the feed sets one we leave it
+// unresolved and let a later run pick up the real result.
 //
 // A level fullTime (a real group-stage draw) yields "" and stays unresolved,
 // which is correct — group draws carry no winner, and a knockout reported level
@@ -83,6 +89,7 @@ function resolveWinnerName(m: any): string {
   const winnerField: string = m.score?.winner ?? "";
   if (winnerField === "HOME_TEAM") return m.homeTeam?.name ?? "";
   if (winnerField === "AWAY_TEAM") return m.awayTeam?.name ?? "";
+  if ((m.score?.duration ?? "") === "PENALTY_SHOOTOUT") return "";
   const ftH = m.score?.fullTime?.home ?? null;
   const ftA = m.score?.fullTime?.away ?? null;
   if ((m.status ?? "") === "FINISHED" && ftH != null && ftA != null && ftH !== ftA) {

@@ -12,6 +12,7 @@ import { getSql } from "@/lib/db";
 import { fetchAllMatches, type RawMatch } from "@/lib/api-football";
 import { apiNameToTeamId } from "@/lib/team-mapping";
 import { findKnockoutSlot } from "@/lib/bracket";
+import { resolveThirdAssignment, type ThirdEntry } from "@/lib/thirds";
 import { TEAMS } from "@/lib/data";
 import { scoreUser, type UserRow, type PickRow, type ResultRow } from "@/lib/scoring";
 import { kabooseRoundsForUser, type SnapshotRow } from "@/lib/snapshots";
@@ -35,25 +36,37 @@ const SNAPSHOT_BY_STAGE: Record<string, string> = {
 // `tieRank` (the *current* live standings order from the DB) as an anchor. That
 // makes the reconstruction's current state match the leaderboard exactly, while
 // genuinely-separated historical positions stay faithful to the actual results.
+interface GroupTeamStat { pts: number; gf: number; ga: number; played: number; seed: number }
+
+// Accumulate a group's per-team stats (points, goals, games played) from the
+// group matches played so far.
+function accumulateGroupStats(
+  matches: { homeId: string; awayId: string; homeGoals: number; awayGoals: number }[],
+  groupId: string,
+): Map<string, GroupTeamStat> {
+  const teams = TEAMS.filter((t) => t.group === groupId);
+  const stats = new Map<string, GroupTeamStat>(
+    teams.map((t) => [t.id, { pts: 0, gf: 0, ga: 0, played: 0, seed: t.seed }]),
+  );
+  for (const m of matches) {
+    const h = stats.get(m.homeId);
+    const a = stats.get(m.awayId);
+    if (!h || !a) continue;
+    h.gf += m.homeGoals; h.ga += m.awayGoals; h.played += 1;
+    a.gf += m.awayGoals; a.ga += m.homeGoals; a.played += 1;
+    if (m.homeGoals > m.awayGoals) h.pts += 3;
+    else if (m.homeGoals < m.awayGoals) a.pts += 3;
+    else { h.pts += 1; a.pts += 1; }
+  }
+  return stats;
+}
+
 export function computeGroupStandings(
   matches: { homeId: string; awayId: string; homeGoals: number; awayGoals: number }[],
   groupId: string,
   tieRank?: Map<string, number>,
 ): string[] {
-  const teams = TEAMS.filter((t) => t.group === groupId);
-  const stats = new Map(teams.map((t) => [t.id, { pts: 0, gf: 0, ga: 0, seed: t.seed }]));
-
-  for (const m of matches) {
-    const h = stats.get(m.homeId);
-    const a = stats.get(m.awayId);
-    if (!h || !a) continue;
-    h.gf += m.homeGoals; h.ga += m.awayGoals;
-    a.gf += m.awayGoals; a.ga += m.homeGoals;
-    if (m.homeGoals > m.awayGoals) h.pts += 3;
-    else if (m.homeGoals < m.awayGoals) a.pts += 3;
-    else { h.pts += 1; a.pts += 1; }
-  }
-
+  const stats = accumulateGroupStats(matches, groupId);
   const rank = (id: string) => tieRank?.get(id) ?? 99;
   return [...stats.entries()]
     .sort(([idA, A], [idB, B]) =>
@@ -64,6 +77,34 @@ export function computeGroupStandings(
       A.seed - B.seed,
     )
     .map(([id]) => id);
+}
+
+// Resolve the official winner-group → third-group Round-of-32 assignment from the
+// replay's current state, mirroring computeThirdAssign in lib/process-matches. The
+// live cron reads these stats from group_points; here we recompute them ourselves
+// from the replayed match scores. Without this, findKnockoutSlot can't place any
+// winner-vs-third R32 match — and every knockout match downstream of one silently
+// fails to map, vanishing from the reconstruction (see findKnockoutSlot).
+function computeThirdAssignFromReplay(
+  resultRows: Map<string, ResultRow>,
+  groupMatches: { groupId: string; homeId: string; awayId: string; homeGoals: number; awayGoals: number }[],
+): Record<string, string> | null {
+  const entries: ThirdEntry[] = [];
+  for (const g of "ABCDEFGHIJKL") {
+    const teamId = resultRows.get(`third:${g}`)?.team_id;
+    if (!teamId) continue;
+    const stats = accumulateGroupStats(groupMatches.filter((m) => m.groupId === g), g).get(teamId);
+    if (!stats) continue;
+    entries.push({
+      group: g,
+      teamId,
+      points: stats.pts,
+      goalDiff: stats.gf - stats.ga,
+      goalsFor: stats.gf,
+      playedGames: stats.played,
+    });
+  }
+  return resolveThirdAssignment(entries);
 }
 
 function knockoutAbbr(round: string): string {
@@ -169,7 +210,8 @@ export async function rebuildPointsHistory(sql: Sql, matches?: RawMatch[]): Prom
     } else if (match.winnerName && homeId && awayId) {
       const winnerId = apiNameToTeamId(match.winnerName);
       const map = new Map([...resultRows.values()].map((r) => [`${r.stage}:${r.slot}`, r.team_id]));
-      const mapping = findKnockoutSlot(homeId, awayId, match.round, map);
+      const thirdAssign = computeThirdAssignFromReplay(resultRows, groupMatches);
+      const mapping = findKnockoutSlot(homeId, awayId, match.round, map, thirdAssign);
       if (winnerId && mapping) {
         // This round is now under way, so its Kaboose Boost may start counting.
         const snapshotRound = SNAPSHOT_BY_STAGE[mapping.stage];

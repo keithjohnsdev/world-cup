@@ -28,15 +28,6 @@ export async function processMatches(
   for (const match of matches) {
     const mid = match.id;
 
-    const already = await sql`
-      SELECT 1 FROM processed_fixtures WHERE fixture_id = ${mid} LIMIT 1
-    ` as unknown[];
-    if (already.length > 0) { skipped.push(mid); continue; }
-
-    // FINISHED but score.winner still null — API lag right after full-time.
-    // Skip WITHOUT marking processed so the next cron run retries.
-    if (match.hasResult === false) { skipped.push(mid); continue; }
-
     // A knockout match can never truly end in a draw — someone always advances
     // via extra time or penalties. But the free tier often reports a shootout
     // match as FINISHED with score.winner "DRAW" (the level regulation/ET score)
@@ -49,6 +40,34 @@ export async function processMatches(
       match.round !== "group stage" &&
       !match.round.includes("3rd") &&
       !match.round.includes("third");
+
+    const already = await sql`
+      SELECT 1 FROM processed_fixtures WHERE fixture_id = ${mid} LIMIT 1
+    ` as unknown[];
+    if (already.length > 0) {
+      // Self-heal: a knockout result can get locked in with the WRONG winner if
+      // the free-tier feed reported the match mid-shootout (see resolveWinnerName).
+      // processed_fixtures would otherwise make that permanent — and a wrong winner
+      // also blocks the next round from mapping. So when a processed knockout now
+      // has a decisive winner that disagrees with what we stored, correct it.
+      if (isKnockout && match.hasResult !== false && match.winnerName) {
+        try {
+          const changed = await reconcileKnockoutMatch(sql, match);
+          if (changed) done.push(mid); else skipped.push(mid);
+        } catch (err) {
+          console.error(`[process-matches] reconcile ${mid}:`, err);
+          errors.push({ id: mid, err: String(err) });
+        }
+      } else {
+        skipped.push(mid);
+      }
+      continue;
+    }
+
+    // FINISHED but score.winner still null — API lag right after full-time.
+    // Skip WITHOUT marking processed so the next cron run retries.
+    if (match.hasResult === false) { skipped.push(mid); continue; }
+
     if (isKnockout && !match.winnerName) { skipped.push(mid); continue; }
 
     try {
@@ -182,7 +201,12 @@ async function computeThirdAssign(sql: Sql, resultsMap: Map<string, string>): Pr
   return resolveThirdAssignment(entries);
 }
 
-async function handleKnockoutMatch(sql: Sql, match: CompletedMatch) {
+// Resolve a knockout match to its { stage, slot } + winning team id, using the
+// current results table (and the derived third-place assignment for R32).
+async function resolveKnockout(
+  sql: Sql,
+  match: CompletedMatch,
+): Promise<{ stage: string; slot: string; winnerId: string }> {
   const ourWinnerId = apiNameToTeamId(match.winnerName);
   if (!ourWinnerId) throw new Error(`Unknown winner: "${match.winnerName}"`);
 
@@ -207,12 +231,43 @@ async function handleKnockoutMatch(sql: Sql, match: CompletedMatch) {
     );
   }
 
-  const { stage, slot } = mapping;
+  return { stage: mapping.stage, slot: mapping.slot, winnerId: ourWinnerId };
+}
+
+async function handleKnockoutMatch(sql: Sql, match: CompletedMatch) {
+  const { stage, slot, winnerId } = await resolveKnockout(sql, match);
   await sql`
     INSERT INTO results (stage, slot, team_id, was_shootout)
-    VALUES (${stage}, ${slot}, ${ourWinnerId}, ${match.wasShootout})
+    VALUES (${stage}, ${slot}, ${winnerId}, ${match.wasShootout})
     ON CONFLICT (stage, slot) DO UPDATE
       SET team_id = EXCLUDED.team_id,
           was_shootout = EXCLUDED.was_shootout
   `;
+}
+
+// Re-check an already-processed knockout fixture against the current feed and
+// correct its result row if the stored winner (or its shootout flag) disagrees.
+// Returns true only when a row was actually changed, so the caller rebuilds
+// derived tables only when something moved. A no-op when they already agree.
+async function reconcileKnockoutMatch(sql: Sql, match: CompletedMatch): Promise<boolean> {
+  const { stage, slot, winnerId } = await resolveKnockout(sql, match);
+  const existing = await sql`
+    SELECT team_id, was_shootout FROM results WHERE stage = ${stage} AND slot = ${slot} LIMIT 1
+  ` as { team_id: string; was_shootout: boolean }[];
+  const cur = existing[0];
+  if (cur && cur.team_id === winnerId && cur.was_shootout === match.wasShootout) {
+    return false; // already correct
+  }
+  await sql`
+    INSERT INTO results (stage, slot, team_id, was_shootout)
+    VALUES (${stage}, ${slot}, ${winnerId}, ${match.wasShootout})
+    ON CONFLICT (stage, slot) DO UPDATE
+      SET team_id = EXCLUDED.team_id,
+          was_shootout = EXCLUDED.was_shootout
+  `;
+  console.warn(
+    `[process-matches] reconciled ${stage}:${slot} for match ${match.id} — ` +
+    `${cur ? `${cur.team_id} → ` : ""}${winnerId}`,
+  );
+  return true;
 }
