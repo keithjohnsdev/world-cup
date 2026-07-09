@@ -104,20 +104,46 @@ export function ResultsBracket({ results, standings }: Props) {
     return out;
   }, [results]);
 
-  // Kickoff time for each not-yet-finished fixture, keyed by team pair, so the tree
-  // can label an upcoming match with its scheduled date/time.
-  const matchTime = useMemo(() => {
-    const byPair = new Map<string, string>();
-    for (const m of matches) {
-      if (m.status === "FINISHED" || !m.homeId || !m.awayId || !m.utcDate) continue;
-      byPair.set(pairKey(m.homeId, m.awayId), m.utcDate);
-    }
-    return (team1?: string, team2?: string) => {
-      if (!team1 || !team2) return undefined;
-      const iso = byPair.get(pairKey(team1, team2));
-      return iso ? fmtKickoff(iso) : undefined;
+  // Scheduled kickoff for each not-yet-finished bracket slot, so the tree can label
+  // an upcoming match with its date/time — including TBD fixtures whose teams aren't
+  // known yet. Two passes per round: first match feed fixtures to slots by their team
+  // pair (works once both sides are known), then hand out the remaining TBD fixtures
+  // to the still-empty slots in bracket order (top→bottom, which the schedule follows
+  // for the deeper rounds — e.g. the earlier semifinal is the top one).
+  const kickoffBySlot = useMemo(() => {
+    const stageOf: Record<string, string> = {
+      "round of 32": "r32", "round of 16": "r16",
+      "quarter-finals": "qf", "semi-finals": "sf", "final": "final",
     };
-  }, [matches]);
+    const slotsByStage: Record<string, TreeMatch[]> = { r32, r16, qf, sf, final: [finalMatch] };
+    const out = new Map<string, string>();
+
+    for (const [stage, slots] of Object.entries(slotsByStage)) {
+      const pool = matches
+        .filter((m) => stageOf[m.round] === stage && m.status !== "FINISHED" && m.utcDate)
+        .sort((a, b) => a.utcDate.localeCompare(b.utcDate) || a.id - b.id);
+      const used = new Set<number>();
+
+      // Pass 1 — known-team fixtures matched by pair.
+      const openSlots: TreeMatch[] = [];
+      for (const s of slots) {
+        const paired = s.team1 && s.team2
+          ? pool.find((m) => !used.has(m.id) && m.homeId && m.awayId && pairKey(m.homeId, m.awayId) === pairKey(s.team1!, s.team2!))
+          : undefined;
+        if (paired) { out.set(`${stage}:${s.slot}`, paired.utcDate); used.add(paired.id); }
+        else openSlots.push(s);
+      }
+      // Pass 2 — remaining (TBD) fixtures to the still-open slots, in bracket order.
+      const leftover = pool.filter((m) => !used.has(m.id));
+      openSlots.forEach((s, i) => { if (leftover[i]) out.set(`${stage}:${s.slot}`, leftover[i].utcDate); });
+    }
+    return out;
+  }, [matches, r32, r16, qf, sf, finalMatch]);
+
+  const matchTime = (stage: string, slot: string) => {
+    const iso = kickoffBySlot.get(`${stage}:${slot}`);
+    return iso ? fmtKickoff(iso) : undefined;
+  };
 
   const treeRounds: TreeRound[] = [
     { stage: "r32", label: "R32", matches: r32 },

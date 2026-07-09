@@ -36,10 +36,11 @@ interface Props {
   onTeamClick?: (teamId: string) => void;
   // Placeholder shown under "Champion" before the Final is decided.
   championPendingText?: string;
-  // Optional kickoff label for an upcoming, not-yet-decided fixture between two
-  // known teams. When it returns a string it's shown as small text above the node.
-  // Used by the real-results bracket to surface scheduled fixture dates/times.
-  matchTime?: (team1?: string, team2?: string) => string | undefined;
+  // Optional kickoff label for an upcoming (not-yet-decided) fixture, keyed by its
+  // bracket slot so it works even before the two teams are known (TBD fixtures).
+  // When it returns a string it's shown as small text above the node. Used by the
+  // real-results bracket to surface scheduled fixture dates/times.
+  matchTime?: (stage: string, slot: string) => string | undefined;
 }
 
 const LOCK_COLOR: Record<LockState, string> = { locked: "#4ade80", likely: "#fbbf24" };
@@ -182,7 +183,7 @@ function RoundColumn({
   onPick: (stage: string, slot: string, teamId: string) => void;
   teamLock?: (stage: string, slot: string, teamId?: string) => LockState | undefined;
   onTeamClick?: (teamId: string) => void;
-  matchTime?: (team1?: string, team2?: string) => string | undefined;
+  matchTime?: (stage: string, slot: string) => string | undefined;
   mirror: boolean;
 }) {
   const flip = mirror ? { transform: "scaleX(-1)" } : undefined;
@@ -193,8 +194,9 @@ function RoundColumn({
       <div className="wcbt-games">
         {round.matches.map((m) => {
           const decided = !!picks[`${round.stage}:${m.slot}`];
-          // Kickoff only for a not-yet-decided fixture where both sides are known.
-          const kickoff = !decided && m.team1 && m.team2 ? matchTime?.(m.team1, m.team2) : undefined;
+          // Kickoff for any not-yet-decided fixture — including TBD ones whose teams
+          // aren't known yet (keyed by slot, so it doesn't need the two teams).
+          const kickoff = decided ? undefined : matchTime?.(round.stage, m.slot);
           return (
             <div key={m.slot} className={`wcbt-game${decided ? " wcbt-won" : ""}`}>
               <div className="wcbt-cell">
@@ -317,6 +319,9 @@ export function BracketTree({ rounds, finalMatch, picks, canPick, onPick, champi
             <div className="wcbt-rlabel">🏆 Final</div>
             <div className="wcbt-finalwrap">
               <div className="wcbt-finalcell">
+                {!finalDecided && matchTime?.("final", finalMatch.slot) && (
+                  <div className="wcbt-kick">{matchTime("final", finalMatch.slot)}</div>
+                )}
                 <Node match={finalMatch} stage="final" picks={picks} canPick={canPick} onPick={onPick} onTeamClick={onTeamClick} isFinal />
                 <div className="wcbt-crown flex flex-col items-center gap-0.5">
                   {championTeam ? (
