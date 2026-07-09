@@ -36,6 +36,10 @@ interface Props {
   onTeamClick?: (teamId: string) => void;
   // Placeholder shown under "Champion" before the Final is decided.
   championPendingText?: string;
+  // Optional kickoff label for an upcoming, not-yet-decided fixture between two
+  // known teams. When it returns a string it's shown as small text above the node.
+  // Used by the real-results bracket to surface scheduled fixture dates/times.
+  matchTime?: (team1?: string, team2?: string) => string | undefined;
 }
 
 const LOCK_COLOR: Record<LockState, string> = { locked: "#4ade80", likely: "#fbbf24" };
@@ -169,6 +173,7 @@ function RoundColumn({
   onPick,
   teamLock,
   onTeamClick,
+  matchTime,
   mirror,
 }: {
   round: TreeRound;
@@ -177,6 +182,7 @@ function RoundColumn({
   onPick: (stage: string, slot: string, teamId: string) => void;
   teamLock?: (stage: string, slot: string, teamId?: string) => LockState | undefined;
   onTeamClick?: (teamId: string) => void;
+  matchTime?: (team1?: string, team2?: string) => string | undefined;
   mirror: boolean;
 }) {
   const flip = mirror ? { transform: "scaleX(-1)" } : undefined;
@@ -187,9 +193,12 @@ function RoundColumn({
       <div className="wcbt-games">
         {round.matches.map((m) => {
           const decided = !!picks[`${round.stage}:${m.slot}`];
+          // Kickoff only for a not-yet-decided fixture where both sides are known.
+          const kickoff = !decided && m.team1 && m.team2 ? matchTime?.(m.team1, m.team2) : undefined;
           return (
             <div key={m.slot} className={`wcbt-game${decided ? " wcbt-won" : ""}`}>
               <div className="wcbt-cell">
+                {kickoff && <div className="wcbt-kick"><span style={labelFlip}>{kickoff}</span></div>}
                 <div style={flip}>
                   <Node match={m} stage={round.stage} picks={picks} canPick={canPick} onPick={onPick} teamLock={teamLock} onTeamClick={onTeamClick} />
                 </div>
@@ -205,7 +214,7 @@ function RoundColumn({
 // Classic two-sided knockout tree: both halves converge on the Final in the middle,
 // with a festive champion spot beneath. Horizontally scrollable on small screens,
 // fully visible on desktop. Interactive — tap a team to send them through.
-export function BracketTree({ rounds, finalMatch, picks, canPick, onPick, championKicker = "Your", teamLock, onTeamClick, championPendingText = "Play it out to crown a champion" }: Props) {
+export function BracketTree({ rounds, finalMatch, picks, canPick, onPick, championKicker = "Your", teamLock, onTeamClick, championPendingText = "Play it out to crown a champion", matchTime }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const drag = useRef({ moved: false });
   const [pannable, setPannable] = useState(false);
@@ -297,7 +306,7 @@ export function BracketTree({ rounds, finalMatch, picks, canPick, onPick, champi
           {/* Left half */}
           <div className="wcbt-side">
             {left.map((r) => (
-              <RoundColumn key={`L-${r.stage}`} round={r} picks={picks} canPick={canPick} onPick={onPick} teamLock={teamLock} onTeamClick={onTeamClick} mirror={false} />
+              <RoundColumn key={`L-${r.stage}`} round={r} picks={picks} canPick={canPick} onPick={onPick} teamLock={teamLock} onTeamClick={onTeamClick} matchTime={matchTime} mirror={false} />
             ))}
           </div>
 
@@ -328,7 +337,7 @@ export function BracketTree({ rounds, finalMatch, picks, canPick, onPick, champi
               flipped so SF ends up next to the center and R32 on the far right. */}
           <div className="wcbt-side wcbt-mirror">
             {right.map((r) => (
-              <RoundColumn key={`R-${r.stage}`} round={r} picks={picks} canPick={canPick} onPick={onPick} teamLock={teamLock} onTeamClick={onTeamClick} mirror />
+              <RoundColumn key={`R-${r.stage}`} round={r} picks={picks} canPick={canPick} onPick={onPick} teamLock={teamLock} onTeamClick={onTeamClick} matchTime={matchTime} mirror />
             ))}
           </div>
         </div>
@@ -397,6 +406,10 @@ const CSS = `
 .wcbt-games { flex: 1; display: flex; flex-direction: column; }
 .wcbt-game { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; padding: 0 calc(var(--g) / 2); }
 .wcbt-cell { width: var(--node); position: relative; margin: 3px 0; }
+/* Upcoming-fixture kickoff, floated above the node so it doesn't shift the node's
+   vertical center (the connector elbows are anchored to that center at top:50%). */
+.wcbt-kick { position: absolute; bottom: 100%; left: 0; right: 0; margin-bottom: 4px; text-align: center; font-size: 11px; font-weight: 700; line-height: 1.1; color: rgba(255,255,255,0.42); white-space: nowrap; pointer-events: none; }
+@media (min-width: 640px) { .wcbt-kick { font-size: 9px; margin-bottom: 3px; } }
 
 /* source stub: every node reaches toward the next round */
 .wcbt-game::after { content: ""; position: absolute; right: 0; top: 50%; width: calc(var(--g) / 2); height: 2px; background: var(--line); transform: translateY(-50%); }

@@ -27,6 +27,18 @@ interface Props {
 
 const GROUP_LETTERS = "ABCDEFGHIJKL".split("");
 
+// Stable key for an unordered pair of teams — a given knockout pairing plays once,
+// so this uniquely identifies its fixture regardless of home/away order.
+const pairKey = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`);
+
+// e.g. "Sat, Jul 11 · 3:00 PM" in the viewer's locale/timezone.
+function fmtKickoff(iso: string): string {
+  const d = new Date(iso);
+  const day = d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+  const time = d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  return `${day} · ${time}`;
+}
+
 // Which third-placed group each relevant winner faces in the R32 (official once the
 // group stage is done, which it is by the time knockouts are underway).
 function computeThirdAssign(results: ResultEntry[], standings: StandingRow[]): Record<string, string> | null {
@@ -92,6 +104,21 @@ export function ResultsBracket({ results, standings }: Props) {
     return out;
   }, [results]);
 
+  // Kickoff time for each not-yet-finished fixture, keyed by team pair, so the tree
+  // can label an upcoming match with its scheduled date/time.
+  const matchTime = useMemo(() => {
+    const byPair = new Map<string, string>();
+    for (const m of matches) {
+      if (m.status === "FINISHED" || !m.homeId || !m.awayId || !m.utcDate) continue;
+      byPair.set(pairKey(m.homeId, m.awayId), m.utcDate);
+    }
+    return (team1?: string, team2?: string) => {
+      if (!team1 || !team2) return undefined;
+      const iso = byPair.get(pairKey(team1, team2));
+      return iso ? fmtKickoff(iso) : undefined;
+    };
+  }, [matches]);
+
   const treeRounds: TreeRound[] = [
     { stage: "r32", label: "R32", matches: r32 },
     { stage: "r16", label: "R16", matches: r16 },
@@ -123,6 +150,7 @@ export function ResultsBracket({ results, standings }: Props) {
             canPick={false}
             onPick={() => {}}
             onTeamClick={setModalTeamId}
+            matchTime={matchTime}
             championKicker="World Cup"
             championPendingText="Still to be decided"
           />
