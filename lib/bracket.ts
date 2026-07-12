@@ -8,8 +8,14 @@
 // via lib/thirds.ts (ranking) + the Annex C table (lib/thirds-table.ts).
 //
 // The 16 R32 matches below are listed in BRACKET (depth-first) order, so the simple
-// sequential pairing used for later rounds — r32 (m1,m2)→r16 m1, r16 (m1,m2)→qf m1,
-// etc. — reproduces FIFA's official R16/QF/SF/Final tree exactly.
+// sequential pairing used for R16 and QF — r32 (m1,m2)→r16 m1, r16 (m1,m2)→qf m1 —
+// reproduces FIFA's official R16/QF tree exactly.
+//
+// The SEMIFINALS are the one exception: FIFA numbers the knockout matches by date,
+// and the 2026 bracket interleaves the quarterfinals, so the semifinals pair the
+// quarterfinals NON-adjacently — QF1+QF3 form one semifinal and QF2+QF4 the other
+// (this is why France (QF1) meets Spain (QF3), and England (QF2) meets Argentina
+// (QF4)). All QF→SF pairing goes through SF_QF_FEEDERS below — never assume m1+m2.
 
 export type SlotSource =
   | { kind: "winner"; group: string }
@@ -58,6 +64,16 @@ export const R32_STRUCTURE: R32Match[] = [
 
 type ResultsMap = Map<string, string>; // "stage:slot" → team_id
 type ThirdAssign = Record<string, string> | null | undefined; // winner group → third group
+
+// Which two quarterfinal slots feed each semifinal. Index i (0-based) → sf slot
+// m(i+1); the pair is the 1-based qf slot numbers. The 2026 bracket pairs QF winners
+// non-adjacently (QF1+QF3, QF2+QF4) — see the note at the top of this file. Every
+// QF→SF derivation (result mapping, results tree, the pick bracket, awards) reads
+// this so the pairing lives in exactly one place.
+export const SF_QF_FEEDERS: readonly [number, number][] = [
+  [1, 3],
+  [2, 4],
+];
 
 // Results-map key for a slot source (null for an unresolved third).
 function sourceKey(s: SlotSource, thirdAssign: ThirdAssign): string | null {
@@ -145,9 +161,10 @@ export function findKnockoutSlot(
   }
 
   if (r.includes("semi")) {
-    for (let i = 0; i < 2; i++) {
-      const t1 = results.get(`qf:m${2 * i + 1}`);
-      const t2 = results.get(`qf:m${2 * i + 2}`);
+    for (let i = 0; i < SF_QF_FEEDERS.length; i++) {
+      const [a, b] = SF_QF_FEEDERS[i];
+      const t1 = results.get(`qf:m${a}`);
+      const t2 = results.get(`qf:m${b}`);
       if (t1 && t2 && teamsMatch(t1, t2, team1, team2)) return { stage: "sf", slot: `m${i + 1}` };
     }
     return null;

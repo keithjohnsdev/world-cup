@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { resolveR32, sourceLabel, type ResolvedMatch, type SlotSource } from "@/lib/bracket";
+import { resolveR32, sourceLabel, SF_QF_FEEDERS, type ResolvedMatch, type SlotSource } from "@/lib/bracket";
 import { resolveThirdAssignment, type ThirdEntry } from "@/lib/thirds";
 import { getTeam } from "@/lib/data";
 import { FlagIcon } from "@/components/FlagIcon";
@@ -179,10 +179,13 @@ function buildBracket(results: ResultEntry[], picks: Picks, thirdAssign: Record<
     team2: picks[`r16:m${2 * i + 2}`],
   }));
 
-  const sf: MatchData[] = [
-    { slot: "m1", team1: picks["qf:m1"], team2: picks["qf:m2"] },
-    { slot: "m2", team1: picks["qf:m3"], team2: picks["qf:m4"] },
-  ];
+  // Semifinals pair the quarterfinals non-adjacently (QF1+QF3, QF2+QF4) — see
+  // SF_QF_FEEDERS. Using it keeps the pick bracket's tree identical to the real one.
+  const sf: MatchData[] = SF_QF_FEEDERS.map(([a, b], i) => ({
+    slot: `m${i + 1}`,
+    team1: picks[`qf:m${a}`],
+    team2: picks[`qf:m${b}`],
+  }));
 
   const finalMatch: MatchData = { slot: "m1", team1: picks["sf:m1"], team2: picks["sf:m2"] };
 
@@ -561,7 +564,7 @@ function sanitizePractice(r32: MatchData[], raw: Picks): Picks {
   };
   for (let i = 0; i < 8; i++) prune(`r16:m${i + 1}`, `r32:m${2 * i + 1}`, `r32:m${2 * i + 2}`);
   for (let i = 0; i < 4; i++) prune(`qf:m${i + 1}`, `r16:m${2 * i + 1}`, `r16:m${2 * i + 2}`);
-  for (let i = 0; i < 2; i++) prune(`sf:m${i + 1}`, `qf:m${2 * i + 1}`, `qf:m${2 * i + 2}`);
+  SF_QF_FEEDERS.forEach(([a, b], i) => prune(`sf:m${i + 1}`, `qf:m${a}`, `qf:m${b}`));
   prune("final:m1", "sf:m1", "sf:m2");
   return p;
 }

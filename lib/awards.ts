@@ -3,7 +3,7 @@
 // Each award returns { name, userId, userName, reason } or null if not yet determinable.
 
 import { TEAMS } from "@/lib/data";
-import { resolveR32 } from "@/lib/bracket";
+import { resolveR32, SF_QF_FEEDERS } from "@/lib/bracket";
 import type { UserRow, PickRow, ResultRow, ScoreBreakdown } from "@/lib/scoring";
 import type { SnapshotRow } from "@/lib/snapshots";
 
@@ -60,12 +60,12 @@ function buildMatchPairs(
     if (t1 && t2) pairs.set(`qf:m${i + 1}`, [t1, t2]);
   }
 
-  // SF
-  for (let i = 0; i < 2; i++) {
-    const t1 = rm.get(`qf:m${2 * i + 1}`)?.team_id;
-    const t2 = rm.get(`qf:m${2 * i + 2}`)?.team_id;
+  // SF — quarterfinals pair non-adjacently (QF1+QF3, QF2+QF4); see SF_QF_FEEDERS.
+  SF_QF_FEEDERS.forEach(([a, b], i) => {
+    const t1 = rm.get(`qf:m${a}`)?.team_id;
+    const t2 = rm.get(`qf:m${b}`)?.team_id;
     if (t1 && t2) pairs.set(`sf:m${i + 1}`, [t1, t2]);
-  }
+  });
 
   // Final
   const ft1 = rm.get("sf:m1")?.team_id;

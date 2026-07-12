@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { resolveR32 } from "@/lib/bracket";
+import { resolveR32, SF_QF_FEEDERS } from "@/lib/bracket";
 import { resolveThirdAssignment, type ThirdEntry } from "@/lib/thirds";
 import { BracketTree, type TreeRound, type TreeMatch } from "@/components/BracketTree";
 import { TeamHistoryModal, type MatchDTO } from "@/components/TeamHistoryModal";
@@ -66,7 +66,7 @@ function buildResultsBracket(results: ResultEntry[], thirdAssign: Record<string,
   const feeder = (stage: string, i: number) => rm.get(`${stage}:m${i}`);
   const r16: TreeMatch[] = Array.from({ length: 8 }, (_, i) => ({ slot: `m${i + 1}`, team1: feeder("r32", 2 * i + 1), team2: feeder("r32", 2 * i + 2) }));
   const qf: TreeMatch[] = Array.from({ length: 4 }, (_, i) => ({ slot: `m${i + 1}`, team1: feeder("r16", 2 * i + 1), team2: feeder("r16", 2 * i + 2) }));
-  const sf: TreeMatch[] = Array.from({ length: 2 }, (_, i) => ({ slot: `m${i + 1}`, team1: feeder("qf", 2 * i + 1), team2: feeder("qf", 2 * i + 2) }));
+  const sf: TreeMatch[] = SF_QF_FEEDERS.map(([a, b], i) => ({ slot: `m${i + 1}`, team1: feeder("qf", a), team2: feeder("qf", b) }));
   const finalMatch: TreeMatch = { slot: "m1", team1: feeder("sf", 1), team2: feeder("sf", 2) };
 
   return { r32, r16, qf, sf, finalMatch };
