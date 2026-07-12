@@ -58,6 +58,24 @@ function computeThirdAssign(results: ResultEntry[], standings: StandingRow[]): R
   return resolveThirdAssignment(entries);
 }
 
+// Reorder a round's matches into the tree's VISUAL bracket order. The BracketTree
+// draws its connector elbows purely by DOM adjacency (consecutive pairs feed the next
+// round), which assumes qf1+qf2→sf1 and qf3+qf4→sf2. But the 2026 bracket pairs the
+// semifinals non-adjacently (qf1+qf3, qf2+qf4 — see SF_QF_FEEDERS), so the two
+// quarterfinals that actually meet must be made adjacent. Splitting each round into 4
+// equal quadrant blocks and swapping the middle two (Q1, Q3, Q2, Q4) puts each real
+// semifinal's feeders side by side. Data/slots are unchanged — this is display only.
+function toVisualOrder<T>(matches: T[]): T[] {
+  if (matches.length % 4 !== 0) return matches; // sf/final: nothing to rearrange
+  const s = matches.length / 4;
+  return [
+    ...matches.slice(0, s),          // Q1
+    ...matches.slice(2 * s, 3 * s),  // Q3
+    ...matches.slice(s, 2 * s),      // Q2
+    ...matches.slice(3 * s, 4 * s),  // Q4
+  ];
+}
+
 // Build the real knockout tree straight from the results table. Unlike the picker
 // (which derives R16→Final from a player's own picks), every round here reads the
 // actual winner the cron recorded — R32 matchups come from resolveR32, and each
@@ -72,7 +90,9 @@ function buildResultsBracket(results: ResultEntry[], thirdAssign: Record<string,
   const sf: TreeMatch[] = SF_QF_FEEDERS.map(([a, b], i) => ({ slot: `m${i + 1}`, team1: feeder("qf", a), team2: feeder("qf", b) }));
   const finalMatch: TreeMatch = { slot: "m1", team1: feeder("sf", 1), team2: feeder("sf", 2) };
 
-  return { r32, r16, qf, sf, finalMatch };
+  // Rearrange the feeder rounds into visual bracket order so the tree's connectors line
+  // up with the real (non-adjacent) semifinal pairing. sf/final are already in order.
+  return { r32: toVisualOrder(r32), r16: toVisualOrder(r16), qf: toVisualOrder(qf), sf, finalMatch };
 }
 
 // Read-only, real-time World Cup results bracket. The winner of each match is
