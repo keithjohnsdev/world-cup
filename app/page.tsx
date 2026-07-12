@@ -1075,6 +1075,17 @@ export default function BracketPage() {
     }
   }, [reopenActive]);
 
+  // When the window closes (deadline reached), return to the leaderboard landing —
+  // but only from the bracket tab, so we don't yank a player who has navigated away.
+  const prevReopenActiveRef = useRef(reopenActive);
+  useEffect(() => {
+    const wasActive = prevReopenActiveRef.current;
+    prevReopenActiveRef.current = reopenActive;
+    if (wasActive && !reopenActive) {
+      setTab((t) => (t === "bracket" ? "leaderboard" : t));
+    }
+  }, [reopenActive]);
+
   const handleGlobeHover = useCallback((teamId: string | null) => setHoveredTeam(teamId), []);
   const handleGlobeClick = useCallback((teamId: string) => router.push(`/learn/${teamId}`), [router]);
 
