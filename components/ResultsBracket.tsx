@@ -23,6 +23,9 @@ interface StandingRow {
 interface Props {
   results: ResultEntry[];
   standings: StandingRow[];
+  // Optional content rendered at the very top of the bracket (inside its themed
+  // container) — used to surface the semifinal re-pick card during a re-open window.
+  reopenTop?: React.ReactNode;
 }
 
 const GROUP_LETTERS = "ABCDEFGHIJKL".split("");
@@ -75,7 +78,7 @@ function buildResultsBracket(results: ResultEntry[], thirdAssign: Record<string,
 // Read-only, real-time World Cup results bracket. The winner of each match is
 // pulled from the results table (highlighted green in the tree); tapping any team
 // opens its full tournament match history with scorelines.
-export function ResultsBracket({ results, standings }: Props) {
+export function ResultsBracket({ results, standings, reopenTop }: Props) {
   const [modalTeamId, setModalTeamId] = useState<string | null>(null);
   const [matches, setMatches] = useState<MatchDTO[]>([]);
   const [loadingMatches, setLoadingMatches] = useState(true);
@@ -157,6 +160,7 @@ export function ResultsBracket({ results, standings }: Props) {
   return (
     <div className="min-h-screen" style={{ background: "linear-gradient(160deg, #060d1a 0%, #0d2137 60%, #071628 100%)" }}>
       <div className="mx-auto max-w-5xl px-4 pb-24 pt-10">
+        {reopenTop}
         {/* Header */}
         <div className="mb-8 text-center">
           <p className="mb-1 font-black uppercase leading-none text-white" style={{ fontSize: "clamp(2rem, 7vw, 2.8rem)", letterSpacing: "-0.02em" }}>The Real</p>

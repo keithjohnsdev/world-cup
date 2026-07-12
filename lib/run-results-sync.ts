@@ -10,6 +10,7 @@ import { syncGroupPoints } from "@/lib/sync-standings";
 import { rebuildPointsHistory } from "@/lib/points-history";
 import { rebuildStats } from "@/lib/stats";
 import { runAnnouncer } from "@/lib/announcer";
+import { closeBracketReopenIfDue } from "@/lib/bracket-reopen";
 
 // Rebuild the derived points-history and stats snapshots after results change.
 // Both consume the full match list, so we fetch it ONCE and share it — no extra
@@ -125,6 +126,10 @@ export async function runResultsSyncIfActive() {
 
   // Active — now do the DB work, reusing the FINISHED matches we already fetched.
   await initDb();
+  // Close any scoped re-open window whose deadline has passed (restores fallbacks
+  // for players who didn't re-pick). Non-fatal. During a match window we're already
+  // ticking every ~2 min, so this fires promptly at the deadline (e.g. SF1 kickoff).
+  try { await closeBracketReopenIfDue(getSql()); } catch (err) { console.warn("[results-sync] reopen close failed:", err); }
   await persistLiveTeams(window);
   const finished = window.filter((m) => m.status === "FINISHED");
   const result = await processMatches(getSql(), finished);
@@ -151,6 +156,10 @@ export async function runResultsSync() {
   const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
 
   const matches = await fetchCompletedMatchesForDate(yesterday, today);
+
+  // Backstop for the scoped re-open auto-close (the fast cron handles the common
+  // case; this ungated 15-min path guarantees it even if no match window is active).
+  try { await closeBracketReopenIfDue(getSql()); } catch (err) { console.warn("[results-sync] reopen close failed:", err); }
 
   const result = await processMatches(getSql(), matches);
 

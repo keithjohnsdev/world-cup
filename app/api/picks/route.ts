@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSql, initDb } from "@/lib/db";
 import { bracketLockedFor } from "@/lib/bracket-lock";
+import { getBracketReopen, reopenAllowsStage } from "@/lib/bracket-reopen";
 
 const GROUP_STAGES = new Set(["group", "runner", "third", "fourth", "champion", "meta", "heart"]);
 const KNOCKOUT_STAGES = new Set(["r32", "r16", "qf", "sf", "final"]);
@@ -56,7 +57,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Bracket picks are locked" }, { status: 403 });
   }
   if (KNOCKOUT_STAGES.has(stage) && await bracketLockedFor(sql, user.id)) {
-    return NextResponse.json({ error: "Bracket picks are locked" }, { status: 403 });
+    // A locked bracket may still be editable for specific stages during a scoped
+    // re-open window (e.g. sf/final re-picks after the bracket structure was fixed).
+    const reopen = await getBracketReopen(sql);
+    if (!reopenAllowsStage(reopen, stage, Date.now())) {
+      return NextResponse.json({ error: "Bracket picks are locked" }, { status: 403 });
+    }
   }
 
   await sql`
@@ -104,7 +110,12 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "Bracket picks are locked" }, { status: 403 });
   }
   if (KNOCKOUT_STAGES.has(stage) && await bracketLockedFor(sql, user.id)) {
-    return NextResponse.json({ error: "Bracket picks are locked" }, { status: 403 });
+    // A locked bracket may still be editable for specific stages during a scoped
+    // re-open window (e.g. sf/final re-picks after the bracket structure was fixed).
+    const reopen = await getBracketReopen(sql);
+    if (!reopenAllowsStage(reopen, stage, Date.now())) {
+      return NextResponse.json({ error: "Bracket picks are locked" }, { status: 403 });
+    }
   }
 
   await sql`DELETE FROM picks WHERE user_id = ${user.id} AND stage = ${stage} AND slot = ${slot}`;

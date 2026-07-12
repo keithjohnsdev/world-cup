@@ -14,6 +14,7 @@ import { GroupPicksModal, type ScoreBreakdownProps } from "@/components/GroupPic
 // BracketPicker (pick-your-own bracket) is retained for the next tournament; the
 // bracket tab now shows the live real-results bracket via ResultsBracket.
 import { ResultsBracket } from "@/components/ResultsBracket";
+import { SemifinalRepick } from "@/components/SemifinalRepick";
 import { NewsTab } from "@/components/NewsTab";
 import { StatsTab } from "@/components/StatsTab";
 import { MessageBoardTab } from "@/components/MessageBoardTab";
@@ -905,6 +906,8 @@ export default function BracketPage() {
   const [bracketResults, setBracketResults] = useState<{ stage: string; slot: string; team_id: string }[]>([]);
   const [bracketStandings, setBracketStandings] = useState<{ team_id: string; points: number; played_games: number; goal_diff: number; goals_for: number }[]>([]);
   const [bracketPhase, setBracketPhase] = useState("phase1_open");
+  // Scoped sf/final re-open window (null when none). Drives the semifinal re-pick UI.
+  const [bracketReopen, setBracketReopen] = useState<{ stages: string[]; until: string } | null>(null);
   const [awardsVisible, setAwardsVisible] = useState(false);
   // One-time intro spotlight for the new Message Board tab (per-player, server-backed).
   const [boardSpotlight, setBoardSpotlight] = useState(false);
@@ -927,6 +930,7 @@ export default function BracketPage() {
         if (data?.standings) setBracketStandings(data.standings);
         if (data?.phase) setBracketPhase(data.phase);
         if (data?.awardsVisible) setAwardsVisible(true);
+        setBracketReopen(data?.reopen ?? null);
       })
       .catch(() => {});
   }, []);
@@ -1056,6 +1060,20 @@ export default function BracketPage() {
 
   // Group-stage picks lock as soon as phase 1 closes (server enforces this too).
   const phase1Locked = bracketPhase !== "phase1_open";
+  // Semifinal re-pick window open? The server only returns `reopen` while the deadline
+  // is still in the future (it filters by `until`), so presence alone is the signal.
+  const reopenActive = !!bracketReopen;
+
+  // While the re-pick window is open, steer players to the bracket tab (where the
+  // re-pick card lives) — but only once, and only from the default leaderboard tab so
+  // it never fights a player who has deliberately navigated elsewhere.
+  const reopenSteeredRef = useRef(false);
+  useEffect(() => {
+    if (reopenActive && !reopenSteeredRef.current) {
+      reopenSteeredRef.current = true;
+      setTab((t) => (t === "leaderboard" ? "bracket" : t));
+    }
+  }, [reopenActive]);
 
   const handleGlobeHover = useCallback((teamId: string | null) => setHoveredTeam(teamId), []);
   const handleGlobeClick = useCallback((teamId: string) => router.push(`/learn/${teamId}`), [router]);
@@ -1377,9 +1395,19 @@ export default function BracketPage() {
       )}
 
       {/* Bracket tab — live real-results bracket (read-only). The pick-your-own
-          BracketPicker lives on for the next tournament but is no longer mounted. */}
+          BracketPicker lives on for the next tournament but is no longer mounted.
+          While a scoped sf/final re-open window is active, a focused re-pick card
+          sits above it so players can fix their semifinals against the corrected tree. */}
       {tab === "bracket" && (
-        <ResultsBracket results={bracketResults} standings={bracketStandings} />
+        <ResultsBracket
+          results={bracketResults}
+          standings={bracketStandings}
+          reopenTop={
+            reopenActive ? (
+              <SemifinalRepick picks={picks} until={bracketReopen!.until} onPick={handlePick} />
+            ) : null
+          }
+        />
       )}
     </div>
   );

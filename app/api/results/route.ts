@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSql, initDb } from "@/lib/db";
 import { bracketLockedFor } from "@/lib/bracket-lock";
+import { getBracketReopen } from "@/lib/bracket-reopen";
 
 export async function GET(req: NextRequest) {
   await initDb();
@@ -24,6 +25,12 @@ export async function GET(req: NextRequest) {
   // Whether THIS player's bracket is frozen by the per-player lock (so the client
   // can render the bracket read-only without attempting saves the API would reject).
   const bracketLocked = await bracketLockedFor(sql, (auth as { id: number }[])[0].id);
+  // Scoped, time-boxed re-open of specific knockout stages (e.g. sf/final re-picks).
+  // Surface it to the client only while the deadline is still in the future, so the
+  // re-pick UI disappears at close even before the cron deletes the setting. The raw
+  // setting lives on until the cron's auto-close runs the fallback restore.
+  const reopenRaw = await getBracketReopen(sql);
+  const reopen = reopenRaw && Date.now() < Date.parse(reopenRaw.until) ? reopenRaw : null;
 
-  return NextResponse.json({ results: rows, phase, awardsVisible, standings, bracketLocked });
+  return NextResponse.json({ results: rows, phase, awardsVisible, standings, bracketLocked, reopen });
 }
