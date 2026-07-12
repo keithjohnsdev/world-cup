@@ -125,7 +125,7 @@ export function SemifinalRepick({ picks, until, onPick }: Props) {
         <div className="mb-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-widest" style={{ background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.35)", color: "#fbbf24" }}>
           🔧 Semifinals re-opened
         </div>
-        <div className="mb-2 font-black uppercase leading-none text-yellow-300" style={{ fontSize: "clamp(2rem, 8vw, 3rem)", letterSpacing: "-0.03em" }}>Oops!</div>
+        <div className="mb-2 font-black uppercase leading-none text-yellow-300" style={{ fontSize: "clamp(2rem, 8vw, 3rem)", letterSpacing: "-0.03em" }}>Whoops...</div>
         <h3 className="font-black uppercase leading-tight text-white" style={{ fontSize: "clamp(1.3rem, 5vw, 1.7rem)" }}>Re-pick your semifinals</h3>
         <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-white/65">
           We had the bracket&apos;s halves paired wrong — your four semifinalists are unchanged, but they line up differently than you saw. Pick who advances from <span className="font-semibold text-white/85">your</span> corrected semifinals.
