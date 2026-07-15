@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { GROUPS, getTeam } from "@/lib/data";
-import { resolveR32 } from "@/lib/bracket";
+import { resolveR32, SF_QF_FEEDERS } from "@/lib/bracket";
 import { resolveThirdAssignment, type ThirdEntry } from "@/lib/thirds";
 import { FlagIcon } from "@/components/FlagIcon";
 
@@ -347,10 +347,12 @@ export default function AdminResultsPage() {
     team1: results[`r16:m${2 * i + 1}`],
     team2: results[`r16:m${2 * i + 2}`],
   }));
-  const sf: MatchData[] = [
-    { slot: "m1", team1: results["qf:m1"], team2: results["qf:m2"] },
-    { slot: "m2", team1: results["qf:m3"], team2: results["qf:m4"] },
-  ];
+  // SF pairs its two QF feeders non-adjacently (QF1+QF3, QF2+QF4); see SF_QF_FEEDERS.
+  const sf: MatchData[] = SF_QF_FEEDERS.map(([a, b], i) => ({
+    slot: `m${i + 1}`,
+    team1: results[`qf:m${a}`],
+    team2: results[`qf:m${b}`],
+  }));
   const finalMatch: MatchData = {
     slot: "m1",
     team1: results["sf:m1"],
