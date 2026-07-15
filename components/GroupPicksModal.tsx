@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { GROUPS, getTeam } from "@/lib/data";
 import { FlagIcon } from "@/components/FlagIcon";
-import { resolveR32 } from "@/lib/bracket";
+import { resolveR32, SF_QF_FEEDERS } from "@/lib/bracket";
 import { resolveThirdAssignment, type ThirdEntry } from "@/lib/thirds";
 
 const STAGES = ["group", "runner", "third", "fourth"] as const;
@@ -148,6 +148,11 @@ function BracketScore({
     if (stage === "r32") {
       const t = r32Teams.get(`m${slotNum}`);
       return t ? [t[0], t[1]] : [undefined, undefined];
+    }
+    // SF pairs its two QF feeders non-adjacently (QF1+QF3, QF2+QF4); see SF_QF_FEEDERS.
+    if (stage === "sf") {
+      const [a, b] = SF_QF_FEEDERS[slotNum - 1];
+      return [pickMap.get(`qf:m${a}`)?.team_id, pickMap.get(`qf:m${b}`)?.team_id];
     }
     const feeder = FEEDER_OF[stage];
     return [pickMap.get(`${feeder}:m${2 * slotNum - 1}`)?.team_id, pickMap.get(`${feeder}:m${2 * slotNum}`)?.team_id];
